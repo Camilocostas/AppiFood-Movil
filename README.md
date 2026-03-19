@@ -19,7 +19,7 @@ tipo de comida, ubicación y preferencias del usuario. Proyecto destinado para l
 
 ## 🚀 Cómo clonar y ejecutar
 ```bash
-git clone https://github.com/org/appifood-android.git
+git clone https://github.com/Camilocostas/AppiFood-Movil.git
 ```
 1. Abrir con Android Studio
 2. Sincronizar Gradle
