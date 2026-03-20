@@ -1,4 +1,4 @@
-# 🍽️ AppiFood - Android
+# 🍽️ AppiFood - Movil 
 
 Aplicación móvil para descubrir restaurantes filtrados por presupuesto,
 tipo de comida, ubicación y preferencias del usuario. Proyecto destinado para la ciudad de Popayan
@@ -11,11 +11,11 @@ tipo de comida, ubicación y preferencias del usuario. Proyecto destinado para l
 ## 👥 Equipo
 | Integrante | GitHub |
 |---|---|
-| Mauricio Bustamante | MauricioB32 : https://github.com/MauricioB32 |
-| Hugo Muñoz          | HugoMunoz : https://github.com/HugoMunoz |
+| Mauricio Bustamante | MauricioB32  : https://github.com/MauricioB32   |
+| Hugo Muñoz          | HugoMunoz    : https://github.com/HugoMunoz     |
 | Cristian Acosta     | Camilocostas : https://github.com/Camilocostas  |
-| Esteban Anaya       | Ebam11 : https://github.com/Ebam11 |
-| Jairo Montes        | adsojairo : https://github.com/adsojairo |
+| Esteban Anaya       | Ebam11       : https://github.com/Ebam11        |
+| Jairo Montes        | adsojairo    : https://github.com/adsojairo     |
 
 ## 🚀 Cómo clonar y ejecutar
 ```bash
