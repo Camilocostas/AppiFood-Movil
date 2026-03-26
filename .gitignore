@@ -12,4 +12,23 @@
 /captures
 .externalNativeBuild
 .cxx
-local.properties
+
+# Android Studio
+*.iws
+*.iml
+*.ipr
+/out/
+
+# Gradle
+.gradle/
+build/
+
+# Kotlin
+*.kotlin_module
+
+# Device-specific
+captures/
+
+# OS specific
+.DS_Store
+Thumbs.db

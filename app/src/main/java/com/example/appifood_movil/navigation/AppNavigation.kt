@@ -1,12 +1,11 @@
 package com.example.appifood_movil.navigation
 
-import com.example.appifood_movil.ui.screens.HomeScreen
 import androidx.compose.runtime.Composable
-import androidx.navigation.NavController
 import androidx.navigation.compose.*
-import com.example.appifood_movil.ui.screens.SplashLoginScreen
 import com.example.appifood_movil.ui.screens.AuthScreen
+import com.example.appifood_movil.ui.screens.HomeScreen
 import com.example.appifood_movil.ui.screens.ProductDetailScreen
+import com.example.appifood_movil.ui.screens.SplashLoginScreen
 
 @Composable
 fun AppNavigation() {
@@ -14,30 +13,28 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = "splash"
+        startDestination = Screen.Splash.route
     ) {
-        composable("splash") {
+        composable(Screen.Splash.route) {
             SplashLoginScreen(
-                onLoginClick = { navController.navigate("auth") },
-                onSignUpClick = { navController.navigate("auth") }
+                onLoginClick = { navController.navigate(Screen.Auth.route) },
+                onSignUpClick = { navController.navigate(Screen.Auth.route) }
             )
         }
 
-        composable("auth") {
-            // Pasamos la función que ejecuta el cambio de pantalla
+        composable(Screen.Auth.route) {
             AuthScreen(onLoginNavigation = {
-                navController.navigate("home") {
-                    // Esto evita que el usuario regrese al login al presionar 'atrás'
-                    popUpTo("auth") { inclusive = true }
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(Screen.Auth.route) { inclusive = true }
                 }
             })
         }
 
-        composable("home") {
+        composable(Screen.Home.route) {
             HomeScreen(navController)
         }
 
-        composable("productDetail") {
+        composable(Screen.ProductDetail.route) {
             ProductDetailScreen(navController)
         }
     }

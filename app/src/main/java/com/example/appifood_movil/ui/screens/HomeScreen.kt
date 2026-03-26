@@ -30,6 +30,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.navigation.compose.rememberNavController
+import com.example.appifood_movil.ui.theme.AppifoodMovilTheme
 
 
 // Importa el R de tu proyecto para acceder a las imágenes
@@ -310,3 +313,11 @@ fun BottomNavigationBar() {
     }
 }
 
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun HomeScreenPreview() {
+    val navController = rememberNavController()
+    AppifoodMovilTheme {
+        HomeScreen(navController)
+    }
+}

@@ -17,6 +17,8 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.ui.tooling.preview.Preview
+import com.example.appifood_movil.ui.theme.AppifoodMovilTheme
 
 
 @Composable
@@ -251,5 +253,13 @@ fun RegisterForm() {
             "Already have account? Sign in",
             modifier = Modifier.align(Alignment.CenterHorizontally)
         )
+    }
+}
+
+@Preview(showBackground = true, showSystemUi = true)
+@Composable
+fun AuthScreenPreview() {
+    AppifoodMovilTheme {
+        AuthScreen(onLoginNavigation = {})
     }
 }
