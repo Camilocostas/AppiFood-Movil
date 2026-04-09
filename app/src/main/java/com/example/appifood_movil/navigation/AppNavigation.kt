@@ -1,11 +1,10 @@
 package com.example.appifood_movil.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.navigation.NavType
 import androidx.navigation.compose.*
-import com.example.appifood_movil.ui.screens.AuthScreen
-import com.example.appifood_movil.ui.screens.HomeScreen
-import com.example.appifood_movil.ui.screens.ProductDetailScreen
-import com.example.appifood_movil.ui.screens.SplashLoginScreen
+import androidx.navigation.navArgument
+import com.example.appifood_movil.ui.screens.*
 
 @Composable
 fun AppNavigation() {
@@ -34,8 +33,35 @@ fun AppNavigation() {
             HomeScreen(navController)
         }
 
-        composable(Screen.ProductDetail.route) {
-            ProductDetailScreen(navController)
+        composable("restaurantDetail/{nombre}") { backStackEntry ->
+            val nombre = backStackEntry.arguments?.getString("nombre")
+            RestaurantDetailScreen(navController, nombre ?: "")
+        }
+
+        composable("cart") { CartScreen(navController) }
+
+        composable(
+            route = Screen.ProductDetail.route + "/{nombre}/{precio}/{imagen}",
+            arguments = listOf(
+                navArgument("nombre") { type = NavType.StringType },
+                navArgument("precio") { type = NavType.StringType },
+                navArgument("imagen") { type = NavType.IntType }
+            )
+        ) { backStackEntry ->
+            val nombre = backStackEntry.arguments?.getString("nombre") ?: ""
+            val precio = backStackEntry.arguments?.getString("precio") ?: ""
+            val imagen = backStackEntry.arguments?.getInt("imagen") ?: 0
+            ProductDetailScreen(navController, nombre, precio, imagen)
+        }
+
+        composable("profile") { ProfileScreen(navController) }
+
+        composable("orderHistory") {
+            OrderHistoryScreen(navController)
+        }
+
+        composable("favorites") {
+            FavoritesScreen(navController)
         }
     }
 }
