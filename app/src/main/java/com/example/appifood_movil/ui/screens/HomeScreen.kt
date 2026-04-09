@@ -22,31 +22,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.example.appifood_movil.R
 import com.example.appifood_movil.data.model.Restaurant
+import com.example.appifood_movil.data.model.HomeFilter
 import com.example.appifood_movil.data.model.FoodProduct
-import com.example.appifood_movil.data.model.sampleRestaurants
-import com.example.appifood_movil.data.model.searchRestaurants
 import com.example.appifood_movil.data.model.sampleProducts
 import com.example.appifood_movil.ui.theme.AppifoodMovilTheme
+import com.example.appifood_movil.ui.viewmodel.HomeViewModel
 import kotlinx.coroutines.launch
-
-data class HomeFilter(
-    val category: String = "Todas",
-    val maxPrice: Float = 100000f,
-    val minRating: Float = 1f
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(navController: NavController) {
-    var selectedCategory by remember { mutableStateOf("Hamburguesas") }
-    var searchText by remember { mutableStateOf("") }
-    var searchResults by remember { mutableStateOf(sampleRestaurants) }
-    var cartCount by remember { mutableStateOf(0) }
-    var filter by remember { mutableStateOf(HomeFilter()) }
+fun HomeScreen(
+    navController: NavController,
+    viewModel: HomeViewModel = viewModel() // <--- Integramos el ViewModel
+) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
@@ -55,9 +48,9 @@ fun HomeScreen(navController: NavController) {
         drawerContent = {
             ModalDrawerSheet {
                 FilterContent(
-                    filter = filter,
+                    filter = viewModel.filter,
                     onApply = {
-                        filter = it
+                        viewModel.onApplyFilter(it)
                         scope.launch { drawerState.close() }
                     },
                     onClose = { scope.launch { drawerState.close() } }
@@ -69,19 +62,16 @@ fun HomeScreen(navController: NavController) {
             LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
                 item {
                     HeaderSection(
-                        searchText = searchText,
-                        onSearchChange = {
-                            searchText = it
-                            searchResults = searchRestaurants(it)
-                        },
-                        selectedCategory = selectedCategory,
-                        onCategorySelected = { selectedCategory = it },
+                        searchText = viewModel.searchText,
+                        onSearchChange = { viewModel.onSearchChange(it) },
+                        selectedCategory = viewModel.selectedCategory,
+                        onCategorySelected = { viewModel.onCategorySelected(it) },
                         onMenuClick = { scope.launch { drawerState.open() } }
                     )
                 }
 
-                if (searchText.length > 2) {
-                    items(searchResults) { restaurant ->
+                if (viewModel.searchText.length > 2) {
+                    items(viewModel.searchResults) { restaurant ->
                         RestaurantSearchResultCard(restaurant) {
                             navController.navigate("restaurantDetail/${restaurant.name}")
                         }
@@ -89,15 +79,15 @@ fun HomeScreen(navController: NavController) {
                 } else {
                     item {
                         CategoryProductsRow(
-                            category = selectedCategory,
-                            filter = filter,
+                            category = viewModel.selectedCategory,
+                            filter = viewModel.filter,
                             navController = navController,
-                            onAddToCart = { cartCount++ }
+                            onAddToCart = { viewModel.onAddToCart() }
                         )
                     }
                 }
             }
-            BottomNavigationBar(cartCount = cartCount, navController = navController)
+            BottomNavigationBar(cartCount = viewModel.cartCount, navController = navController)
         }
     }
 }
@@ -273,7 +263,8 @@ fun BottomNavigationBar(cartCount: Int, navController: NavController) {
         }
         Box(modifier = Modifier.align(Alignment.BottomCenter).offset(y = (-42).dp).size(80.dp).border(4.dp, Color.White, CircleShape).background(Color(0xFFFF4B3A), CircleShape).clickable { navController.navigate("cart") }, contentAlignment = Alignment.Center) {
             BadgedBox(badge = { if (cartCount > 0) Badge(containerColor = Color.White, contentColor = Color(0xFFFF4B3A)) { Text("$cartCount") } }) {
-                Icon(Icons.Default.ShoppingCart, null, tint = Color.White, modifier = Modifier.size(30.dp))
+                Icon(Icons.Default.ShoppingCart, null, tint = Color.White, modifier = Modifier.size(30.dp)
+                )
             }
         }
     }
