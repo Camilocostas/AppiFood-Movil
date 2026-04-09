@@ -1,6 +1,6 @@
 # 📑 Guía de Implementación Actual - AppiFood Móvil
 
-Este documento detalla los cambios técnicos realizados para profesionalizar la estructura del proyecto y el flujo de trabajo del equipo.
+Este documento detalla la arquitectura profesional del proyecto, las últimas integraciones realizadas y el flujo de trabajo obligatorio para el equipo.
 
 ---
 
@@ -8,51 +8,47 @@ Este documento detalla los cambios técnicos realizados para profesionalizar la 
 Para mantener el código ordenado, usaremos el siguiente flujo:
 
 1. **Ramas Principales:**
-   - `main`: Solo código estable y listo para producción.
-   - `develop`: Integración de todas las funcionalidades. Es la rama por defecto.
+   - `main`: Código estable y listo para producción.
+   - `develop`: Rama base de desarrollo e integración. **Es la rama por defecto.**
 
-2. **Crear una Funcionalidad:**
+2. **Desarrollo de Funcionalidades:**
    ```bash
    git checkout develop
    git pull origin develop
    git checkout -b feature/nombre-de-tu-tarea
    ```
 
-3. **Subir Cambios:**
+3. **Integración:**
    - Sube tu rama: `git push origin feature/nombre-de-tu-tarea`.
-   - Abre un **Pull Request (PR)** en GitHub hacia `develop`.
-   - Al menos un compañero debe revisar y aprobar el PR.
+   - Abre un **Pull Request (PR)** hacia `develop`.
+   - Al menos un compañero debe revisar y aprobar el PR para poder hacer el merge.
 
 ---
 
-## 🚀 2. Implementaciones Técnicas Realizadas
+## 🚀 2. Reporte de Integraciones Técnicas (Abril 2024)
 
-### A. Arquitectura por Capas (Clean Architecture Lite)
-Se separó la lógica de negocio de la interfaz:
-- `data/`: Repositorios, modelos y API.
-- `ui/components/`: Elementos reutilizables (ej: `RestaurantCard.kt`).
-- `ui/screens/`: Pantallas principales.
+Se ha realizado una reestructuración profunda para convertir el prototipo en una aplicación de nivel profesional:
 
-### B. Navegación Type-Safe (Seguridad de Tipos)
-- **Archivo:** `navigation/Screen.kt`
-- **Uso:** Navegar usando `Screen.Home.route`. Evita errores de escritura manual de texto.
-
-### C. Capa de Red (Networking con Retrofit)
-- **Networking:** Configurado en `data/api/RetrofitClient.kt`.
-- **URL Base:** `http://10.0.2.2:8000/api/` (Localhost desde el emulador).
-- **Modelos:** Definidos en `data/model/Restaurant.kt`.
-
-### D. Visualización (Previews de Compose)
-- Se añadieron `@Preview` en pantallas principales.
-- **Uso:** Pestaña **Design** de Android Studio para ver la UI sin ejecutar la app.
-
-### E. Compatibilidad SDK 36 (Última Versión)
-- Se actualizó `compileSdk` y `targetSdk` a la **versión 36**.
-- **Razón:** Necesario para soportar las últimas librerías de AndroidX y resolver errores de metadatos AAR.
+1. **Arquitectura MVVM:** Se ha implementado el patrón Modelo-Vista-ViewModel para separar la lógica de la interfaz.
+2. **Navegación Type-Safe:** Uso de `Sealed Classes` en `navigation/Screen.kt` para rutas seguras.
+3. **Networking (Retrofit):** Configuración de cliente API para conectar con el backend de Laravel (`10.0.2.2:8000`).
+4. **Actualización SDK 36:** Migración a la última versión de Android para soportar librerías modernas de AndroidX.
+5. **Integración de Avances:** Se han fusionado las vistas anteriores (Carrito, Perfil, Filtros) dentro de la nueva arquitectura profesional.
 
 ---
 
-## 🛠️ 3. Requisitos para el Equipo
-1. **Instalar SDK 36:** Ir a *Settings > Languages & Frameworks > Android SDK* y descargar la API 36.
-2. **Sincronizar Gradle:** Al clonar, hacer clic en el icono del elefante (Sync).
-3. **Backend:** Tener el backend de Laravel corriendo en el puerto 8000.
+## 💡 3. Reglas de Oro para el Desarrollo
+
+Para mantener la calidad y el orden del proyecto, a partir de ahora:
+
+- **Lógica:** TODO el manejo de estados, llamadas a API y lógica de negocio va en el **ViewModel** (`ui/viewmodel/`).
+- **Datos:** Las clases de datos (POJOs), modelos y lógica de red van en **`data/model/`** o **`data/api/`**.
+- **Interfaz (UI):** Los archivos en **`ui/screens/`** deben ser "tontos"; solo se encargan de pintar la UI basándose en lo que el ViewModel les provea.
+- **Componentes:** Elementos pequeños y repetitivos (botones, cards) deben ir en **`ui/components/`**.
+
+---
+
+## 🛠️ 4. Requisitos para el Equipo
+1. **Sincronizar Gradle:** Al clonar o actualizar, haz clic en el icono del elefante (Sync).
+2. **Instalar SDK 36:** Descarga la API 36 desde el SDK Manager de Android Studio.
+3. **Backend:** Asegúrate de tener Laravel corriendo en el puerto 8000 para las pruebas de red.

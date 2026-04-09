@@ -1,11 +1,13 @@
 <resources>
 
+    <!-- Splash -->
     <style name="Theme.AppifoodMovil.Splash" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@android:color/white</item>
-        <item name="windowSplashScreenAnimatedIcon">@drawable/logo_appifood_2</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/logo</item>
         <item name="postSplashScreenTheme">@style/Theme.AppifoodMovil</item>
     </style>
 
+    <!-- Tema normal -->
     <style name="Theme.AppifoodMovil" parent="android:Theme.Material.Light.NoActionBar"/>
 
 </resources>

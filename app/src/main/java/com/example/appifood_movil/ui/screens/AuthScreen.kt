@@ -1,117 +1,74 @@
 package com.example.appifood_movil.ui.screens
 
-import androidx.compose.runtime.*
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.*
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.*
 import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.*
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.*
-import com.example.appifood_movil.R
-import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.fadeIn
+import androidx.compose.ui.unit.*
 import androidx.compose.ui.tooling.preview.Preview
+import com.example.appifood_movil.R
 import com.example.appifood_movil.ui.theme.AppifoodMovilTheme
 
+private val AppiFoodRed = Color(0xFFFF4B3A)
 
 @Composable
 fun AuthScreen(onLoginNavigation: () -> Unit) {
-
     var isLogin by remember { mutableStateOf(true) }
     var showForm by remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
-        showForm = true
-    }
+    LaunchedEffect(Unit) { showForm = true }
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
-
-        // 🔥 Imagen superior
+    Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.burger_background_2),
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(350.dp)
+            modifier = Modifier.fillMaxWidth().height(350.dp)
         )
 
-        // 🔥 Curva blanca inferior
         AnimatedVisibility(
             visible = showForm,
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = tween(600)
-            ) + fadeIn()
+            enter = slideInVertically(initialOffsetY = { it }, animationSpec = tween(600)) + fadeIn()
         ) {
-
             Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(top = 280.dp)
-                    .background(
-                        Color.White,
-                        shape = RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp)
-                    )
+                    .background(Color.White, RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))
+                    .verticalScroll(rememberScrollState())
             ) {
-
                 Spacer(modifier = Modifier.height(60.dp))
 
-                // 🔥 Toggle Login/Register
                 Row(
                     modifier = Modifier
                         .align(Alignment.CenterHorizontally)
                         .background(Color(0xFFE0E0E0), RoundedCornerShape(50))
                 ) {
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(if (isLogin) Color(0xFFFF4B3A) else Color.Transparent)
-                            .clickable { isLogin = true }
-                            .padding(horizontal = 32.dp, vertical = 10.dp)
-                    ) {
-                        Text(
-                            "Log in",
-                            color = if (isLogin) Color.White else Color.Gray
-                        )
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50))
-                            .background(if (!isLogin) Color(0xFFFF4B3A) else Color.Transparent)
-                            .clickable { isLogin = false }
-                            .padding(horizontal = 32.dp, vertical = 10.dp)
-                    ) {
-                        Text(
-                            "Register",
-                            color = if (!isLogin) Color.White else Color.Gray
-                        )
-                    }
+                    AuthTabItem("Log in", isLogin) { isLogin = true }
+                    AuthTabItem("Register", !isLogin) { isLogin = false }
                 }
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Dentro de AuthScreen, busca el bloque del if(isLogin)
                 if (isLogin) {
-                    LoginForm(onLoginClick = onLoginNavigation) // Pasamos la función aquí
+                    LoginForm(onLoginClick = onLoginNavigation)
                 } else {
                     RegisterForm()
                 }
             }
         }
 
-        // 🔥 Logo circular
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -132,127 +89,80 @@ fun AuthScreen(onLoginNavigation: () -> Unit) {
 
 @Composable
 fun LoginForm(onLoginClick: () -> Unit) {
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp)
-    ) {
-
-        Text(
-            text = "Welcome to AppiFood",
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            label = { Text("Username") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)) {
+        WelcomeHeader()
+        AuthTextField(label = "Username")
         Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            label = { Text("Password") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
+        AuthTextField(label = "Password", isPassword = true)
         Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = { onLoginClick() }, // <--- CAMBIO AQUÍ: Ahora ejecuta la navegación
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(70.dp),
-            shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFFF4B3A)
-            )
-        ) {
-            Text("Log in")
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        Text(
-            "Forgot Password?",
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
+        AuthButton("Log in") { onLoginClick() }
+        Text("Forgot Password?", modifier = Modifier.padding(top = 12.dp).align(Alignment.CenterHorizontally))
     }
 }
 
 @Composable
 fun RegisterForm() {
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-
-        Text(
-            text = "Welcome to AppiFood",
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            label = { Text("Username") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)) {
+        WelcomeHeader()
+        AuthTextField(label = "Username")
         Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            label = { Text("Mobile number") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
+        AuthTextField(label = "Mobile number")
         Spacer(modifier = Modifier.height(12.dp))
-
-        OutlinedTextField(
-            value = "",
-            onValueChange = {},
-            label = { Text("Password") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
+        AuthTextField(label = "Password", isPassword = true)
         Spacer(modifier = Modifier.height(24.dp))
+        AuthButton("Register") { }
+        Text("Already have account? Sign in", modifier = Modifier.padding(top = 12.dp).align(Alignment.CenterHorizontally))
+    }
+}
 
-        Button(
-            onClick = {},
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(70.dp),
-            shape = RoundedCornerShape(50),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color(0xFFFF4B3A)
-            )
-        ) {
-            Text("Register")
-        }
+@Composable
+fun WelcomeHeader() {
+    Text(
+        text = "Welcome to AppiFood",
+        style = MaterialTheme.typography.headlineSmall,
+        textAlign = TextAlign.Center,
+        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+    )
+}
 
-        Spacer(modifier = Modifier.height(12.dp))
+@Composable
+fun AuthTabItem(text: String, isActive: Boolean, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(50))
+            .background(if (isActive) AppiFoodRed else Color.Transparent)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() }
+            .padding(horizontal = 32.dp, vertical = 10.dp)
+    ) {
+        Text(text, color = if (isActive) Color.White else Color.Gray)
+    }
+}
 
-        Text(
-            "Already have account? Sign in",
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
+@Composable
+fun AuthTextField(label: String, isPassword: Boolean = false) {
+    OutlinedTextField(
+        value = "",
+        onValueChange = {},
+        label = { Text(label) },
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp)
+    )
+}
+
+@Composable
+fun AuthButton(text: String, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth().height(60.dp),
+        shape = RoundedCornerShape(50),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = AppiFoodRed,
+            contentColor = Color.White)
+    ) {
+        Text(text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
 }
 
