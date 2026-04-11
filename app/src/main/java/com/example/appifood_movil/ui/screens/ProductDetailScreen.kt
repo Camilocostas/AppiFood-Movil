@@ -23,26 +23,22 @@ import androidx.navigation.NavController
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProductDetailScreen(navController: NavController, nombre: String, precio: String, imagenRes: Int) {
-    var cantidad by remember { mutableStateOf(1) }
-    var extraQueso by remember { mutableStateOf(false) }
-
-    FilterChip(
-        selected = extraQueso,
-        onClick = { extraQueso = !extraQueso },
-        label = { Text("Extra Queso +$2.000") },
-        leadingIcon = if (extraQueso) {
-            { Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp)) }
-        } else null
-    )
+fun ProductDetailScreen(
+    navController: NavController,
+    name: String,           // nombre -> name
+    price: String,          // precio -> price
+    imageRes: Int           // imagenRes -> imageRes (se mantiene igual)
+) {
+    var quantity by remember { mutableStateOf(1) } // cantidad -> quantity
+    var extraCheese by remember { mutableStateOf(false) } // extraQueso -> extraCheese
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Detalle del Producto", fontWeight = FontWeight.Bold) },
+                title = { Text("Product Detail", fontWeight = FontWeight.Bold) },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null)
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -56,8 +52,8 @@ fun ProductDetailScreen(navController: NavController, nombre: String, precio: St
                 .verticalScroll(rememberScrollState())
         ) {
             Image(
-                painter = painterResource(id = imagenRes),
-                contentDescription = nombre,
+                painter = painterResource(id = imageRes),
+                contentDescription = name,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(300.dp)
@@ -71,45 +67,56 @@ fun ProductDetailScreen(navController: NavController, nombre: String, precio: St
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = nombre, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                    Text(text = precio, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFFF4B3A))
+                    Text(text = name, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                    Text(text = price, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFFF4B3A))
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                Text(text = "Descripción", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+                Text(text = "Description", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
                 Text(
-                    text = "Nuestra deliciosa $nombre preparada con ingredientes frescos de la mejor calidad. Una explosión de sabor en cada bocado.",
+                    text = "Our delicious $name is prepared with the highest quality fresh ingredients. A burst of flavor in every bite.",
                     color = Color.Gray,
                     fontSize = 14.sp
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                Text(text = "Ingredientes", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+                Text(text = "Ingredients", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
                 Text(
-                    text = "• Carne premium\n• Queso fundido\n• Vegetales frescos\n• Salsa especial de la casa",
+                    text = "• Premium meat\n• Melted cheese\n• Fresh vegetables\n• Special house sauce",
                     color = Color.Gray,
                     lineHeight = 22.sp
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                Text(text = "Adiciones", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+                Text(text = "Add-ons", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
+
+                // Movimos el FilterChip dentro de la columna para que sea visible
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    AsistChip(label = "Tocineta +$3.000")
-                    AsistChip(label = "Huevo +$2.000")
+                    FilterChip(
+                        selected = extraCheese,
+                        onClick = { extraCheese = !extraCheese },
+                        label = { Text("Extra Cheese +$2.000") },
+                        leadingIcon = if (extraCheese) {
+                            { Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp)) }
+                        } else null
+                    )
+
+                    // Usamos la función corregida CustomChip
+                    CustomChip(label = "Bacon +$3.000")
                 }
 
                 Spacer(modifier = Modifier.height(30.dp))
 
                 Button(
-                    onClick = { },
+                    onClick = { /* TODO: Add to cart logic */ },
                     modifier = Modifier.fillMaxWidth().height(55.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF4B3A)),
                     shape = RoundedCornerShape(15.dp)
                 ) {
-                    Text("Añadir al carrito", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("Add to Cart", fontSize = 16.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -117,12 +124,16 @@ fun ProductDetailScreen(navController: NavController, nombre: String, precio: St
 }
 
 @Composable
-fun AsistChip(label: String) {
+fun CustomChip(label: String) {
     Surface(
         color = Color(0xFFF5F5F5),
         shape = RoundedCornerShape(10.dp),
         modifier = Modifier.padding(vertical = 5.dp)
     ) {
-        Text(text = label, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp), fontSize = 12.sp)
+        Text(
+            text = label,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+            fontSize = 12.sp
+        )
     }
 }

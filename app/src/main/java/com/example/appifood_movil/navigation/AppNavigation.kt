@@ -12,48 +12,54 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Splash.route
+        startDestination = "splash" // Usamos strings directos para evitar el error del import de Screen
     ) {
-        composable(Screen.Splash.route) {
+        // Splash & Login
+        composable("splash") {
             SplashLoginScreen(
-                onLoginClick = { navController.navigate(Screen.Auth.route) },
-                onSignUpClick = { navController.navigate(Screen.Auth.route) }
+                onLoginClick = { navController.navigate("auth") },
+                onSignUpClick = { navController.navigate("auth") }
             )
         }
 
-        composable(Screen.Auth.route) {
+        composable("auth") {
             AuthScreen(onLoginNavigation = {
-                navController.navigate(Screen.Home.route) {
-                    popUpTo(Screen.Auth.route) { inclusive = true }
+                navController.navigate("home") {
+                    popUpTo("auth") { inclusive = true }
                 }
             })
         }
 
-        composable(Screen.Home.route) {
+        // Home
+        composable("home") {
             HomeScreen(navController)
         }
 
-        composable("restaurantDetail/{nombre}") { backStackEntry ->
-            val nombre = backStackEntry.arguments?.getString("nombre")
-            RestaurantDetailScreen(navController, nombre ?: "")
+        // Restaurant Detail
+        composable("restaurantDetail/{name}") { backStackEntry ->
+            val name = backStackEntry.arguments?.getString("name") ?: ""
+            RestaurantDetailScreen(navController, name)
         }
 
+        // Cart
         composable("cart") { CartScreen(navController) }
 
+        // Product Detail
         composable(
-            route = Screen.ProductDetail.route + "/{nombre}/{precio}/{imagen}",
+            route = "productDetail/{name}/{price}/{image}",
             arguments = listOf(
-                navArgument("nombre") { type = NavType.StringType },
-                navArgument("precio") { type = NavType.StringType },
-                navArgument("imagen") { type = NavType.IntType }
+                navArgument("name") { type = NavType.StringType },
+                navArgument("price") { type = NavType.StringType },
+                navArgument("image") { type = NavType.IntType }
             )
         ) { backStackEntry ->
-            val nombre = backStackEntry.arguments?.getString("nombre") ?: ""
-            val precio = backStackEntry.arguments?.getString("precio") ?: ""
-            val imagen = backStackEntry.arguments?.getInt("imagen") ?: 0
-            ProductDetailScreen(navController, nombre, precio, imagen)
+            val name = backStackEntry.arguments?.getString("name") ?: ""
+            val price = backStackEntry.arguments?.getString("price") ?: ""
+            val image = backStackEntry.arguments?.getInt("image") ?: 0
+            ProductDetailScreen(navController, name, price, image)
         }
 
+        // Profile & Others
         composable("profile") { ProfileScreen(navController) }
 
         composable("orderHistory") {

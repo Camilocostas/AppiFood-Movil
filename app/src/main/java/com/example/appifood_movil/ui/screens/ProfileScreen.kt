@@ -39,11 +39,7 @@ fun ProfileScreen(navController: NavController) {
                         .fillMaxWidth()
                         .height(300.dp)
                         .clip(RoundedCornerShape(bottomStart = 50.dp, bottomEnd = 50.dp))
-                        .background(
-                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                colors = listOf(Color(0xFFFF4B3A), Color(0xFFFF4B3A))
-                            )
-                        )
+                        .background(Color(0xFFFF4B3A))
                 ) {
                     Column(
                         modifier = Modifier
@@ -62,7 +58,7 @@ fun ProfileScreen(navController: NavController) {
                             ) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
 
                             IconButton(
-                                onClick = { },
+                                onClick = { /* TODO: Edit Profile */ },
                                 modifier = Modifier.size(40.dp).background(Color.White.copy(alpha = 0.2f), CircleShape)
                             ) { Icon(Icons.Default.Edit, null, tint = Color.White) }
                         }
@@ -70,7 +66,7 @@ fun ProfileScreen(navController: NavController) {
                         Box(contentAlignment = Alignment.BottomEnd) {
                             Image(
                                 painter = painterResource(id = R.drawable.profile_placeholder),
-                                contentDescription = "Foto Mauricio",
+                                contentDescription = "User Photo",
                                 modifier = Modifier
                                     .size(130.dp)
                                     .clip(CircleShape)
@@ -95,7 +91,7 @@ fun ProfileScreen(navController: NavController) {
                         }
 
                         Text("Mauricio Bustamante", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, modifier = Modifier.padding(top = 10.dp))
-                        Text("mauricio@ejemplo.com", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                        Text("mauricio@example.com", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
                     }
                 }
             }
@@ -103,22 +99,22 @@ fun ProfileScreen(navController: NavController) {
                 Spacer(modifier = Modifier.height(30.dp))
 
                 ProfileSection(
-                    titulo = "Detalles Personales",
-                    icono = Icons.Default.Person,
+                    title = "Personal Details", // titulo -> title
+                    icon = Icons.Default.Person, // icono -> icon
                     modifier = Modifier.padding(horizontal = 20.dp)
                 ) {
-                    InfoRowItem("Dirección", "Calle 123 #45-67, Pasto", Icons.Default.LocationOn)
-                    InfoRowItem("Teléfono", "+57 300 123 4567", Icons.Default.Phone)
+                    InfoRowItem("Address", "Calle 123 #45-67, Popayán", Icons.Default.LocationOn)
+                    InfoRowItem("Phone", "+57 300 123 4567", Icons.Default.Phone)
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
                 ProfileSection(
-                    titulo = "Métodos de Pago",
-                    icono = Icons.Default.CreditCard,
+                    title = "Payment Methods",
+                    icon = Icons.Default.CreditCard,
                     modifier = Modifier.padding(horizontal = 20.dp)
                 ) {
-                    InfoRowItem("Principal", "Mastercard **** 1234", Icons.Default.Payment, true)
+                    InfoRowItem("Primary", "Mastercard **** 1234", Icons.Default.Payment, true)
                 }
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -127,7 +123,7 @@ fun ProfileScreen(navController: NavController) {
             item {
                 Spacer(modifier = Modifier.height(40.dp))
                 OutlinedButton(
-                    onClick = { },
+                    onClick = { /* TODO: Logout */ },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp).height(50.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
                     border = BorderStroke(1.dp, Color.Red),
@@ -136,7 +132,7 @@ fun ProfileScreen(navController: NavController) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Logout, null, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Cerrar Sesión", fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        Text("Logout", fontWeight = FontWeight.Bold, fontSize = 16.sp)
                     }
                 }
                 Spacer(modifier = Modifier.height(20.dp))
@@ -144,10 +140,11 @@ fun ProfileScreen(navController: NavController) {
         }
     }
 }
+
 @Composable
 fun ProfileSection(
-    titulo: String,
-    icono: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -159,9 +156,9 @@ fun ProfileSection(
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icono, null, tint = Color(0xFFFF4B3A), modifier = Modifier.size(22.dp))
+                Icon(icon, null, tint = Color(0xFFFF4B3A), modifier = Modifier.size(22.dp))
                 Spacer(modifier = Modifier.width(10.dp))
-                Text(titulo, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
             }
             HorizontalDivider(modifier = Modifier.padding(vertical = 15.dp), color = Color(0xFFF0F0F0))
             Column(content = content)

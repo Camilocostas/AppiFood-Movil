@@ -1,6 +1,5 @@
 package com.example.appifood_movil.ui.screens
 
-import androidx.compose.animation.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -21,274 +20,238 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
-import com.example.appifood_movil.R
-import com.example.appifood_movil.data.model.Restaurant
-import com.example.appifood_movil.data.model.HomeFilter
-import com.example.appifood_movil.data.model.FoodProduct
-import com.example.appifood_movil.data.model.sampleProducts
-import com.example.appifood_movil.ui.theme.AppifoodMovilTheme
 import com.example.appifood_movil.ui.viewmodel.HomeViewModel
-import kotlinx.coroutines.launch
+import com.example.appifood_movil.ui.components.AppiFoodHeader
+import com.example.appifood_movil.ui.components.AppiFoodFooter
+import com.example.appifood_movil.ui.components.CategoryChip
+import com.example.appifood_movil.data.allProducts
+import com.example.appifood_movil.data.restaurants
+import com.example.appifood_movil.ui.screens.RestaurantDetailScreen
+import com.example.appifood_movil.ui.components.PromoBanner
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: HomeViewModel = viewModel() // <--- Integramos el ViewModel
+    viewModel: HomeViewModel = viewModel()
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                FilterContent(
-                    filter = viewModel.filter,
-                    onApply = {
-                        viewModel.onApplyFilter(it)
-                        scope.launch { drawerState.close() }
-                    },
-                    onClose = { scope.launch { drawerState.close() } }
-                )
-            }
-        }
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
-                item {
-                    HeaderSection(
-                        searchText = viewModel.searchText,
-                        onSearchChange = { viewModel.onSearchChange(it) },
-                        selectedCategory = viewModel.selectedCategory,
-                        onCategorySelected = { viewModel.onCategorySelected(it) },
-                        onMenuClick = { scope.launch { drawerState.open() } }
-                    )
-                }
-
-                if (viewModel.searchText.length > 2) {
-                    items(viewModel.searchResults) { restaurant ->
-                        RestaurantSearchResultCard(restaurant) {
-                            navController.navigate("restaurantDetail/${restaurant.name}")
-                        }
-                    }
-                } else {
-                    item {
-                        CategoryProductsRow(
-                            category = viewModel.selectedCategory,
-                            filter = viewModel.filter,
-                            navController = navController,
-                            onAddToCart = { viewModel.onAddToCart() }
-                        )
-                    }
-                }
-            }
-            BottomNavigationBar(cartCount = viewModel.cartCount, navController = navController)
-        }
-    }
-}
-
-@Composable
-fun CategoryProductsRow(
-    category: String,
-    filter: HomeFilter,
-    navController: NavController,
-    onAddToCart: () -> Unit
-) {
-    val filtered = sampleProducts.filter { product ->
-        val matchesCategory = filter.category == "Todas" || product.category == category
-        val priceValue = product.price.replace("$", "").replace(".", "").replace(",", "").replace(" ", "").filter { it.isDigit() }.toFloatOrNull() ?: 0f
-        val matchesPrice = priceValue <= filter.maxPrice
-        matchesCategory && matchesPrice
-    }
-
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(15.dp)
-    ) {
-        items(filtered, key = { it.id }) { product ->
-            FoodItemCard(
-                name = product.name,
-                imageRes = product.imageRes,
-                price = product.price,
-                onNavigate = {
-                    navController.navigate("productDetail/${product.name}/${product.price}/${product.imageRes}")
-                },
-                onAddToCart = onAddToCart
+    Scaffold(
+        modifier = Modifier.fillMaxSize(), // Aseguramos que el Scaffold ocupe todo
+        bottomBar = {
+            AppiFoodFooter(
+                navController = navController,
+                currentRoute = "home",
+                cartCount = viewModel.cartCount
             )
         }
-    }
-}
+    ) { paddingValues ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.White)
+                .padding(bottom = paddingValues.calculateBottomPadding())
+        ) {
+            // 1. EL HEADER SE QUEDA AQUÍ (FUERA DEL SCROLL)
+            AppiFoodHeader(
+                searchText = viewModel.searchText,
+                onSearchChange = { viewModel.onSearchChange(it) }
+            )
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White)
+                    .padding(bottom = paddingValues.calculateBottomPadding())
+            ) {
 
-@Composable
-fun FilterContent(
-    filter: HomeFilter,
-    onApply: (HomeFilter) -> Unit,
-    onClose: () -> Unit
-) {
-    var price by remember { mutableStateOf(filter.maxPrice) }
-    var selectedCategory by remember { mutableStateOf(filter.category) }
-    var rating by remember { mutableStateOf(filter.minRating) }
 
-    val categories = listOf("Todas", "Hamburguesas", "Sushi", "Bebidas", "Sopas")
-
-    Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Filtros", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text("Cerrar", color = Color(0xFFFF4B3A), modifier = Modifier.clickable { onClose() })
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-        Text("Precio máximo", fontWeight = FontWeight.Bold)
-        Slider(
-            value = price,
-            onValueChange = { price = it },
-            valueRange = 10000f..100000f,
-            colors = SliderDefaults.colors(thumbColor = Color(0xFFFF4B3A), activeTrackColor = Color(0xFFFF4B3A))
-        )
-        Text("$${price.toInt()}", color = Color.Gray)
-
-        Spacer(modifier = Modifier.height(20.dp))
-        Text("Categoría", fontWeight = FontWeight.Bold)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-            categories.forEach { cat ->
-                val isSelected = cat == selectedCategory
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(if (isSelected) Color(0xFFFF4B3A) else Color(0xFFF1F1F1))
-                        .clickable { selectedCategory = cat }
-                        .padding(horizontal = 15.dp, vertical = 8.dp)
-                ) {
-                    Text(cat, color = if (isSelected) Color.White else Color.Black, fontSize = 13.sp)
+                item {
+                    PromoBanner(onClick = {
+                        navController.navigate("home")
+                    })
                 }
+
+                // 2. Sección Categorías
+                item {
+                    SectionHeader(title = "Categorías")
+                    val categories = listOf("Todos", "Rapida", "", "Oriental", "Mexicana", "China", "Vegetariana")
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        items(categories) { cat ->
+                            val isSelected =
+                                (cat == "Todos" && viewModel.selectedCategory == "Todas") || viewModel.selectedCategory == cat
+                            CategoryChip(text = cat, isSelected = isSelected) {
+                                viewModel.onCategorySelected(cat)
+                            }
+                        }
+                    }
+                }
+
+                // 3. SECCIÓN: COMIDAS EN PROMOCIÓN HOY (Ahora de primero)
+                item { SectionHeader(title = "Promociones de Hoy", showViewAll = true) }
+                item {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(15.dp)
+                    ) {
+                        // Tomamos los primeros productos para mostrar como promoción
+                        items(allProducts) { product ->
+                            PromoFoodCard(
+                                name = product.name,
+                                price = product.price,
+                                oldPrice = "$35.000", // Precio ficticio para el ejemplo
+                                imageRes = product.imageRes,
+                                onNavigate = {
+                                    navController.navigate("productDetail/${product.name}/${product.price}/${product.imageRes}")
+                                }
+                            )
+                        }
+                    }
+                }
+
+// --- SECCIÓN: RESTAURANTES POPULARES (Usando tu lista restaurants) ---
+                item { SectionHeader(title = "Restaurantes Populares", showViewAll = true) }
+                item {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(restaurants) { restaurant ->
+                            MinimalRestaurantCard(
+                                name = restaurant.name,
+                                rating = restaurant.rating,
+                                time = "25-40 min", // Puedes agregar este campo a tu modelo Restaurant luego
+                                imageRes = restaurant.imageRes,
+                                onClick = {
+                                    navController.navigate("restaurantDetail/${restaurant.name}")
+                                }
+                            )
+                        }
+                    }
+                }
+
+                item { Spacer(modifier = Modifier.height(30.dp)) }
             }
         }
-
-        Spacer(modifier = Modifier.height(30.dp))
-        Button(
-            onClick = { onApply(HomeFilter(selectedCategory, price, rating)) },
-            modifier = Modifier.fillMaxWidth().height(55.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF4B3A))
-        ) {
-            Text("APLICAR FILTROS", color = Color.White)
-        }
     }
 }
+// --- Componentes Modernos y Minimalistas ---
 
 @Composable
-fun FoodItemCard(name: String, imageRes: Int, price: String, onNavigate: () -> Unit, onAddToCart: () -> Unit) {
-    Card(
-        modifier = Modifier.width(180.dp).padding(top = 10.dp, bottom = 10.dp).clickable { onNavigate() },
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(7.dp)
+fun PromoFoodCard(name: String, price: String, oldPrice: String, imageRes: Int, onNavigate: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .width(150.dp)
+            .clickable { onNavigate() }
     ) {
-        Column {
+        Box {
             Image(
                 painter = painterResource(id = imageRes),
                 contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+                modifier = Modifier
+                    .size(150.dp)
+                    .clip(RoundedCornerShape(24.dp)), // Bordes más redondeados
+                contentScale = ContentScale.Crop
             )
-            Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                Text(name, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(price, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF4B3A))
-                    IconButton(onClick = onAddToCart, modifier = Modifier.size(35.dp).background(Color(0xFFFF4B3A), CircleShape)) {
-                        Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(20.dp))
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun HeaderSection(searchText: String, onSearchChange: (String) -> Unit, selectedCategory: String, onCategorySelected: (String) -> Unit, onMenuClick: () -> Unit) {
-    Box(modifier = Modifier.fillMaxWidth().height(410.dp).clip(RoundedCornerShape(bottomStart = 50.dp, bottomEnd = 50.dp))) {
-        Image(painter = painterResource(id = R.drawable.burger_background_2), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        Column(modifier = Modifier.fillMaxSize().padding(top = 60.dp, start = 20.dp, end = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                IconButton(onClick = onMenuClick) { Icon(Icons.Default.Menu, null, tint = Color.White) }
-            }
-            Spacer(modifier = Modifier.height(40.dp))
-            Text("¿Qué deseas comer\nhoy?", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, lineHeight = 35.sp)
-            Spacer(modifier = Modifier.height(20.dp))
-            OutlinedTextField(
-                value = searchText,
-                onValueChange = onSearchChange,
-                placeholder = { Text("Buscar...", color = Color.Gray) },
-                leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Gray) },
-                shape = RoundedCornerShape(30.dp),
-                modifier = Modifier.fillMaxWidth().height(55.dp),
-                colors = TextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent)
-            )
-            Spacer(modifier = Modifier.height(30.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                listOf("Hamburguesas", "Sushi", "Bebidas", "Sopas").forEach { name ->
-                    CategoryText(text = name, active = selectedCategory == name) { onCategorySelected(name) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CategoryText(text: String, active: Boolean, onSelect: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onSelect() }) {
-        Text(text = text, color = if (active) Color.White else Color.White.copy(alpha = 0.6f), fontWeight = if (active) FontWeight.Bold else FontWeight.Normal, fontSize = 14.sp)
-        if (active) {
-            Box(modifier = Modifier.width(40.dp).height(4.dp).background(Color(0xFFFF4B3A), RoundedCornerShape(2.dp)))
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun BottomNavigationBar(cartCount: Int, navController: NavController) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-        Row(modifier = Modifier.fillMaxWidth().height(80.dp).background(Color(0xFFFF4B3A), RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)).padding(horizontal = 30.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { navController.navigate("home") }) { Icon(Icons.Default.Home, null, tint = Color.White) }
-            IconButton(onClick = { navController.navigate("profile") }) { Icon(Icons.Default.Person, null, tint = Color.White) }
-            Spacer(modifier = Modifier.width(40.dp))
-            IconButton(onClick = { navController.navigate("orderHistory") }) { Icon(Icons.Default.Message, null, tint = Color.White) }
-            IconButton(onClick = { navController.navigate("favorites") }) { Icon(Icons.Default.Favorite, null, tint = Color.White) }
-        }
-        Box(modifier = Modifier.align(Alignment.BottomCenter).offset(y = (-42).dp).size(80.dp).border(4.dp, Color.White, CircleShape).background(Color(0xFFFF4B3A), CircleShape).clickable { navController.navigate("cart") }, contentAlignment = Alignment.Center) {
-            BadgedBox(badge = { if (cartCount > 0) Badge(containerColor = Color.White, contentColor = Color(0xFFFF4B3A)) { Text("$cartCount") } }) {
-                Icon(Icons.Default.ShoppingCart, null, tint = Color.White, modifier = Modifier.size(30.dp)
+            // Badge de descuento minimalista
+            Surface(
+                color = Color(0xFFFF4B3A),
+                shape = RoundedCornerShape(topStart = 24.dp, bottomEnd = 12.dp),
+                modifier = Modifier.align(Alignment.TopStart)
+            ) {
+                Text(
+                    "OFERTA",
+                    color = Color.White,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                 )
             }
         }
-    }
-}
-
-@Composable
-fun RestaurantSearchResultCard(restaurant: Restaurant, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp).clickable { onClick() }, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(4.dp)) {
-        Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Image(painter = painterResource(id = restaurant.imageRes), contentDescription = null, modifier = Modifier.size(85.dp).clip(RoundedCornerShape(15.dp)), contentScale = ContentScale.Crop)
-            Spacer(modifier = Modifier.width(15.dp))
-            Column {
-                Text(restaurant.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text(restaurant.address, color = Color.Gray, fontSize = 13.sp)
-            }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(name, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(price, color = Color(0xFFFF4B3A), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                oldPrice,
+                color = Color.Gray,
+                fontSize = 11.sp,
+                style = androidx.compose.ui.text.TextStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough)
+            )
         }
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
 @Composable
-fun HomeScreenPreview() {
-    val navController = rememberNavController()
-    AppifoodMovilTheme {
-        HomeScreen(navController)
+fun MinimalRestaurantCard(
+    name: String,
+    rating: String,
+    time: String,
+    imageRes: Int,
+    onClick: () -> Unit
+) {
+    // Card estilo "Flat" (sin sombras, fondo gris suave)
+    Column(
+        modifier = Modifier
+            .width(130.dp)
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0xFFF8F8F8))
+            .clickable { onClick() } // <--- TE FALTABA ESTA LÍNEA
+            .padding(8.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Image(
+            painter = painterResource(id = imageRes),
+            contentDescription = null,
+            modifier = Modifier
+                .size(70.dp)
+                .clip(CircleShape),
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(name, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Default.Star, null, tint = Color(0xFFFFB800), modifier = Modifier.size(12.dp))
+            Text(" $rating", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            Text(" • $time", fontSize = 11.sp, color = Color.Gray)
+        }
+    }
+}
+@Composable
+fun SectionHeader(
+    title: String,
+    showViewAll: Boolean = false,
+    onViewAllClick: () -> Unit = {}
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF1A1D26) // Un negro más moderno y suave
+        )
+        if (showViewAll) {
+            Text(
+                text = "Ver todos",
+                color = Color(0xFFFF4B3A), // El rojo de AppiFood
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.clickable { onViewAllClick() }
+            )
+        }
     }
 }

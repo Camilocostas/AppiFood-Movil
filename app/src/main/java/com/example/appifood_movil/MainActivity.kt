@@ -1,45 +1,29 @@
 package com.example.appifood_movil
 
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.activity.enableEdgeToEdge // Asegúrate de tener este import
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.appifood_movil.navigation.AppNavigation
 import com.example.appifood_movil.ui.theme.AppifoodMovilTheme
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-
+        // 1. Manejar la Splash Screen antes que nada
         installSplashScreen()
 
         super.onCreate(savedInstanceState)
 
+        // 2. Habilitar el modo de pantalla completa (Edge-to-Edge)
+        enableEdgeToEdge()
+
         setContent {
+            // Usa el nombre exacto de tu tema (el que genera Android Studio por defecto)
             AppifoodMovilTheme {
+                // Punto de entrada de la navegación
                 AppNavigation()
             }
         }
-    }}
-
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    AppifoodMovilTheme {
-        Greeting("Android")
     }
 }

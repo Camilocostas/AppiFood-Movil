@@ -1,6 +1,6 @@
 package com.example.appifood_movil.ui.screens
 
-data class Producto(
+data class Product(
     val id: Int,
     val nombre: String,
     val precio: String,

@@ -16,9 +16,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.*
-import androidx.compose.ui.tooling.preview.Preview
 import com.example.appifood_movil.R
-import com.example.appifood_movil.ui.theme.AppifoodMovilTheme
 
 private val AppiFoodRed = Color(0xFFFF4B3A)
 
@@ -163,13 +161,5 @@ fun AuthButton(text: String, onClick: () -> Unit) {
             contentColor = Color.White)
     ) {
         Text(text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-    }
-}
-
-@Preview(showBackground = true, showSystemUi = true)
-@Composable
-fun AuthScreenPreview() {
-    AppifoodMovilTheme {
-        AuthScreen(onLoginNavigation = {})
     }
 }

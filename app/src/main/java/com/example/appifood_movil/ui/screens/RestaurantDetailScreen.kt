@@ -20,17 +20,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.appifood_movil.R
-import com.example.appifood_movil.data.restaurantes
+import com.example.appifood_movil.data.restaurants // restaurantes -> restaurants
 
 @Composable
-fun RestaurantDetailScreen(navController: NavController, nombre: String?) {
-    val restaurante = restaurantes.find { it.nombre == nombre }
-    var esFavorito by remember { mutableStateOf(false) }
+fun RestaurantDetailScreen(navController: NavController, name: String?) { // nombre -> name
+    // Buscamos el restaurante en la lista (ajustado a nombres en inglés)
+    val restaurant = restaurants.find { it.name == name }
+    var isFavorite by remember { mutableStateOf(false) } // esFavorito -> isFavorite
 
     Scaffold(
         bottomBar = {
             Button(
-                onClick = { },
+                onClick = { /* TODO: Order logic */ },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(20.dp)
@@ -49,9 +50,10 @@ fun RestaurantDetailScreen(navController: NavController, nombre: String?) {
                 .verticalScroll(rememberScrollState())
                 .background(Color.White)
         ) {
+            // Header Image Box
             Box(modifier = Modifier.fillMaxWidth().height(320.dp)) {
                 Image(
-                    painter = painterResource(id = restaurante?.imagenRes ?: R.drawable.burger_background_2),
+                    painter = painterResource(id = restaurant?.imageRes ?: R.drawable.burger_background_2),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
@@ -74,10 +76,11 @@ fun RestaurantDetailScreen(navController: NavController, nombre: String?) {
                         .padding(16.dp)
                         .background(Color.White.copy(alpha = 0.7f), CircleShape)
                 ) {
-                    Icon(Icons.Default.ArrowBack, contentDescription = "Atrás")
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                 }
             }
 
+            // Info Content Column
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -92,30 +95,31 @@ fun RestaurantDetailScreen(navController: NavController, nombre: String?) {
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = nombre ?: "Restaurante",
+                            text = name ?: "Restaurant",
                             fontSize = 28.sp,
                             fontWeight = FontWeight.ExtraBold
                         )
                         Text(
-                            text = restaurante?.direccion ?: "Dirección no disponible",
+                            text = restaurant?.address ?: "Dirección no disponible", // direccion -> address
                             color = Color.Gray,
                             fontSize = 14.sp
                         )
                     }
 
                     IconButton(
-                        onClick = { esFavorito = !esFavorito },
+                        onClick = { isFavorite = !isFavorite },
                         modifier = Modifier.background(Color(0xFFF5F5F5), CircleShape)
                     ) {
                         Icon(
-                            imageVector = if (esFavorito) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                             contentDescription = null,
-                            tint = if (esFavorito) Color.Red else Color.Gray,
+                            tint = if (isFavorite) Color.Red else Color.Gray,
                             modifier = Modifier.size(28.dp)
                         )
                     }
                 }
 
+                // Info Cards Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -126,7 +130,7 @@ fun RestaurantDetailScreen(navController: NavController, nombre: String?) {
                     InfoCard(
                         icon = Icons.Default.Schedule,
                         label = "Horario",
-                        value = restaurante?.horario ?: "9:00 - 21:00"
+                        value = restaurant?.schedule ?: "9:00 - 21:00" // horario -> schedule
                     )
                     InfoCard(
                         icon = Icons.Default.Star,
@@ -137,7 +141,7 @@ fun RestaurantDetailScreen(navController: NavController, nombre: String?) {
                     InfoCard(
                         icon = Icons.Default.DeliveryDining,
                         label = "Envío",
-                        value = if (restaurante?.tieneDomicilio == true) "Gratis" else "No",
+                        value = if (restaurant?.hasDelivery == true) "Gratis" else "No", // tieneDomicilio -> hasDelivery
                         iconColor = Color(0xFF4CAF50)
                     )
                 }
@@ -149,11 +153,12 @@ fun RestaurantDetailScreen(navController: NavController, nombre: String?) {
                     modifier = Modifier.padding(bottom = 16.dp)
                 )
 
-                restaurante?.platos?.forEach { plato ->
-                    PlatoItem(
-                        nombre = plato.nombre,
-                        precio = plato.precio,
-                        imagenRes = plato.imagenRes
+                // List of Dishes (Platos)
+                restaurant?.dishes?.forEach { dish -> // platos -> dishes
+                    DishItem( // PlatoItem -> DishItem
+                        name = dish.name,
+                        price = dish.price,
+                        imageRes = dish.imageRes
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
@@ -196,9 +201,7 @@ fun InfoCard(
                 text = value,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                lineHeight = 14.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 4.dp)
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center
             )
 
             Text(
@@ -211,7 +214,7 @@ fun InfoCard(
 }
 
 @Composable
-fun PlatoItem(nombre: String, precio: String, imagenRes: Int) {
+fun DishItem(name: String, price: String, imageRes: Int) { // PlatoItem -> DishItem
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -225,8 +228,8 @@ fun PlatoItem(nombre: String, precio: String, imagenRes: Int) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Image(
-                painter = painterResource(id = imagenRes),
-                contentDescription = nombre,
+                painter = painterResource(id = imageRes),
+                contentDescription = name,
                 modifier = Modifier
                     .size(75.dp)
                     .clip(RoundedCornerShape(12.dp)),
@@ -237,14 +240,14 @@ fun PlatoItem(nombre: String, precio: String, imagenRes: Int) {
 
             Column {
                 Text(
-                    text = nombre,
+                    text = name,
                     fontWeight = FontWeight.Bold,
                     fontSize = 17.sp,
                     color = Color.Black
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = precio,
+                    text = price,
                     color = Color(0xFFFF4B3A),
                     fontWeight = FontWeight.ExtraBold,
                     fontSize = 15.sp
