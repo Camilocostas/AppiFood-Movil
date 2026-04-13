@@ -26,58 +26,100 @@ fun AppiFoodHeader(
     searchText: String,
     onSearchChange: (String) -> Unit
 ) {
-    val appiFoodRed = Color(0xFFFF4B3A)
     val searchBarBackground = Color(0xFFF2F2F2).copy(alpha = 0.9f)
 
-    Column(
+    // Usamos Box para poder poner la imagen DEBAJO del contenido
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
-            .background(appiFoodRed)
-            // 1. Añadimos statusBarsPadding para que no choque con la hora
-            .statusBarsPadding()
-            // 2. Ajustamos el padding superior original de 25.dp a uno más pequeño
-            // porque statusBarsPadding ya hace gran parte del trabajo.
-            .padding(top = 25.dp, start = 20.dp, end = 20.dp, bottom = 25.dp)
     ) {
-        // Logo
+        // 1. LA IMAGEN DE FONDO
         Image(
-            painter = painterResource(id = R.drawable.logo_appifood),
-            contentDescription = "AppiFood",
-            modifier = Modifier.height(35.dp),
-            contentScale = ContentScale.Fit
+            painter = painterResource(id = R.drawable.hero_login), // Tu imagen de hamburguesas
+            contentDescription = null,
+            contentScale = ContentScale.Crop,
+            modifier = Modifier.matchParentSize() // Se ajusta al tamaño del Box
         )
 
-        Spacer(modifier = Modifier.height(10.dp))
+        // 2. EL GRADIENTE (Para que se funda con el blanco de abajo y se lea el texto)
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            Color.White.copy(alpha = 0.1f), // Arriba: Casi transparente
+                            Color.White // Abajo: Blanco sólido
+                        )
+                    )
+                )
+        )
 
-        // Ubicación
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.LocationOn, null, tint = Color.White.copy(alpha = 0.9f), modifier = Modifier.size(18.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text("Popayán, Cauca", fontSize = 15.sp, color = Color.White.copy(alpha = 0.9f), fontWeight = FontWeight.Medium)
-        }
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // Saludo
-        Text("Hola, Camilo", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = Color.White)
-
-        Spacer(modifier = Modifier.height(25.dp))
-
-        // Buscador
-        TextField(
-            value = searchText,
-            onValueChange = onSearchChange,
-            modifier = Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp)),
-            placeholder = { Text("¿Deseas algo en especial?", color = Color.Gray) },
-            leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Gray) },
-            singleLine = true,
-            colors = TextFieldDefaults.colors(
-                focusedContainerColor = searchBarBackground,
-                unfocusedContainerColor = searchBarBackground,
-                focusedIndicatorColor = Color.Transparent,
-                unfocusedIndicatorColor = Color.Transparent
+        // 3. TU CONTENIDO ORIGINAL
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .statusBarsPadding()
+                .padding(top = 25.dp, start = 20.dp, end = 20.dp, bottom = 25.dp)
+        ) {
+            // Logo
+            Image(
+                painter = painterResource(id = R.drawable.logo_appifood),
+                contentDescription = "AppiFood",
+                modifier = Modifier.height(35.dp),
+                contentScale = ContentScale.Fit
             )
-        )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Ubicación (Cambié el texto a negro/gris para que se vea sobre el blanco de abajo)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.LocationOn,
+                    null,
+                    tint = Color.DarkGray,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(
+                    "Popayán, Cauca",
+                    fontSize = 15.sp,
+                    color = Color.DarkGray,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            // Saludo (En Negro para resaltar sobre el degradado blanco)
+            Text(
+                "Hola, Camilo",
+                fontSize = 28.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+
+            Spacer(modifier = Modifier.height(25.dp))
+
+            // Buscador
+            TextField(
+                value = searchText,
+                onValueChange = onSearchChange,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp)
+                    .clip(RoundedCornerShape(28.dp)),
+                placeholder = { Text("¿Deseas algo en especial?", color = Color.Gray) },
+                leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Gray) },
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = searchBarBackground,
+                    unfocusedContainerColor = searchBarBackground,
+                    focusedIndicatorColor = Color.Transparent,
+                    unfocusedIndicatorColor = Color.Transparent
+                )
+            )
+        }
     }
 }

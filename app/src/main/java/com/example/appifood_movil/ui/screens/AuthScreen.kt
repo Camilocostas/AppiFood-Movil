@@ -1,165 +1,418 @@
 package com.example.appifood_movil.ui.screens
 
-import androidx.compose.animation.*
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.*
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.*
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.*
 import com.example.appifood_movil.R
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.Icons
+import androidx.compose.ui.draw.scale
+import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.PersonAdd
+import androidx.compose.material.icons.filled.Person
+import com.example.appifood_movil.ui.components.ImageHeader
 
 private val AppiFoodRed = Color(0xFFFF4B3A)
 
+enum class AuthState { LOGIN, REGISTER, FORGOT_PASSWORD, VERIFY_CODE }
 @Composable
 fun AuthScreen(onLoginNavigation: () -> Unit) {
-    var isLogin by remember { mutableStateOf(true) }
-    var showForm by remember { mutableStateOf(false) }
+    // Estado inicial en LOGIN
+    var screenState by remember { mutableStateOf(AuthState.LOGIN) }
 
-    LaunchedEffect(Unit) { showForm = true }
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .verticalScroll(rememberScrollState())
+    ) {
+        ImageHeader()
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Image(
-            painter = painterResource(id = R.drawable.burger_background_2),
-            contentDescription = null,
-            contentScale = ContentScale.Crop,
-            modifier = Modifier.fillMaxWidth().height(350.dp)
-        )
-
-        AnimatedVisibility(
-            visible = showForm,
-            enter = slideInVertically(initialOffsetY = { it }, animationSpec = tween(600)) + fadeIn()
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset(y = (-30).dp)
+                .background(
+                    Color.White,
+                    RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
+                )
+                .padding(24.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(top = 280.dp)
-                    .background(Color.White, RoundedCornerShape(topStart = 40.dp, topEnd = 40.dp))
-                    .verticalScroll(rememberScrollState())
-            ) {
-                Spacer(modifier = Modifier.height(60.dp))
+            // Título dinámico según el estado
+            val title = when(screenState) {
+                AuthState.LOGIN -> "¡Bienvenido de nuevo!"
+                AuthState.REGISTER -> "Crear cuenta gratis"
+                AuthState.FORGOT_PASSWORD -> "Actualiza tu contraseña"
+                AuthState.VERIFY_CODE -> "Código de verificación"
+            }
 
-                Row(
+            val subtitle = when(screenState) {
+                AuthState.LOGIN -> "Inicia sesión para continuar"
+                AuthState.REGISTER -> "Únete a AppiFood hoy"
+                AuthState.FORGOT_PASSWORD -> "Crea una nueva contraseña para tu cuenta."
+                AuthState.VERIFY_CODE -> "Por favor ingresa el código que acabamos de enviar al correo mauricio@ejemplo.com"
+            }
+
+            Text(text = title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+            Text(text = subtitle, fontSize = 15.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 24.dp))
+
+            // Selector de formularios
+            when (screenState) {
+                AuthState.LOGIN -> LoginForm(
+                    onLoginClick = onLoginNavigation,
+                    onRegisterSwitch = { screenState = AuthState.REGISTER },
+                    onForgotClick = { screenState = AuthState.FORGOT_PASSWORD }
+                )
+                AuthState.REGISTER -> RegisterForm(
+                    onLoginSwitch = { screenState = AuthState.LOGIN }
+                )
+                AuthState.FORGOT_PASSWORD -> ForgotPasswordForm(
+                    onBackToLogin = { screenState = AuthState.VERIFY_CODE }
+                )
+                AuthState.VERIFY_CODE -> VerificationCodeForm(
+                    onContinue = { screenState = AuthState.LOGIN }, // O a donde prefieras enviarlo
+                    onBack = { screenState = AuthState.FORGOT_PASSWORD }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun VerificationCodeForm(onContinue: () -> Unit, onBack: () -> Unit) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+
+        // Fila de cuadros de código
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            repeat(4) {
+                Box(
                     modifier = Modifier
-                        .align(Alignment.CenterHorizontally)
-                        .background(Color(0xFFE0E0E0), RoundedCornerShape(50))
+                        .size(60.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFF5F5F5)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    AuthTabItem("Log in", isLogin) { isLogin = true }
-                    AuthTabItem("Register", !isLogin) { isLogin = false }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                if (isLogin) {
-                    LoginForm(onLoginClick = onLoginNavigation)
-                } else {
-                    RegisterForm()
+                    // Aquí iría el estado de cada dígito
+                    Text("", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
 
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 180.dp)
-                .size(130.dp)
-                .clip(CircleShape)
-                .background(Color.White),
-            contentAlignment = Alignment.Center
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = buildAnnotatedString {
+                append("Reenviar código en ")
+                withStyle(style = SpanStyle(fontWeight = FontWeight.Bold)) {
+                    append("00:15")
+                }
+            },
+            fontSize = 14.sp,
+            color = Color.Gray
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        MainActionButton(text = "Continuar") { onContinue() }
+
+        TextButton(onClick = onBack) {
+            Text("Volver", color = Color.Gray)
+        }
+    }
+}
+@Composable
+fun RegisterForm(onLoginSwitch: () -> Unit) {
+    Column {
+        CustomTextField(
+            label = "Nombre completo",
+            placeholder = "Tu nombre",
+            icon = Icons.Default.Person
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        CustomTextField(
+            label = "Correo electrónico",
+            placeholder = "tucorreo@email.com",
+            icon = Icons.Default.Email
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        CustomTextField(
+            label = "Contraseña",
+            placeholder = "Mínimo 8 caracteres",
+            icon = Icons.Default.Lock,
+            isPassword = true
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+
+        CustomTextField(
+            label = "Confirmar contraseña",
+            placeholder = "Repite tu contraseña",
+            icon = Icons.Default.Lock,
+            isPassword = true
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Botón para crear la cuenta
+        MainActionButton(text = "Crear cuenta", icon = Icons.Default.PersonAdd) {
+            // Aquí irá la conexión a Laravel después
+        }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        // Texto para volver al Login
+        TextButton(
+            onClick = onLoginSwitch,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.logo_appifood_2),
-                contentDescription = null,
-                modifier = Modifier.size(110.dp)
+            Text(
+                text = buildAnnotatedString {
+                    append("¿Ya tienes cuenta? ")
+                    withStyle(style = SpanStyle(color = Color(0xFFFF4B3A), fontWeight = FontWeight.Bold)) {
+                        append("Inicia sesión")
+                    }
+                },
+                fontSize = 14.sp,
+                color = Color.Gray
             )
         }
     }
 }
 
 @Composable
-fun LoginForm(onLoginClick: () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)) {
-        WelcomeHeader()
-        AuthTextField(label = "Username")
-        Spacer(modifier = Modifier.height(12.dp))
-        AuthTextField(label = "Password", isPassword = true)
-        Spacer(modifier = Modifier.height(24.dp))
-        AuthButton("Log in") { onLoginClick() }
-        Text("Forgot Password?", modifier = Modifier.padding(top = 12.dp).align(Alignment.CenterHorizontally))
+fun LoginForm(onLoginClick: () -> Unit, onRegisterSwitch: () -> Unit, onForgotClick: () -> Unit) {
+    Column {
+        CustomTextField(label = "Correo electrónico", placeholder = "tucorreo@email.com", icon = Icons.Default.Email)
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Campo de contraseña con el OJO más pequeño
+        CustomTextField(
+            label = "Contraseña",
+            placeholder = "••••••••",
+            icon = Icons.Default.Lock,
+            isPassword = true
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Checkbox más pequeño y estilizado
+                var checked by remember { mutableStateOf(false) }
+                Checkbox(
+                    checked = checked,
+                    onCheckedChange = { checked = it },
+                    modifier = Modifier.scale(0.8f), // <--- Lo hace más pequeño
+                    colors = CheckboxDefaults.colors(checkedColor = Color(0xFFFF4B3A))
+                )
+                Text(
+                    "Recordarme",
+                    fontSize = 12.sp, // <--- Letras más pequeñas
+                    color = Color.Gray
+                )
+            }
+            Text(
+                "¿Olvidaste tu contraseña?",
+                color = Color(0xFFFF4B3A),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { onForgotClick() } // <--- Acción para cambiar de pantalla
+            )
+        }
+
+        // Botón de iniciar sesión "más bonito"
+        MainActionButton(
+            text = "Iniciar sesión",
+            icon = Icons.Default.ArrowForward
+        ) { onLoginClick() }
+
+        Spacer(modifier = Modifier.height(20.dp))
+
+        TextButton(
+            onClick = onRegisterSwitch,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text(
+                text = buildAnnotatedString {
+                    append("¿No tienes cuenta? ")
+                    withStyle(style = SpanStyle(color = Color(0xFFFF4B3A), fontWeight = FontWeight.Bold)) {
+                        append("Regístrate gratis")
+                    }
+                },
+                fontSize = 14.sp,
+                color = Color.Gray
+            )
+        }
+    }
+}
+
+// --- Componentes Reutilizables con el nuevo estilo ---
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CustomTextField(label: String, placeholder: String, icon: ImageVector, isPassword: Boolean = false) {
+    Column {
+        Text(
+            label,
+            fontWeight = FontWeight.Bold,
+            fontSize = 13.sp, // <--- Label más pequeño
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+        TextField(
+            value = "",
+            onValueChange = {},
+            placeholder = { Text(placeholder, color = Color.Gray, fontSize = 14.sp) },
+            leadingIcon = { Icon(icon, null, tint = Color.Gray, modifier = Modifier.size(20.dp)) },
+            trailingIcon = {
+                if (isPassword) {
+                    IconButton(onClick = { /* Lógica para ver password */ }) {
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_eye),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp), // <--- EL OJO MÁS PEQUEÑO
+                            tint = Color.Gray.copy(alpha = 0.6f)
+                        )
+                    }
+                }
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(52.dp) // <--- Altura más estilizada
+                .clip(RoundedCornerShape(12.dp)),
+            colors = TextFieldDefaults.colors(
+                focusedContainerColor = Color(0xFFF5F5F5),
+                unfocusedContainerColor = Color(0xFFF5F5F5),
+                focusedIndicatorColor = Color.Transparent,
+                unfocusedIndicatorColor = Color.Transparent
+            )
+        )
     }
 }
 
 @Composable
-fun RegisterForm() {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp)) {
-        WelcomeHeader()
-        AuthTextField(label = "Username")
-        Spacer(modifier = Modifier.height(12.dp))
-        AuthTextField(label = "Mobile number")
-        Spacer(modifier = Modifier.height(12.dp))
-        AuthTextField(label = "Password", isPassword = true)
-        Spacer(modifier = Modifier.height(24.dp))
-        AuthButton("Register") { }
-        Text("Already have account? Sign in", modifier = Modifier.padding(top = 12.dp).align(Alignment.CenterHorizontally))
-    }
-}
-
-@Composable
-fun WelcomeHeader() {
-    Text(
-        text = "Welcome to AppiFood",
-        style = MaterialTheme.typography.headlineSmall,
-        textAlign = TextAlign.Center,
-        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
-    )
-}
-
-@Composable
-fun AuthTabItem(text: String, isActive: Boolean, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(50))
-            .background(if (isActive) AppiFoodRed else Color.Transparent)
-            .clickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null
-            ) { onClick() }
-            .padding(horizontal = 32.dp, vertical = 10.dp)
-    ) {
-        Text(text, color = if (isActive) Color.White else Color.Gray)
-    }
-}
-
-@Composable
-fun AuthTextField(label: String, isPassword: Boolean = false) {
-    OutlinedTextField(
-        value = "",
-        onValueChange = {},
-        label = { Text(label) },
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp)
-    )
-}
-
-@Composable
-fun AuthButton(text: String, onClick: () -> Unit) {
+fun MainActionButton(text: String, icon: ImageVector? = null, onClick: () -> Unit) {
     Button(
         onClick = onClick,
-        modifier = Modifier.fillMaxWidth().height(60.dp),
-        shape = RoundedCornerShape(50),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(54.dp)
+            .shadow(4.dp, RoundedCornerShape(16.dp)), // <--- Sombra para que no sea plano
+        shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = AppiFoodRed,
-            contentColor = Color.White)
+            containerColor = Color(0xFFFF4B3A) // Rojo vibrante
+        ),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
     ) {
-        Text(text, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+            if (icon != null) {
+                Spacer(modifier = Modifier.width(10.dp))
+                Icon(icon, null, modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
+@Composable
+fun ForgotPasswordForm(onBackToLogin: () -> Unit) {
+    Column {
+        CustomTextField(
+            label = "Nueva contraseña",
+            placeholder = "mínimo 8 caracteres",
+            icon = Icons.Default.Lock,
+            isPassword = true
+        )
+
+        // --- Indicador de fuerza de contraseña ---
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .width(60.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(Color(0xFFFF4B3A).copy(alpha = 0.4f))
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text("débil", color = Color(0xFFFF4B3A).copy(alpha = 0.5f), fontSize = 11.sp)
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        CustomTextField(
+            label = "Confirmar contraseña",
+            placeholder = "repite la contraseña",
+            icon = Icons.Default.Lock,
+            isPassword = true
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // --- Sección de Instrucciones traducida ---
+        Text(
+            "Instrucciones",
+            fontWeight = FontWeight.Bold,
+            fontSize = 16.sp,
+            color = Color.DarkGray
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+
+        val instructions = listOf(
+            "Usa diferentes tipos de caracteres",
+            "Letras mayúsculas (A-Z)",
+            "Letras minúsculas (a-z)",
+            "Números (0-9)",
+            "Símbolos especiales (!, @, #, $, %)"
+        )
+
+        instructions.forEach { text ->
+            Row(modifier = Modifier.padding(vertical = 2.dp)) {
+                Text("• ", color = Color.Gray)
+                Text(text, fontSize = 13.sp, color = Color.Gray)
+            }
+        }
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // --- Botón Principal en Español ---
+        MainActionButton(text = "Guardar nueva contraseña") {
+            // Aquí irá la lógica para actualizar en tu base de datos de Laravel
+            onBackToLogin()
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // --- Enlace para volver ---
+        TextButton(
+            onClick = onBackToLogin,
+            modifier = Modifier.align(Alignment.CenterHorizontally)
+        ) {
+            Text("Volver al inicio de sesión", color = Color.Gray, fontSize = 14.sp)
+        }
     }
 }

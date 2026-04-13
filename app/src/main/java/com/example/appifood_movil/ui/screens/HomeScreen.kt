@@ -23,14 +23,13 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.appifood_movil.ui.viewmodel.HomeViewModel
-import com.example.appifood_movil.ui.components.AppiFoodHeader
 import com.example.appifood_movil.ui.components.AppiFoodFooter
 import com.example.appifood_movil.ui.components.CategoryChip
 import com.example.appifood_movil.data.allProducts
 import com.example.appifood_movil.data.restaurants
-import com.example.appifood_movil.ui.screens.RestaurantDetailScreen
 import com.example.appifood_movil.ui.components.PromoBanner
-
+import com.example.appifood_movil.ui.components.CarouselHeader
+import com.example.appifood_movil.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,18 +56,43 @@ fun HomeScreen(
                 .background(Color.White)
                 .padding(bottom = paddingValues.calculateBottomPadding())
         ) {
-            // 1. EL HEADER SE QUEDA AQUÍ (FUERA DEL SCROLL)
-            AppiFoodHeader(
-                searchText = viewModel.searchText,
-                onSearchChange = { viewModel.onSearchChange(it) }
-            )
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.White)
                     .padding(bottom = paddingValues.calculateBottomPadding())
             ) {
+                item {
+                    CarouselHeader(height = 300.dp) {
+                        // Aquí dibujamos lo que va encima del carrusel
+                        Image(
+                            painter = painterResource(id = R.drawable.logomau), // Tu logo
+                            contentDescription = null,
+                            modifier = Modifier.width(130.dp).wrapContentHeight()
+                        )
 
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.LocationOn,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "Popayán, Cauca",
+                                color = Color.White.copy(alpha = 0.9f),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+
+                        Text("Hola, Camilo", color = Color.White, fontSize = 28.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
+                    }
+                }
 
                 item {
                     PromoBanner(onClick = {
@@ -79,7 +103,7 @@ fun HomeScreen(
                 // 2. Sección Categorías
                 item {
                     SectionHeader(title = "Categorías")
-                    val categories = listOf("Todos", "Rapida", "", "Oriental", "Mexicana", "China", "Vegetariana")
+                    val categories = listOf("Todos", "Rapida", "Oriental", "Mexicana", "China", "Vegetariana")
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)

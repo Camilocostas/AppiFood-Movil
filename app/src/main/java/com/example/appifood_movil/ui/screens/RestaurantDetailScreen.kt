@@ -20,7 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.appifood_movil.R
-import com.example.appifood_movil.data.restaurants // restaurantes -> restaurants
+import com.example.appifood_movil.data.restaurants
 
 @Composable
 fun RestaurantDetailScreen(navController: NavController, name: String?) { // nombre -> name

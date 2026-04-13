@@ -12,16 +12,22 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        startDestination = "splash" // Usamos strings directos para evitar el error del import de Screen
+        // 1. Cambiamos el destino inicial a "onboarding"
+        startDestination = "onboarding"
     ) {
-        // Splash & Login
-        composable("splash") {
-            SplashLoginScreen(
-                onLoginClick = { navController.navigate("auth") },
-                onSignUpClick = { navController.navigate("auth") }
-            )
+
+        // 2. Definimos la nueva pantalla de Onboarding
+        composable("onboarding") {
+            OnboardingScreen(onFinished = {
+                // Cuando el usuario termine las páginas, lo mandamos al login (auth)
+                navController.navigate("auth") {
+                    // Limpiamos el historial para que no pueda volver atrás al Onboarding
+                    popUpTo("onboarding") { inclusive = true }
+                }
+            })
         }
 
+        // 3. Mantenemos el AuthScreen (Login/Registro)
         composable("auth") {
             AuthScreen(onLoginNavigation = {
                 navController.navigate("home") {

@@ -1,13 +1,9 @@
 package com.example.appifood_movil.ui.screens
 
-import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -18,180 +14,207 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.appifood_movil.R
+import androidx.compose.ui.graphics.vector.ImageVector
 
 @Composable
 fun ProfileScreen(navController: NavController) {
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFBFBFB))) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 40.dp)
+    val appiFoodRed = Color(0xFFFF4B3A)
+    val lightGray = Color(0xFFF5F5F5)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .verticalScroll(rememberScrollState())
+    ) {
+
+        // --- CABECERA ROJA ---
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(290.dp)
+                .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
+                .background(appiFoodRed),
+            contentAlignment = Alignment.TopCenter
         ) {
-            item {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                // 1. ESPACIO PARA BAJAR EL CONTENIDO
+                Spacer(modifier = Modifier.height(80.dp))
+
+                // 2. Imagen de Perfil (Círculo con inicial)
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .clip(RoundedCornerShape(bottomStart = 50.dp, bottomEnd = 50.dp))
-                        .background(Color(0xFFFF4B3A))
+                        .size(90.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFF8A80)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = 50.dp, start = 20.dp, end = 20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = { navController.popBackStack() },
-                                modifier = Modifier.size(40.dp).background(Color.White.copy(alpha = 0.2f), CircleShape)
-                            ) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
-
-                            IconButton(
-                                onClick = { /* TODO: Edit Profile */ },
-                                modifier = Modifier.size(40.dp).background(Color.White.copy(alpha = 0.2f), CircleShape)
-                            ) { Icon(Icons.Default.Edit, null, tint = Color.White) }
-                        }
-
-                        Box(contentAlignment = Alignment.BottomEnd) {
-                            Image(
-                                painter = painterResource(id = R.drawable.profile_placeholder),
-                                contentDescription = "User Photo",
-                                modifier = Modifier
-                                    .size(130.dp)
-                                    .clip(CircleShape)
-                                    .border(4.dp, Color.White, CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                            Surface(
-                                color = Color.White,
-                                shape = CircleShape,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .offset(x = (-3).dp, y = (-3).dp),
-                                shadowElevation = 5.dp
-                            ) {
-                                Icon(
-                                    Icons.Default.CameraAlt,
-                                    null,
-                                    tint = Color(0xFFFF4B3A),
-                                    modifier = Modifier.padding(8.dp).size(20.dp)
-                                )
-                            }
-                        }
-
-                        Text("Mauricio Bustamante", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, modifier = Modifier.padding(top = 10.dp))
-                        Text("mauricio@example.com", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
-                    }
-                }
-            }
-            item {
-                Spacer(modifier = Modifier.height(30.dp))
-
-                ProfileSection(
-                    title = "Personal Details", // titulo -> title
-                    icon = Icons.Default.Person, // icono -> icon
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                ) {
-                    InfoRowItem("Address", "Calle 123 #45-67, Popayán", Icons.Default.LocationOn)
-                    InfoRowItem("Phone", "+57 300 123 4567", Icons.Default.Phone)
+                    Text(
+                        text = "C",
+                        color = Color.White,
+                        fontSize = 40.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-                ProfileSection(
-                    title = "Payment Methods",
-                    icon = Icons.Default.CreditCard,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                ) {
-                    InfoRowItem("Primary", "Mastercard **** 1234", Icons.Default.Payment, true)
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(40.dp))
-                OutlinedButton(
-                    onClick = { /* TODO: Logout */ },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp).height(50.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
-                    border = BorderStroke(1.dp, Color.Red),
-                    shape = RoundedCornerShape(15.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Logout, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Logout", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    }
-                }
-                Spacer(modifier = Modifier.height(20.dp))
+                // 3. Nombre y Correo
+                Text(
+                    text = "Camilo Acosta",
+                    color = Color.White,
+                    fontSize = 22.sp, // Lo subí un poquito de tamaño para que resalte más
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = "camilo@gmail.com",
+                    color = Color.White.copy(alpha = 0.8f),
+                    fontSize = 14.sp
+                )
             }
         }
+
+        // --- SECCIÓN: INFORMACIÓN PERSONAL ---
+        ProfileSectionCard(title = "Información personal") {
+            InfoRow(label = "Nombre", value = "Camilo Acosta")
+            InfoRow(label = "Celular", value = "312 345 6789")
+            InfoRow(label = "Correo", value = "camilo@gmail.com")
+            InfoRow(label = "Género", value = "Masculino", isLast = true)
+        }
+
+        // --- SECCIÓN: MI CUENTA ---
+        ProfileSectionCard(title = "Mi cuenta") {
+            MenuRow(icon = Icons.Default.List, title = "Mis pedidos", badgeCount = 3)
+            MenuRow(
+                icon = Icons.Default.FavoriteBorder,
+                title = "Favoritos",
+                onClick = {
+                    navController.navigate("favorites")
+                }
+            )
+            MenuRow(icon = Icons.Default.LocationOn, title = "Mis direcciones")
+            MenuRow(icon = Icons.Default.CreditCard, title = "Métodos de pago")
+            MenuRow(icon = Icons.Default.Notifications, title = "Notificaciones")
+            MenuRow(icon = Icons.Default.HeadsetMic, title = "Centro de ayuda", isLast = true)
+        }
+
+        // --- BOTÓN CERRAR SESIÓN ---
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable {
+                    // 1. Navega a la pantalla de login (ajusta "login" al nombre de tu ruta)
+                    navController.navigate("auth") {
+                        // 2. Limpia el historial para que no pueda volver atrás al perfil
+                        popUpTo("home") { inclusive = true }
+                    }
+                }
+                .padding(24.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.ExitToApp,
+                contentDescription = null,
+                tint = appiFoodRed,
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(appiFoodRed.copy(alpha = 0.1f))
+                    .padding(8.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = "Cerrar sesión",
+                color = appiFoodRed,
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+        }
+
+        Spacer(modifier = Modifier.height(80.dp)) // Espacio para el BottomBar
     }
 }
 
 @Composable
-fun ProfileSection(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+fun ProfileSectionCard(title: String, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 10.dp)
+            .border(1.dp, Color(0xFFEEEEEE), RoundedCornerShape(16.dp))
+            .padding(16.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, null, tint = Color(0xFFFF4B3A), modifier = Modifier.size(22.dp))
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(title, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-            }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 15.dp), color = Color(0xFFF0F0F0))
-            Column(content = content)
-        }
+        Text(
+            text = title,
+            fontWeight = FontWeight.Bold,
+            fontSize = 17.sp,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+        content()
     }
 }
 
 @Composable
-fun InfoRowItem(
-    label: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    isPayment: Boolean = false
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Surface(
-            color = Color(0xFFFF4B3A).copy(alpha = 0.1f),
-            shape = CircleShape,
-            modifier = Modifier.size(40.dp)
-        ) { Icon(icon, null, tint = Color(0xFFFF4B3A), modifier = Modifier.padding(10.dp)) }
-
-        Spacer(modifier = Modifier.width(15.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(label, fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
-            Text(value, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Black)
+fun InfoRow(label: String, value: String, isLast: Boolean = false) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(text = label, color = Color.Gray, fontSize = 14.sp)
+            Text(text = value, fontWeight = FontWeight.Bold, fontSize = 14.sp)
         }
+        if (!isLast) Divider(color = Color(0xFFF5F5F5), thickness = 1.dp)
+    }
+}
 
-        if (!isPayment) {
-            Icon(Icons.Default.ChevronRight, null, tint = Color.Gray.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+@Composable
+fun MenuRow(icon: ImageVector, onClick: () -> Unit = {}, title: String, badgeCount: Int = 0, isLast: Boolean = false) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { onClick() } // Hacemos que toda la fila sea clickeable
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = Color(0xFFFF4B3A),
+                modifier = Modifier
+                    .size(35.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color(0xFFFF4B3A).copy(alpha = 0.1f))
+                    .padding(6.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(text = title, modifier = Modifier.weight(1f), fontSize = 15.sp)
+
+            if (badgeCount > 0) {
+                Surface(
+                    color = Color.Red,
+                    shape = CircleShape,
+                    modifier = Modifier.size(20.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(text = badgeCount.toString(), color = Color.White, fontSize = 10.sp)
+                    }
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+            }
+
+            Icon(Icons.Default.ChevronRight, null, tint = Color.LightGray)
         }
+        if (!isLast) Divider(color = Color(0xFFF5F5F5), thickness = 1.dp)
     }
 }
