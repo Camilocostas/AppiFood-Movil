@@ -15,73 +15,109 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.clickable
 
 @Composable
-fun AppiFoodFooter(navController: NavController, currentRoute: String, cartCount: Int = 0) {
+fun AppiFoodFooter(
+    navController: NavController,
+    currentRoute: String,
+    cartCount: Int = 0
+) {
     val activeColor = Color(0xFFFF4B3A)
     val inactiveColor = Color.Gray
 
-    NavigationBar(
-        containerColor = Color.White,
-        tonalElevation = 8.dp,
-        modifier = Modifier.height(70.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
     ) {
-        // Inicio
-        NavigationBarItem(
-            selected = currentRoute == "home",
-            onClick = { if(currentRoute != "home") navController.navigate("home") },
-            icon = { Icon(Icons.Default.Home, contentDescription = null, modifier = Modifier.size(26.dp)) },
-            label = { Text("Inicio", fontSize = 12.sp) },
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = activeColor,
-                selectedTextColor = activeColor,
-                unselectedIconColor = inactiveColor,
-                indicatorColor = Color.Transparent
-            )
-        )
 
-        // Buscar
-        NavigationBarItem(
-            selected = false,
-            onClick = { /* Navegar a búsqueda */ },
-            icon = { Icon(Icons.Default.Search, contentDescription = null) },
-            label = { Text("Buscar", fontSize = 12.sp) },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactiveColor)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(73.dp),
+            horizontalArrangement = Arrangement.SpaceAround, // 🔥 CLAVE
+            verticalAlignment = Alignment.CenterVertically
+        ) {
 
-        // Carrito con Badge
-        NavigationBarItem(
-            selected = currentRoute == "cart",
-            onClick = { navController.navigate("cart") },
-            icon = {
-                BadgedBox(badge = {
-                    if (cartCount > 0) {
-                        Badge(containerColor = activeColor) { Text("$cartCount", color = Color.White) }
+            Icon(
+                imageVector = Icons.Default.Home,
+                contentDescription = null,
+                tint = if (currentRoute == "home") activeColor else inactiveColor,
+                modifier = Modifier
+                    .size(26.dp)
+                    .clickable {
+                        if (currentRoute != "home") navController.navigate("home")
                     }
-                }) {
-                    Icon(Icons.Default.ShoppingBag, contentDescription = null)
+            )
+
+            Icon(
+                imageVector = Icons.Default.Search,
+                contentDescription = null,
+                tint = inactiveColor,
+                modifier = Modifier
+                    .size(26.dp)
+                    .clickable { }
+            )
+
+            BadgedBox(
+                badge = {
+                    if (cartCount > 0) {
+                        Badge(containerColor = activeColor) {
+                            Text("$cartCount", fontSize = 9.sp)
+                        }
+                    }
                 }
-            },
-            label = { Text("Carrito", fontSize = 12.sp) },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactiveColor)
-        )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ShoppingBag,
+                    contentDescription = null,
+                    tint = if (currentRoute == "cart") activeColor else inactiveColor,
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clickable {
+                            if (currentRoute != "cart") navController.navigate("cart")
+                        }
+                )
+            }
 
-        // Pedidos
-        NavigationBarItem(
-            selected = currentRoute == "orderHistory",
-            onClick = {navController.navigate("orderHistory")},
-            icon = { Icon(Icons.Outlined.Assignment, contentDescription = null) },
-            label = { Text("Pedidos", fontSize = 12.sp) },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactiveColor)
-        )
+            Icon(
+                imageVector = Icons.Outlined.Assignment,
+                contentDescription = null,
+                tint = if (currentRoute == "orderHistory") activeColor else inactiveColor,
+                modifier = Modifier
+                    .size(26.dp)
+                    .clickable {
+                        if (currentRoute != "orderHistory") navController.navigate("orderHistory")
+                    }
+            )
 
-        // Perfil
-        NavigationBarItem(
-            selected = currentRoute == "profile",
-            onClick = { navController.navigate("profile") },
-            icon = { Icon(Icons.Default.Person, contentDescription = null) },
-            label = { Text("Perfil", fontSize = 12.sp) },
-            colors = NavigationBarItemDefaults.colors(unselectedIconColor = inactiveColor)
+            Icon(
+                imageVector = Icons.Default.Person,
+                contentDescription = null,
+                tint = if (currentRoute == "profile") activeColor else inactiveColor,
+                modifier = Modifier
+                    .size(26.dp)
+                    .clickable {
+                        if (currentRoute != "profile") navController.navigate("profile")
+                    }
+            )
+        }
+
+        // 🔥 ESTE SÍ usa matchParentSize (solo para el padding del sistema)
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .navigationBarsPadding()
         )
     }
 }

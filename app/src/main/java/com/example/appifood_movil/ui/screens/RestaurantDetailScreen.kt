@@ -21,7 +21,11 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.appifood_movil.R
 import com.example.appifood_movil.data.restaurants
-
+import com.google.android.gms.maps.model.LatLng
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.rememberCameraPositionState
 @Composable
 fun RestaurantDetailScreen(navController: NavController, name: String?) { // nombre -> name
     // Buscamos el restaurante en la lista (ajustado a nombres en inglés)
@@ -162,6 +166,37 @@ fun RestaurantDetailScreen(navController: NavController, name: String?) { // nom
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                 }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "Ubicación",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+// Configuramos la cámara del mapa
+                val restaurantLocation = LatLng(restaurant?.latitude ?: 2.4435, restaurant?.longitude ?: -76.6063)
+                val cameraPositionState = rememberCameraPositionState {
+                    position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(restaurantLocation, 16f)
+                }
+
+// Renderizamos el componente del mapa
+                GoogleMap(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(200.dp)
+                        .clip(RoundedCornerShape(15.dp)),
+                    cameraPositionState = cameraPositionState
+                ) {
+                    Marker(
+                        state = MarkerState(position = restaurantLocation),
+                        title = restaurant?.name ?: "Restaurante"
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(30.dp))
             }
         }
     }

@@ -21,5 +21,7 @@ data class Restaurant(
     val rating: String = "4.5",
     val category: String,
     val deliveryTime: String = "20-30 min",
-    val dishes: List<Dish> = emptyList()
+    val dishes: List<Dish> = emptyList(),
+    val latitude: Double,
+    val longitude: Double
 )

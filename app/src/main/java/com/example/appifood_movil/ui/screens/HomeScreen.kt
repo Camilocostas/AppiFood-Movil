@@ -50,14 +50,8 @@ fun HomeScreen(
             )
         }
     ) { paddingValues ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color.White)
-                .padding(bottom = paddingValues.calculateBottomPadding())
-        ) {
 
-            LazyColumn(
+         LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.White)
@@ -65,32 +59,45 @@ fun HomeScreen(
             ) {
                 item {
                     CarouselHeader(height = 300.dp) {
-                        // Aquí dibujamos lo que va encima del carrusel
-                        Image(
-                            painter = painterResource(id = R.drawable.logomau), // Tu logo
-                            contentDescription = null,
-                            modifier = Modifier.width(130.dp).wrapContentHeight()
-                        )
 
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(top = 40.dp, start = 20.dp), // 🔥 SUBE TODO
+                            verticalArrangement = Arrangement.Top // 👈 CLAVE
+                        ) {
 
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.LocationOn,
+                            Image(
+                                painter = painterResource(id = R.drawable.logomau),
                                 contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.width(130.dp)
                             )
-                            Spacer(modifier = Modifier.width(4.dp))
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "Popayán, Cauca",
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+
                             Text(
-                                text = "Popayán, Cauca",
-                                color = Color.White.copy(alpha = 0.9f),
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Medium
+                                "Hola, Camilo",
+                                color = Color.White,
+                                fontSize = 28.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
-
-                        Text("Hola, Camilo", color = Color.White, fontSize = 28.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold)
                     }
                 }
 
@@ -165,7 +172,7 @@ fun HomeScreen(
             }
         }
     }
-}
+
 // --- Componentes Modernos y Minimalistas ---
 
 @Composable

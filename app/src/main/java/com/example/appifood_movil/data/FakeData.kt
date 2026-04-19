@@ -16,6 +16,7 @@ val restaurants = listOf(
         hasDelivery = true,
         rating = "4.8",
         category = "Comida China",
+        latitude = 2.4435, longitude = -76.6063,
         dishes = listOf(
             Dish("Arroz Chaufa Especial", "$ 25.000", R.drawable.arrozchaufa),
             Dish("Lomo Saltado Chino", "$ 28.500", R.drawable.lomosaltado),
@@ -30,12 +31,13 @@ val restaurants = listOf(
         hasDelivery = false,
         rating = "4.6",
         category = "Comida Vegana",
+        latitude = 2.4412, longitude = -76.6085,
         dishes = listOf(
             Dish("Ensalada César Premium", "$ 18.000", R.drawable.ensaladacesar),
             Dish("Bowl Vegano Mixto", "$ 22.000", R.drawable.bowlvegano),
             Dish("Hamburguesa de Lenteja", "$ 15.500", R.drawable.hamburguesalenteja)
         )
-    ), // <--- La coma que faltaba estaba aquí
+    ),
     Restaurant(
         name = "Burguer House",
         address = "Carrera 9 #12-45",
@@ -44,6 +46,7 @@ val restaurants = listOf(
         hasDelivery = true,
         rating = "4.9",
         category = "Hamburguesas",
+        latitude = 2.4455, longitude = -76.6042,
         dishes = listOf(
             Dish("Monster Bacon", "$ 32.000", R.drawable.monster_bacon),
             Dish("Clásica de la Casa", "$ 24.500", R.drawable.clasica_casa),
@@ -58,6 +61,7 @@ val restaurants = listOf(
         hasDelivery = true,
         rating = "4.7",
         category = "Pizzería",
+        latitude = 2.4480, longitude = -76.6025,
         dishes = listOf(
             Dish("Pepperoni King", "$ 38.000", R.drawable.pepperoni_king),
             Dish("Hawaiana Especial", "$ 35.000", R.drawable.hawaiana),
@@ -72,6 +76,7 @@ val restaurants = listOf(
         hasDelivery = true,
         rating = "4.5",
         category = "Carnes y Parrilla",
+        latitude = 2.4610, longitude = -76.5980,
         dishes = listOf(
             Dish("Baby Beef 300g", "$ 45.000", R.drawable.baby_beef),
             Dish("Churrasco Especial", "$ 48.000", R.drawable.churrasco),
@@ -86,6 +91,7 @@ val restaurants = listOf(
         hasDelivery = true,
         rating = "4.9",
         category = "Comida Japonesa",
+        latitude = 2.4390, longitude = -76.6090,
         dishes = listOf(
             Dish("Roll Philadelphia", "$ 28.000", R.drawable.roll_phila),
             Dish("Ramen Tradicional", "$ 32.500", R.drawable.ramen),
@@ -100,6 +106,7 @@ val restaurants = listOf(
         hasDelivery = true,
         rating = "4.4",
         category = "Comida Mexicana",
+        latitude = 2.4350, longitude = -76.6030,
         dishes = listOf(
             Dish("Tacos al Pastor x3", "$ 21.000", R.drawable.tacos_pastor),
             Dish("Burrito Supremo", "$ 26.000", R.drawable.burrito),
@@ -114,6 +121,7 @@ val restaurants = listOf(
         hasDelivery = false,
         rating = "4.8",
         category = "Italiana",
+        latitude = 2.4520, longitude = -76.6055,
         dishes = listOf(
             Dish("Lasaña Boloñesa", "$ 29.000", R.drawable.lasana),
             Dish("Fettuccine Alfredo", "$ 27.500", R.drawable.fettuccine),
@@ -128,6 +136,7 @@ val restaurants = listOf(
         hasDelivery = true,
         rating = "4.6",
         category = "Pescadería",
+        latitude = 2.4410, longitude = -76.6010,
         dishes = listOf(
             Dish("Ceviche de Camarón", "$ 26.000", R.drawable.ceviche),
             Dish("Mojarra Frita", "$ 32.000", R.drawable.mojarra),
@@ -142,6 +151,7 @@ val restaurants = listOf(
         hasDelivery = true,
         rating = "4.3",
         category = "Pollo Frito",
+        latitude = 2.4440, longitude = -76.6075,
         dishes = listOf(
             Dish("Combo 8 Presas", "$ 48.000", R.drawable.combo_pollo),
             Dish("Alitas Picantes x12", "$ 29.900", R.drawable.alitas),

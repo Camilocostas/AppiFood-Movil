@@ -29,10 +29,10 @@ fun CarouselHeader(
     content: @Composable ColumnScope.() -> Unit
 ) {
     val images = listOf(
-        R.drawable.pizza,
-        R.drawable.ojotigre, // Cambia por tus imágenes reales
-        R.drawable.cheese,
-        R.drawable.hero_login
+        R.drawable.flat_carousel,
+        R.drawable.plate_carousel, // Cambia por tus imágenes reales
+        R.drawable.top_carousel,
+        R.drawable.helado
     )
 
     val virtualPageCount = Int.MAX_VALUE

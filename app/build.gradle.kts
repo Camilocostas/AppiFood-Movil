@@ -37,6 +37,8 @@ android {
 }
 
 dependencies {
+    implementation("com.google.maps.android:maps-compose:4.3.0")
+    implementation("com.google.android.gms:play-services-maps:18.2.0")
     implementation("androidx.compose.foundation:foundation:1.6.1")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.compose.material:material-icons-extended:1.6.0")

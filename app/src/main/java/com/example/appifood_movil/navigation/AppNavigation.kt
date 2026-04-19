@@ -12,47 +12,44 @@ fun AppNavigation() {
 
     NavHost(
         navController = navController,
-        // 1. Cambiamos el destino inicial a "onboarding"
-        startDestination = "onboarding"
+        startDestination = Screen.Splash.route // Usamos la constante
     ) {
 
-        // 2. Definimos la nueva pantalla de Onboarding
-        composable("onboarding") {
+        composable(Screen.Splash.route) {
+            // Asumiendo que tenías una pantalla de splash o onboarding
             OnboardingScreen(onFinished = {
-                // Cuando el usuario termine las páginas, lo mandamos al login (auth)
-                navController.navigate("auth") {
-                    // Limpiamos el historial para que no pueda volver atrás al Onboarding
-                    popUpTo("onboarding") { inclusive = true }
+                navController.navigate(Screen.Auth.route) {
+                    popUpTo(Screen.Splash.route) { inclusive = true }
                 }
             })
         }
 
-        // 3. Mantenemos el AuthScreen (Login/Registro)
-        composable("auth") {
+        composable(Screen.Auth.route) {
             AuthScreen(onLoginNavigation = {
-                navController.navigate("home") {
-                    popUpTo("auth") { inclusive = true }
+                navController.navigate(Screen.Home.route) {
+                    popUpTo(Screen.Auth.route) { inclusive = true }
                 }
             })
         }
 
-        // Home
-        composable("home") {
+        composable(Screen.Home.route) {
             HomeScreen(navController)
         }
 
-        // Restaurant Detail
-        composable("restaurantDetail/{name}") { backStackEntry ->
+        composable(
+            route = "${Screen.RestaurantDetail.route}/{name}",
+            arguments = listOf(navArgument("name") { type = NavType.StringType })
+        ) { backStackEntry ->
             val name = backStackEntry.arguments?.getString("name") ?: ""
             RestaurantDetailScreen(navController, name)
         }
 
-        // Cart
-        composable("cart") { CartScreen(navController) }
+        composable(Screen.Cart.route) {
+            CartScreen(navController)
+        }
 
-        // Product Detail
         composable(
-            route = "productDetail/{name}/{price}/{image}",
+            route = "${Screen.ProductDetail.route}/{name}/{price}/{image}",
             arguments = listOf(
                 navArgument("name") { type = NavType.StringType },
                 navArgument("price") { type = NavType.StringType },
@@ -65,14 +62,15 @@ fun AppNavigation() {
             ProductDetailScreen(navController, name, price, image)
         }
 
-        // Profile & Others
-        composable("profile") { ProfileScreen(navController) }
+        composable(Screen.Profile.route) {
+            ProfileScreen(navController)
+        }
 
-        composable("orderHistory") {
+        composable(Screen.OrderHistory.route) {
             OrderHistoryScreen(navController)
         }
 
-        composable("favorites") {
+        composable(Screen.Favorites.route) {
             FavoritesScreen(navController)
         }
     }
