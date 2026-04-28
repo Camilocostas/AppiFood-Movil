@@ -30,6 +30,13 @@ import com.example.appifood_movil.data.restaurants
 import com.example.appifood_movil.ui.components.AppiFoodFooter
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.foundation.lazy.items
+import com.google.android.gms.maps.model.LatLng
+import com.google.android.gms.maps.model.CameraPosition
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MarkerState
+import com.google.maps.android.compose.MapUiSettings
+import com.google.maps.android.compose.Marker
+import com.google.maps.android.compose.rememberCameraPositionState
 
 // Paleta de colores de AppiFood (de tus fotos)
 val AppiFoodRed = Color(0xFFFF4B3A)
@@ -262,6 +269,42 @@ fun RestaurantDetailScreen(navController: NavController, name: String?) {
                             }
                         }
                     }
+                    item {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp)
+                        ) {
+                            Text(
+                                text = "Ubicación del Restaurante",
+                                fontWeight = FontWeight.ExtraBold,
+                                fontSize = 18.sp
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            // Usamos las coordenadas del modelo restaurantData
+                            val restaurantLocation = LatLng(restaurantData.latitude, restaurantData.longitude)
+                            val cameraPositionState = rememberCameraPositionState {
+                                position = CameraPosition.fromLatLngZoom(restaurantLocation, 16f)
+                            }
+
+                            GoogleMap(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(200.dp)
+                                    .clip(RoundedCornerShape(16.dp)),
+                                cameraPositionState = cameraPositionState,
+                                uiSettings = MapUiSettings(zoomControlsEnabled = false)
+                            ) {
+                                Marker(
+                                    state = MarkerState(position = restaurantLocation),
+                                    title = restaurantData.name,
+                                    snippet = restaurantData.address
+                                )
+                            }
+                        }
+                    }
+
                 }
 
                 2 -> { // PESTAÑA RESEÑAS
