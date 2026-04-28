@@ -33,8 +33,9 @@ import com.example.appifood_movil.ui.components.ImageHeader
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import android.R.attr.password
+import com.example.appifood_movil.ui.theme.AppColors
 
-private val AppiFoodRed = Color(0xFFFF4B3A)
+
 
 enum class AuthState { LOGIN, REGISTER, FORGOT_PASSWORD, VERIFY_CODE }
 @Composable
@@ -42,7 +43,7 @@ fun AuthScreen(onLoginNavigation: () -> Unit) {
     var screenState by remember { mutableStateOf(AuthState.LOGIN) }
 
     Column(
-        modifier = Modifier
+        modifier = Modifier.background(AppColors.AppiFoodRed)
             .fillMaxSize()
             .background(Color.White)
             .verticalScroll(rememberScrollState())
@@ -301,9 +302,12 @@ fun CustomTextField(
     placeholder: String,
     icon: ImageVector,
     isPassword: Boolean = false,
-    text: String, // Recibe el texto
-    onTextChange: (String) -> Unit // Envía el cambio
+    text: String,
+    onTextChange: (String) -> Unit
 ) {
+    // 1. Añadimos un estado local para controlar la visibilidad
+    var isPasswordVisible by remember { mutableStateOf(false) }
+
     Column {
         Text(
             label,
@@ -316,13 +320,19 @@ fun CustomTextField(
             onValueChange = onTextChange,
             placeholder = { Text(placeholder, color = Color.Gray, fontSize = 14.sp) },
             leadingIcon = { Icon(icon, null, tint = Color.Gray, modifier = Modifier.size(20.dp)) },
-            visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
+
+            // 2. Usamos el estado para decidir si aplicar la transformación
+            visualTransformation = if (isPassword && !isPasswordVisible)
+                PasswordVisualTransformation()
+            else VisualTransformation.None,
+
             trailingIcon = {
                 if (isPassword) {
-                    IconButton(onClick = { /* Lógica para ver password */ }) {
+                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) { // 3. Cambiamos el estado al hacer clic
                         Icon(
+                            // Opcional: Podrías cambiar el icono a uno de "ojo tachado" si quieres
                             painter = painterResource(id = R.drawable.ic_eye),
-                            contentDescription = null,
+                            contentDescription = if (isPasswordVisible) "Ocultar" else "Ver",
                             modifier = Modifier.size(18.dp),
                             tint = Color.Gray.copy(alpha = 0.6f)
                         )

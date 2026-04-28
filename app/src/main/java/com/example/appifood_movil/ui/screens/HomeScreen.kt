@@ -74,7 +74,7 @@ fun HomeScreen(
             AppiFoodFooter(
                 navController = navController,
                 currentRoute = "home",
-                cartCount = viewModel.cartCount,
+                cartCount = 6,
                 onSearchClick = { navController.navigate("search") }// 2. Conectamos la acción
             )
         }

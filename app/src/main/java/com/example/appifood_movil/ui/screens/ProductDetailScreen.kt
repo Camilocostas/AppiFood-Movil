@@ -24,6 +24,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.lazy.items
+import com.example.appifood_movil.ui.components.AppiFoodFooter
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailScreen(
@@ -34,60 +36,72 @@ fun ProductDetailScreen(
 ) {
     var adicionesSeleccionadas by remember { mutableStateOf(setOf<String>()) }
     var cantidad by remember { mutableStateOf(1) }
+    val precioNumerico = price.toDoubleOrNull() ?: 0.0
 
     val appNaranja = Color(0xFFFF4B3A)
 
     Scaffold(
         bottomBar = {
-            // Panel inferior con botón grande y prominente
-            Surface(shadowElevation = 12.dp, color = Color.White) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Contador de cantidad (más compacto)
+            Column {
+                // 1. Panel de acción (Contador y Botón)
+                Surface(shadowElevation = 12.dp, color = Color.White) {
                     Row(
                         modifier = Modifier
-                            .height(56.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFFF5F5F5)),
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 20.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        IconButton(onClick = { if (cantidad > 1) cantidad-- }) { Icon(Icons.Default.Remove, null) }
-                        Text("$cantidad", fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(horizontal = 16.dp))
-                        IconButton(onClick = { cantidad++ }) { Icon(Icons.Default.Add, null) }
-                    }
+                        // Contador de cantidad
+                        Row(
+                            modifier = Modifier
+                                .height(56.dp)
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(Color(0xFFF5F5F5)),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = { if (cantidad > 1) cantidad-- }) { Icon(Icons.Default.Remove, null) }
+                            Text("$cantidad", fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(horizontal = 16.dp))
+                            IconButton(onClick = { cantidad++ }) { Icon(Icons.Default.Add, null) }
+                        }
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
 
-                    // Botón de "Agregar" MUY GRANDE Y LLAMATIVO
-                    Button(
-                        onClick = { /* Acción */ },
-                        colors = ButtonDefaults.buttonColors(appNaranja),
-                        modifier = Modifier
-                            .height(56.dp)
-                            .weight(1f),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Text("Agregar al carrito", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        // Botón de agregar
+                        Button(
+                            onClick = { /* Acción */ },
+                            colors = ButtonDefaults.buttonColors(appNaranja),
+                            modifier = Modifier
+                                .height(56.dp)
+                                .weight(1f),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Text("Agregar al carrito", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                        }
                     }
                 }
+
+                // 2. Footer de navegación (Menú)
+                AppiFoodFooter(
+                    navController = navController,
+                    currentRoute = "home", // Asegúrate de que esta ruta sea la correcta
+                    cartCount = 6,
+                    onSearchClick = { navController.navigate("search") }
+                )
             }
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())
+            modifier = Modifier.fillMaxSize(), // Quita el padding bottom manual aquí
+            contentPadding = PaddingValues(bottom = 120.dp)
         ) {
             // Header: Imagen y Título integrados
             item {
                 Box(modifier = Modifier.fillMaxWidth().height(300.dp)) {
                     Image(
+                        modifier = Modifier.fillMaxSize(), // Debe ocupar el 100%
+                        contentScale = ContentScale.Crop,
                         painter = painterResource(id = imageRes),
-                        contentDescription = name,
-                        modifier = Modifier.fillMaxWidth(),
-                        contentScale = ContentScale.Crop
+                        contentDescription = name
                     )
 
                     Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.6f)))))
@@ -96,11 +110,25 @@ fun ProductDetailScreen(
                     val precioNumerico = price.toDoubleOrNull() ?: 0.0
                     Column(modifier = Modifier.align(Alignment.BottomStart).padding(24.dp)) {
                         Text(name, color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold)
-                        Text("$ ${"%.1f".format(precioNumerico)}", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "$ ${String.format("%,.0f", precioNumerico).replace(",", ".")}",
+                            color = Color.White,
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
-                    IconButton(onClick = { navController.popBackStack() }, modifier = Modifier.padding(top = 40.dp, start = 16.dp)) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás", tint = Color.White)
+                    FloatingActionButton(
+                        onClick = { navController.popBackStack() },
+                        // MODIFICACIÓN AQUÍ: Añadimos padding para separarlo del borde superior
+                        modifier = Modifier
+                            .padding(top = 54.dp, start = 16.dp)
+                            .size(44.dp),
+                        shape = CircleShape,
+                        containerColor = Color.White.copy(alpha = 0.5f),
+                        elevation = FloatingActionButtonDefaults.elevation(0.dp)
+                    ) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Back", tint = Color.Black)
                     }
                 }
             }

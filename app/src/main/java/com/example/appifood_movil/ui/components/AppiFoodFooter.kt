@@ -71,7 +71,10 @@ fun AppiFoodFooter(
             BadgedBox(
                 badge = {
                     if (cartCount > 0) {
-                        Badge(containerColor = activeColor) {
+                        Badge(
+                            containerColor = activeColor, // Fondo rojo (0xFFFF4B3A)
+                            contentColor = Color.White    // <--- ESTA ES LA CLAVE: Color blanco para el texto
+                        ) {
                             Text("$cartCount", fontSize = 9.sp)
                         }
                     }

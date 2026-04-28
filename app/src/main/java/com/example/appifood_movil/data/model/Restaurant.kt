@@ -23,5 +23,12 @@ data class Restaurant(
     val deliveryTime: String = "20-30 min",
     val dishes: List<Dish> = emptyList(),
     val latitude: Double,
-    val longitude: Double
+    val longitude: Double,
+    val reviews: List<Review>
+)
+
+data class Review(
+    val name: String,
+    val comment: String,
+    val rating: Int // De 1 a 5
 )
