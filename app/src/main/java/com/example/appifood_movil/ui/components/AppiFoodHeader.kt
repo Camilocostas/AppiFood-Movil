@@ -28,42 +28,37 @@ fun AppiFoodHeader(
 ) {
     val searchBarBackground = Color(0xFFF2F2F2).copy(alpha = 0.9f)
 
-    // Usamos Box para poder poner la imagen DEBAJO del contenido
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp))
     ) {
-        // 1. LA IMAGEN DE FONDO
         Image(
-            painter = painterResource(id = R.drawable.hero_login), // Tu imagen de hamburguesas
+            painter = painterResource(id = R.drawable.hero_login),
             contentDescription = null,
             contentScale = ContentScale.Crop,
-            modifier = Modifier.matchParentSize() // Se ajusta al tamaño del Box
+            modifier = Modifier.matchParentSize()
         )
 
-        // 2. EL GRADIENTE (Para que se funda con el blanco de abajo y se lea el texto)
         Box(
             modifier = Modifier
                 .matchParentSize()
                 .background(
                     brush = androidx.compose.ui.graphics.Brush.verticalGradient(
                         colors = listOf(
-                            Color.White.copy(alpha = 0.1f), // Arriba: Casi transparente
-                            Color.White // Abajo: Blanco sólido
+                            Color.White.copy(alpha = 0.1f),
+                            Color.White
                         )
                     )
                 )
         )
 
-        // 3. TU CONTENIDO ORIGINAL
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
                 .padding(top = 25.dp, start = 20.dp, end = 20.dp, bottom = 25.dp)
         ) {
-            // Logo
             Image(
                 painter = painterResource(id = R.drawable.logo_appifood),
                 contentDescription = "AppiFood",
@@ -73,7 +68,6 @@ fun AppiFoodHeader(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Ubicación (Cambié el texto a negro/gris para que se vea sobre el blanco de abajo)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.LocationOn,
@@ -92,7 +86,6 @@ fun AppiFoodHeader(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Saludo (En Negro para resaltar sobre el degradado blanco)
             Text(
                 "Hola, Camilo",
                 fontSize = 28.sp,
@@ -102,7 +95,6 @@ fun AppiFoodHeader(
 
             Spacer(modifier = Modifier.height(25.dp))
 
-            // Buscador
             TextField(
                 value = searchText,
                 onValueChange = onSearchChange,

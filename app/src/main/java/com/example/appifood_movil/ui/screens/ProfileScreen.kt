@@ -32,7 +32,6 @@ fun ProfileScreen(navController: NavController) {
             .verticalScroll(rememberScrollState())
     ) {
 
-        // --- CABECERA ROJA ---
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -45,10 +44,8 @@ fun ProfileScreen(navController: NavController) {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // 1. ESPACIO PARA BAJAR EL CONTENIDO
                 Spacer(modifier = Modifier.height(80.dp))
 
-                // 2. Imagen de Perfil (Círculo con inicial)
                 Box(
                     modifier = Modifier
                         .size(90.dp)
@@ -66,11 +63,10 @@ fun ProfileScreen(navController: NavController) {
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // 3. Nombre y Correo
                 Text(
                     text = "Camilo Acosta",
                     color = Color.White,
-                    fontSize = 22.sp, // Lo subí un poquito de tamaño para que resalte más
+                    fontSize = 22.sp,
                     fontWeight = FontWeight.Bold
                 )
                 Text(
@@ -81,7 +77,6 @@ fun ProfileScreen(navController: NavController) {
             }
         }
 
-        // --- SECCIÓN: INFORMACIÓN PERSONAL ---
         ProfileSectionCard(title = "Información personal") {
             InfoRow(label = "Nombre", value = "Camilo Acosta")
             InfoRow(label = "Celular", value = "312 345 6789")
@@ -89,30 +84,45 @@ fun ProfileScreen(navController: NavController) {
             InfoRow(label = "Género", value = "Masculino", isLast = true)
         }
 
-        // --- SECCIÓN: MI CUENTA ---
         ProfileSectionCard(title = "Mi cuenta") {
-            MenuRow(icon = Icons.Default.List, title = "Mis pedidos", badgeCount = 3)
             MenuRow(
                 icon = Icons.Default.FavoriteBorder,
                 title = "Favoritos",
-                onClick = {
-                    navController.navigate("favorites")
-                }
+                onClick = { navController.navigate("favorites") } // Conectado
             )
-            MenuRow(icon = Icons.Default.LocationOn, title = "Mis direcciones")
-            MenuRow(icon = Icons.Default.CreditCard, title = "Métodos de pago")
-            MenuRow(icon = Icons.Default.Notifications, title = "Notificaciones")
-            MenuRow(icon = Icons.Default.HeadsetMic, title = "Centro de ayuda", isLast = true)
+            MenuRow(
+                icon = Icons.Default.LocationOn,
+                title = "Mis direcciones",
+                onClick = { navController.navigate("addresses") } // Conectado
+            )
+            MenuRow(
+                icon = Icons.Default.CreditCard,
+                title = "Métodos de pago"
+                // onClick = { navController.navigate("payment") } // Si creas la ruta después
+            )
+            MenuRow(
+                icon = Icons.Default.Notifications,
+                title = "Notificaciones",
+                onClick = { navController.navigate("settings") }
+            )
+            MenuRow(
+                icon = Icons.Default.Settings,
+                title = "Configuracion",
+                onClick = { navController.navigate("settings") }
+            )
+            MenuRow(
+                icon = Icons.Default.HeadsetMic,
+                title = "Centro de ayuda",
+                isLast = true,
+                onClick = { navController.navigate("help") } // Conectado
+            )
         }
 
-        // --- BOTÓN CERRAR SESIÓN ---
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .clickable {
-                    // 1. Navega a la pantalla de login (ajusta "login" al nombre de tu ruta)
                     navController.navigate("auth") {
-                        // 2. Limpia el historial para que no pueda volver atrás al perfil
                         popUpTo("home") { inclusive = true }
                     }
                 }
@@ -138,7 +148,7 @@ fun ProfileScreen(navController: NavController) {
             )
         }
 
-        Spacer(modifier = Modifier.height(80.dp)) // Espacio para el BottomBar
+        Spacer(modifier = Modifier.height(80.dp))
     }
 }
 
@@ -183,7 +193,7 @@ fun MenuRow(icon: ImageVector, onClick: () -> Unit = {}, title: String, badgeCou
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { onClick() } // Hacemos que toda la fila sea clickeable
+                .clickable { onClick() }
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {

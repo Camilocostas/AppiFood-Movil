@@ -1,3 +1,5 @@
+package com.example.appifood_movil.ui.components
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -18,19 +20,22 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
 
 @Composable
 fun MinimalRestaurantCard(
     name: String,
     rating: String,
     time: String,
-    imageRes: Int
+    imageRes: Int,
+    onClick: () -> Unit
 ) {
     Column(
         modifier = Modifier
             .width(130.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFFF8F8F8)) // Fondo gris muy suave (moderno)
+            .background(Color(0xFFF8F8F8))
+            .clickable { onClick() }
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -39,7 +44,7 @@ fun MinimalRestaurantCard(
             contentDescription = null,
             modifier = Modifier
                 .size(80.dp)
-                .clip(CircleShape), // Imagen circular para logos
+                .clip(CircleShape),
             contentScale = ContentScale.Crop
         )
 

@@ -30,23 +30,52 @@ import com.example.appifood_movil.data.restaurants
 import com.example.appifood_movil.ui.components.PromoBanner
 import com.example.appifood_movil.ui.components.CarouselHeader
 import com.example.appifood_movil.R
-
+import com.example.appifood_movil.ui.components.SearchBottomSheet
+import com.example.appifood_movil.ui.viewmodel.SearchViewModel
+import androidx.compose.ui.platform.LocalContext
+import com.example.appifood_movil.data.LocationManager
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import com.example.appifood_movil.ui.components.MinimalRestaurantCard
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: HomeViewModel = viewModel()
+    viewModel: HomeViewModel = viewModel(),
+    searchViewModel: SearchViewModel
 ) {
     val drawerState = rememberDrawerState(DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val filteredRestaurants by searchViewModel.filteredRestaurants.collectAsState(initial = restaurants)
+    val context = LocalContext.current // Necesitas esto para el LocationManager
+    val locationManager = remember { LocationManager(context) }
+
+    // 1. Lanzador de permisos
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            // Si dio permiso, obtenemos la ubicación y la mandamos al ViewModel
+            locationManager.getCurrentLocation { location ->
+                searchViewModel.updateLocation(location)
+            }
+        }
+    }
+
+    // 2. Pedir permiso al iniciar la pantalla
+    LaunchedEffect(Unit) {
+        permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(), // Aseguramos que el Scaffold ocupe todo
+        modifier = Modifier.fillMaxSize(),
         bottomBar = {
             AppiFoodFooter(
                 navController = navController,
                 currentRoute = "home",
-                cartCount = viewModel.cartCount
+                cartCount = viewModel.cartCount,
+                onSearchClick = { navController.navigate("search") }// 2. Conectamos la acción
             )
         }
     ) { paddingValues ->
@@ -63,8 +92,8 @@ fun HomeScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(top = 40.dp, start = 20.dp), // 🔥 SUBE TODO
-                            verticalArrangement = Arrangement.Top // 👈 CLAVE
+                                .padding(top = 40.dp, start = 20.dp),
+                            verticalArrangement = Arrangement.Top
                         ) {
 
                             Image(
@@ -97,6 +126,7 @@ fun HomeScreen(
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold
                             )
+                            Spacer(modifier = Modifier.height(6.dp))
                         }
                     }
                 }
@@ -107,10 +137,9 @@ fun HomeScreen(
                     })
                 }
 
-                // 2. Sección Categorías
                 item {
                     SectionHeader(title = "Categorías")
-                    val categories = listOf("Todos", "Rapida", "Oriental", "Mexicana", "China", "Vegetariana")
+                    val categories = listOf("Todos", "Bebidas", "Postres", "Rapida", "Oriental", "Mexicana", "Vegetariana")
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -125,55 +154,55 @@ fun HomeScreen(
                     }
                 }
 
-                // 3. SECCIÓN: COMIDAS EN PROMOCIÓN HOY (Ahora de primero)
-                item { SectionHeader(title = "Promociones de Hoy", showViewAll = true) }
-                item {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(15.dp)
-                    ) {
-                        // Tomamos los primeros productos para mostrar como promoción
-                        items(allProducts) { product ->
-                            PromoFoodCard(
-                                name = product.name,
-                                price = product.price,
-                                oldPrice = "$35.000", // Precio ficticio para el ejemplo
-                                imageRes = product.imageRes,
-                                onNavigate = {
-                                    navController.navigate("productDetail/${product.name}/${product.price}/${product.imageRes}")
-                                }
-                            )
-                        }
-                    }
-                }
+             item {
+                 SectionHeader(title = "Promociones de Hoy", showViewAll = true)
+             }
 
-// --- SECCIÓN: RESTAURANTES POPULARES (Usando tu lista restaurants) ---
-                item { SectionHeader(title = "Restaurantes Populares", showViewAll = true) }
-                item {
-                    LazyRow(
-                        contentPadding = PaddingValues(horizontal = 20.dp),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        items(restaurants) { restaurant ->
-                            MinimalRestaurantCard(
-                                name = restaurant.name,
-                                rating = restaurant.rating,
-                                time = "25-40 min", // Puedes agregar este campo a tu modelo Restaurant luego
-                                imageRes = restaurant.imageRes,
-                                onClick = {
-                                    navController.navigate("restaurantDetail/${restaurant.name}")
-                                }
-                            )
-                        }
-                    }
-                }
+             item {
+                 LazyRow(
+                     contentPadding = PaddingValues(horizontal = 20.dp),
+                     horizontalArrangement = Arrangement.spacedBy(15.dp)
+                 ) {
+                     // AQUÍ ESTÁ EL CAMBIO: Usamos la lista filtrada del ViewModel
+                     items(viewModel.filteredProducts) { product ->
+                         PromoFoodCard(
+                             name = product.name,
+                             price = "$ ${String.format("%,.0f", product.price)}",
+                             oldPrice = "$35.000",
+                             imageRes = product.imageRes,
+                             onNavigate = {
+                                 navController.navigate("productDetail/${product.name}/${product.price}/${product.imageRes}")
+                             }
+                         )
+                     }
+                 }
+             }
+
+             item { SectionHeader(title = "Restaurantes Populares", showViewAll = true) }
+
+             item {
+                 // ESTA LÍNEA ES LA CLAVE: Observamos el flujo filtrado/ordenad
+                 LazyRow(
+                     contentPadding = PaddingValues(horizontal = 20.dp),
+                     horizontalArrangement = Arrangement.spacedBy(12.dp)
+                 ) {
+                     items(filteredRestaurants) { restaurant ->
+                         MinimalRestaurantCard(
+                             name = restaurant.name,
+                             rating = restaurant.rating,
+                             time = "25-40 min",
+                             imageRes = restaurant.imageRes,
+                             onClick = { navController.navigate("restaurantDetail/${restaurant.name}") }
+                         )
+                     }
+                 }
+             }
 
                 item { Spacer(modifier = Modifier.height(30.dp)) }
             }
         }
-    }
+}
 
-// --- Componentes Modernos y Minimalistas ---
 
 @Composable
 fun PromoFoodCard(name: String, price: String, oldPrice: String, imageRes: Int, onNavigate: () -> Unit) {
@@ -188,10 +217,9 @@ fun PromoFoodCard(name: String, price: String, oldPrice: String, imageRes: Int, 
                 contentDescription = null,
                 modifier = Modifier
                     .size(150.dp)
-                    .clip(RoundedCornerShape(24.dp)), // Bordes más redondeados
+                    .clip(RoundedCornerShape(24.dp)),
                 contentScale = ContentScale.Crop
             )
-            // Badge de descuento minimalista
             Surface(
                 color = Color(0xFFFF4B3A),
                 shape = RoundedCornerShape(topStart = 24.dp, bottomEnd = 12.dp),
@@ -229,13 +257,12 @@ fun MinimalRestaurantCard(
     imageRes: Int,
     onClick: () -> Unit
 ) {
-    // Card estilo "Flat" (sin sombras, fondo gris suave)
     Column(
         modifier = Modifier
             .width(130.dp)
             .clip(RoundedCornerShape(20.dp))
             .background(Color(0xFFF8F8F8))
-            .clickable { onClick() } // <--- TE FALTABA ESTA LÍNEA
+            .clickable { onClick() }
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -273,12 +300,12 @@ fun SectionHeader(
             text = title,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1A1D26) // Un negro más moderno y suave
+            color = Color(0xFF1A1D26)
         )
         if (showViewAll) {
             Text(
                 text = "Ver todos",
-                color = Color(0xFFFF4B3A), // El rojo de AppiFood
+                color = Color(0xFFFF4B3A),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.clickable { onViewAllClick() }

@@ -15,11 +15,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.ui.Alignment
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.background
@@ -30,7 +28,8 @@ import androidx.compose.foundation.clickable
 fun AppiFoodFooter(
     navController: NavController,
     currentRoute: String,
-    cartCount: Int = 0
+    cartCount: Int = 0,
+    onSearchClick: () -> Unit
 ) {
     val activeColor = Color(0xFFFF4B3A)
     val inactiveColor = Color.Gray
@@ -45,7 +44,7 @@ fun AppiFoodFooter(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(73.dp),
-            horizontalArrangement = Arrangement.SpaceAround, // 🔥 CLAVE
+            horizontalArrangement = Arrangement.SpaceAround,
             verticalAlignment = Alignment.CenterVertically
         ) {
 
@@ -66,7 +65,7 @@ fun AppiFoodFooter(
                 tint = inactiveColor,
                 modifier = Modifier
                     .size(26.dp)
-                    .clickable { }
+                    .clickable { onSearchClick() }
             )
 
             BadgedBox(
@@ -113,7 +112,6 @@ fun AppiFoodFooter(
             )
         }
 
-        // 🔥 ESTE SÍ usa matchParentSize (solo para el padding del sistema)
         Box(
             modifier = Modifier
                 .matchParentSize()

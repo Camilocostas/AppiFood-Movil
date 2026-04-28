@@ -30,13 +30,15 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Person
 import com.example.appifood_movil.ui.components.ImageHeader
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.input.VisualTransformation
+import android.R.attr.password
 
 private val AppiFoodRed = Color(0xFFFF4B3A)
 
 enum class AuthState { LOGIN, REGISTER, FORGOT_PASSWORD, VERIFY_CODE }
 @Composable
 fun AuthScreen(onLoginNavigation: () -> Unit) {
-    // Estado inicial en LOGIN
     var screenState by remember { mutableStateOf(AuthState.LOGIN) }
 
     Column(
@@ -57,7 +59,6 @@ fun AuthScreen(onLoginNavigation: () -> Unit) {
                 )
                 .padding(24.dp)
         ) {
-            // Título dinámico según el estado
             val title = when(screenState) {
                 AuthState.LOGIN -> "¡Bienvenido de nuevo!"
                 AuthState.REGISTER -> "Crear cuenta gratis"
@@ -75,7 +76,6 @@ fun AuthScreen(onLoginNavigation: () -> Unit) {
             Text(text = title, fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Black)
             Text(text = subtitle, fontSize = 15.sp, color = Color.Gray, modifier = Modifier.padding(bottom = 24.dp))
 
-            // Selector de formularios
             when (screenState) {
                 AuthState.LOGIN -> LoginForm(
                     onLoginClick = onLoginNavigation,
@@ -89,7 +89,7 @@ fun AuthScreen(onLoginNavigation: () -> Unit) {
                     onBackToLogin = { screenState = AuthState.VERIFY_CODE }
                 )
                 AuthState.VERIFY_CODE -> VerificationCodeForm(
-                    onContinue = { screenState = AuthState.LOGIN }, // O a donde prefieras enviarlo
+                    onContinue = { screenState = AuthState.LOGIN },
                     onBack = { screenState = AuthState.FORGOT_PASSWORD }
                 )
             }
@@ -101,7 +101,6 @@ fun AuthScreen(onLoginNavigation: () -> Unit) {
 fun VerificationCodeForm(onContinue: () -> Unit, onBack: () -> Unit) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
 
-        // Fila de cuadros de código
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceEvenly
@@ -114,7 +113,6 @@ fun VerificationCodeForm(onContinue: () -> Unit, onBack: () -> Unit) {
                         .background(Color(0xFFF5F5F5)),
                     contentAlignment = Alignment.Center
                 ) {
-                    // Aquí iría el estado de cada dígito
                     Text("", fontSize = 20.sp, fontWeight = FontWeight.Bold)
                 }
             }
@@ -144,26 +142,27 @@ fun VerificationCodeForm(onContinue: () -> Unit, onBack: () -> Unit) {
 }
 @Composable
 fun RegisterForm(onLoginSwitch: () -> Unit) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     Column {
-        CustomTextField(
-            label = "Nombre completo",
-            placeholder = "Tu nombre",
-            icon = Icons.Default.Person
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-
         CustomTextField(
             label = "Correo electrónico",
             placeholder = "tucorreo@email.com",
-            icon = Icons.Default.Email
+            icon = Icons.Default.Email,
+            text = email,           // <--- Nuevo
+            onTextChange = { email = it } // <--- Nuevo
         )
+
         Spacer(modifier = Modifier.height(16.dp))
 
         CustomTextField(
             label = "Contraseña",
-            placeholder = "Mínimo 8 caracteres",
+            placeholder = "••••••••",
             icon = Icons.Default.Lock,
-            isPassword = true
+            isPassword = true,
+            text = password,
+            onTextChange = { password = it }
         )
         Spacer(modifier = Modifier.height(16.dp))
 
@@ -171,19 +170,18 @@ fun RegisterForm(onLoginSwitch: () -> Unit) {
             label = "Confirmar contraseña",
             placeholder = "Repite tu contraseña",
             icon = Icons.Default.Lock,
-            isPassword = true
+            isPassword = true,
+            text = confirmPassword,            // <--- Aquí guardas el valor
+            onTextChange = { confirmPassword = it }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Botón para crear la cuenta
         MainActionButton(text = "Crear cuenta", icon = Icons.Default.PersonAdd) {
-            // Aquí irá la conexión a Laravel después
         }
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // Texto para volver al Login
         TextButton(
             onClick = onLoginSwitch,
             modifier = Modifier.align(Alignment.CenterHorizontally)
@@ -204,17 +202,37 @@ fun RegisterForm(onLoginSwitch: () -> Unit) {
 
 @Composable
 fun LoginForm(onLoginClick: () -> Unit, onRegisterSwitch: () -> Unit, onForgotClick: () -> Unit) {
+    var email by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
     Column {
-        CustomTextField(label = "Correo electrónico", placeholder = "tucorreo@email.com", icon = Icons.Default.Email)
+        CustomTextField(
+            label = "Correo electrónico",
+            placeholder = "tucorreo@email.com",
+            icon = Icons.Default.Email,
+            text = email,
+            onTextChange = { email = it }
+        )
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Campo de contraseña con el OJO más pequeño
         CustomTextField(
             label = "Contraseña",
             placeholder = "••••••••",
             icon = Icons.Default.Lock,
-            isPassword = true
+            isPassword = true,
+            text = password,
+            onTextChange = { password = it }
         )
+
+        // 2. Mostrar el mensaje de error si existe
+        if (errorMessage != null) {
+            Text(
+                text = errorMessage!!,
+                color = Color.Red,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 8.dp)
+            )
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp),
@@ -222,7 +240,6 @@ fun LoginForm(onLoginClick: () -> Unit, onRegisterSwitch: () -> Unit, onForgotCl
             verticalAlignment = Alignment.CenterVertically
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Checkbox más pequeño y estilizado
                 var checked by remember { mutableStateOf(false) }
                 Checkbox(
                     checked = checked,
@@ -232,7 +249,7 @@ fun LoginForm(onLoginClick: () -> Unit, onRegisterSwitch: () -> Unit, onForgotCl
                 )
                 Text(
                     "Recordarme",
-                    fontSize = 12.sp, // <--- Letras más pequeñas
+                    fontSize = 12.sp,
                     color = Color.Gray
                 )
             }
@@ -241,15 +258,21 @@ fun LoginForm(onLoginClick: () -> Unit, onRegisterSwitch: () -> Unit, onForgotCl
                 color = Color(0xFFFF4B3A),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                modifier = Modifier.clickable { onForgotClick() } // <--- Acción para cambiar de pantalla
+                modifier = Modifier.clickable { onForgotClick() }
             )
         }
 
-        // Botón de iniciar sesión "más bonito"
         MainActionButton(
             text = "Iniciar sesión",
             icon = Icons.Default.ArrowForward
-        ) { onLoginClick() }
+        ) {
+            // 3. Lógica de validación
+            if (email == "yo@ejemplo.com" && password == "123") {
+                onLoginClick() // Datos correctos, navegamos al home
+            } else {
+                errorMessage = "Correo o contraseña incorrectos" // Datos inválidos
+            }
+        }
 
         Spacer(modifier = Modifier.height(20.dp))
 
@@ -271,30 +294,36 @@ fun LoginForm(onLoginClick: () -> Unit, onRegisterSwitch: () -> Unit, onForgotCl
     }
 }
 
-// --- Componentes Reutilizables con el nuevo estilo ---
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CustomTextField(label: String, placeholder: String, icon: ImageVector, isPassword: Boolean = false) {
+fun CustomTextField(
+    label: String,
+    placeholder: String,
+    icon: ImageVector,
+    isPassword: Boolean = false,
+    text: String, // Recibe el texto
+    onTextChange: (String) -> Unit // Envía el cambio
+) {
     Column {
         Text(
             label,
             fontWeight = FontWeight.Bold,
-            fontSize = 13.sp, // <--- Label más pequeño
+            fontSize = 13.sp,
             modifier = Modifier.padding(bottom = 6.dp)
         )
         TextField(
-            value = "",
-            onValueChange = {},
+            value = text,
+            onValueChange = onTextChange,
             placeholder = { Text(placeholder, color = Color.Gray, fontSize = 14.sp) },
             leadingIcon = { Icon(icon, null, tint = Color.Gray, modifier = Modifier.size(20.dp)) },
+            visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
             trailingIcon = {
                 if (isPassword) {
                     IconButton(onClick = { /* Lógica para ver password */ }) {
                         Icon(
                             painter = painterResource(id = R.drawable.ic_eye),
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp), // <--- EL OJO MÁS PEQUEÑO
+                            modifier = Modifier.size(18.dp),
                             tint = Color.Gray.copy(alpha = 0.6f)
                         )
                     }
@@ -302,7 +331,7 @@ fun CustomTextField(label: String, placeholder: String, icon: ImageVector, isPas
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(52.dp) // <--- Altura más estilizada
+                .height(52.dp)
                 .clip(RoundedCornerShape(12.dp)),
             colors = TextFieldDefaults.colors(
                 focusedContainerColor = Color(0xFFF5F5F5),
@@ -321,10 +350,10 @@ fun MainActionButton(text: String, icon: ImageVector? = null, onClick: () -> Uni
         modifier = Modifier
             .fillMaxWidth()
             .height(54.dp)
-            .shadow(4.dp, RoundedCornerShape(16.dp)), // <--- Sombra para que no sea plano
+            .shadow(4.dp, RoundedCornerShape(16.dp)),
         shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = Color(0xFFFF4B3A) // Rojo vibrante
+            containerColor = Color(0xFFFF4B3A)
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
     ) {
@@ -340,15 +369,18 @@ fun MainActionButton(text: String, icon: ImageVector? = null, onClick: () -> Uni
 
 @Composable
 fun ForgotPasswordForm(onBackToLogin: () -> Unit) {
+    var newPassword by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     Column {
         CustomTextField(
             label = "Nueva contraseña",
             placeholder = "mínimo 8 caracteres",
             icon = Icons.Default.Lock,
-            isPassword = true
+            isPassword = true,
+            text = newPassword,
+            onTextChange = { newPassword = it }
         )
 
-        // --- Indicador de fuerza de contraseña ---
         Spacer(modifier = Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -368,12 +400,13 @@ fun ForgotPasswordForm(onBackToLogin: () -> Unit) {
             label = "Confirmar contraseña",
             placeholder = "repite la contraseña",
             icon = Icons.Default.Lock,
-            isPassword = true
+            isPassword = true,
+            text = confirmPassword,
+            onTextChange = { confirmPassword = it }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // --- Sección de Instrucciones traducida ---
         Text(
             "Instrucciones",
             fontWeight = FontWeight.Bold,
@@ -399,15 +432,12 @@ fun ForgotPasswordForm(onBackToLogin: () -> Unit) {
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // --- Botón Principal en Español ---
         MainActionButton(text = "Guardar nueva contraseña") {
-            // Aquí irá la lógica para actualizar en tu base de datos de Laravel
             onBackToLogin()
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // --- Enlace para volver ---
         TextButton(
             onClick = onBackToLogin,
             modifier = Modifier.align(Alignment.CenterHorizontally)

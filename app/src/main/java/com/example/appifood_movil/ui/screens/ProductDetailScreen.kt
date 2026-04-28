@@ -1,18 +1,15 @@
 package com.example.appifood_movil.ui.screens
 
-import androidx.compose.foundation.Image
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -20,120 +17,121 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.scale
+import androidx.compose.foundation.lazy.items
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailScreen(
     navController: NavController,
-    name: String,           // nombre -> name
-    price: String,          // precio -> price
-    imageRes: Int           // imagenRes -> imageRes (se mantiene igual)
+    name: String,
+    price: String,
+    imageRes: Int
 ) {
-    var quantity by remember { mutableStateOf(1) } // cantidad -> quantity
-    var extraCheese by remember { mutableStateOf(false) } // extraQueso -> extraCheese
+    var adicionesSeleccionadas by remember { mutableStateOf(setOf<String>()) }
+    var cantidad by remember { mutableStateOf(1) }
+
+    val appNaranja = Color(0xFFFF4B3A)
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Product Detail", fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-        }
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .verticalScroll(rememberScrollState())
-        ) {
-            Image(
-                painter = painterResource(id = imageRes),
-                contentDescription = name,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(300.dp)
-                    .clip(RoundedCornerShape(bottomStart = 30.dp, bottomEnd = 30.dp)),
-                contentScale = ContentScale.Crop
-            )
-
-            Column(modifier = Modifier.padding(20.dp)) {
+        bottomBar = {
+            // Panel inferior con botón grande y prominente
+            Surface(shadowElevation = 12.dp, color = Color.White) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 20.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(text = name, fontSize = 26.sp, fontWeight = FontWeight.Bold)
-                    Text(text = price, fontSize = 22.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFFF4B3A))
-                }
+                    // Contador de cantidad (más compacto)
+                    Row(
+                        modifier = Modifier
+                            .height(56.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFFF5F5F5)),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { if (cantidad > 1) cantidad-- }) { Icon(Icons.Default.Remove, null) }
+                        Text("$cantidad", fontWeight = FontWeight.Bold, fontSize = 20.sp, modifier = Modifier.padding(horizontal = 16.dp))
+                        IconButton(onClick = { cantidad++ }) { Icon(Icons.Default.Add, null) }
+                    }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                    Spacer(modifier = Modifier.width(16.dp))
 
-                Text(text = "Description", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
-                Text(
-                    text = "Our delicious $name is prepared with the highest quality fresh ingredients. A burst of flavor in every bite.",
-                    color = Color.Gray,
-                    fontSize = 14.sp
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Text(text = "Ingredients", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
-                Text(
-                    text = "• Premium meat\n• Melted cheese\n• Fresh vegetables\n• Special house sauce",
-                    color = Color.Gray,
-                    lineHeight = 22.sp
-                )
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                Text(text = "Add-ons", fontWeight = FontWeight.SemiBold, fontSize = 18.sp)
-
-                // Movimos el FilterChip dentro de la columna para que sea visible
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    FilterChip(
-                        selected = extraCheese,
-                        onClick = { extraCheese = !extraCheese },
-                        label = { Text("Extra Cheese +$2.000") },
-                        leadingIcon = if (extraCheese) {
-                            { Icon(Icons.Default.Check, null, modifier = Modifier.size(18.dp)) }
-                        } else null
-                    )
-
-                    // Usamos la función corregida CustomChip
-                    CustomChip(label = "Bacon +$3.000")
-                }
-
-                Spacer(modifier = Modifier.height(30.dp))
-
-                Button(
-                    onClick = { /* TODO: Add to cart logic */ },
-                    modifier = Modifier.fillMaxWidth().height(55.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF4B3A)),
-                    shape = RoundedCornerShape(15.dp)
-                ) {
-                    Text("Add to Cart", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    // Botón de "Agregar" MUY GRANDE Y LLAMATIVO
+                    Button(
+                        onClick = { /* Acción */ },
+                        colors = ButtonDefaults.buttonColors(appNaranja),
+                        modifier = Modifier
+                            .height(56.dp)
+                            .weight(1f),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Text("Agregar al carrito", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
             }
         }
-    }
-}
+    ) { padding ->
+        LazyColumn(
+            modifier = Modifier.fillMaxSize().padding(bottom = padding.calculateBottomPadding())
+        ) {
+            // Header: Imagen y Título integrados
+            item {
+                Box(modifier = Modifier.fillMaxWidth().height(300.dp)) {
+                    Image(
+                        painter = painterResource(id = imageRes),
+                        contentDescription = name,
+                        modifier = Modifier.fillMaxWidth(),
+                        contentScale = ContentScale.Crop
+                    )
 
-@Composable
-fun CustomChip(label: String) {
-    Surface(
-        color = Color(0xFFF5F5F5),
-        shape = RoundedCornerShape(10.dp),
-        modifier = Modifier.padding(vertical = 5.dp)
-    ) {
-        Text(
-            text = label,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-            fontSize = 12.sp
-        )
+                    Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.6f)))))
+
+                    // Título y Precio (FORMATO CORRECTO AQUÍ)
+                    val precioNumerico = price.toDoubleOrNull() ?: 0.0
+                    Column(modifier = Modifier.align(Alignment.BottomStart).padding(24.dp)) {
+                        Text(name, color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold)
+                        Text("$ ${"%.1f".format(precioNumerico)}", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    IconButton(onClick = { navController.popBackStack() }, modifier = Modifier.padding(top = 40.dp, start = 16.dp)) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás", tint = Color.White)
+                    }
+                }
+            }
+
+            // Sección de Adiciones (Solo el texto)
+            item {
+                Text("Personaliza tu pedido", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(24.dp))
+            }
+
+            // Lista de opciones
+            val opciones = listOf("Papas Fritas", "Extra Queso", "Tocino", "Salsa Especial")
+            items(opciones) { item ->
+                val isSelected = adicionesSeleccionadas.contains(item)
+                val backgroundColor by animateColorAsState(if (isSelected) appNaranja.copy(0.1f) else Color.White)
+                val borderColor by animateColorAsState(if (isSelected) appNaranja else Color.LightGray.copy(0.3f))
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp, vertical = 8.dp)
+                        .clickable { adicionesSeleccionadas = if (isSelected) adicionesSeleccionadas - item else adicionesSeleccionadas + item },
+                    colors = CardDefaults.cardColors(containerColor = backgroundColor),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(2.dp, borderColor)
+                ) {
+                    Row(modifier = Modifier.padding(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(item, modifier = Modifier.weight(1f), fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        RadioButton(selected = isSelected, onClick = null, colors = RadioButtonDefaults.colors(selectedColor = appNaranja))
+                    }
+                }
+            }
+        }
     }
 }

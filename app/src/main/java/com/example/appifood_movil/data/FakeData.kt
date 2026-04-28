@@ -4,7 +4,7 @@ import com.example.appifood_movil.R
 import com.example.appifood_movil.data.model.Dish
 import com.example.appifood_movil.data.model.Restaurant
 import com.example.appifood_movil.data.model.FoodProduct
-
+import com.example.appifood_movil.ui.screens.ForgotPasswordForm
 
 
 val restaurants = listOf(
@@ -18,9 +18,9 @@ val restaurants = listOf(
         category = "Comida China",
         latitude = 2.4435, longitude = -76.6063,
         dishes = listOf(
-            Dish("Arroz Chaufa Especial", "$ 25.000", R.drawable.arrozchaufa),
-            Dish("Lomo Saltado Chino", "$ 28.500", R.drawable.lomosaltado),
-            Dish("Tallarín Saltarín", "$ 22.000", R.drawable.tallarinsaltarin)
+            Dish("Arroz Chaufa Especial", 25000.0, R.drawable.arrozchaufa),
+            Dish("Lomo Saltado Chino", 28500.0, R.drawable.lomosaltado),
+            Dish("Tallarín Saltarín", 22000.0, R.drawable.tallarinsaltarin)
         )
     ),
     Restaurant(
@@ -33,9 +33,9 @@ val restaurants = listOf(
         category = "Comida Vegana",
         latitude = 2.4412, longitude = -76.6085,
         dishes = listOf(
-            Dish("Ensalada César Premium", "$ 18.000", R.drawable.ensaladacesar),
-            Dish("Bowl Vegano Mixto", "$ 22.000", R.drawable.bowlvegano),
-            Dish("Hamburguesa de Lenteja", "$ 15.500", R.drawable.hamburguesalenteja)
+            Dish("Ensalada César Premium", 18000.0, R.drawable.ensaladacesar),
+            Dish("Bowl Vegano Mixto", 22000.0, R.drawable.bowlvegano),
+            Dish("Hamburguesa de Lenteja", 15500.0, R.drawable.hamburguesalenteja)
         )
     ),
     Restaurant(
@@ -48,9 +48,9 @@ val restaurants = listOf(
         category = "Hamburguesas",
         latitude = 2.4455, longitude = -76.6042,
         dishes = listOf(
-            Dish("Monster Bacon", "$ 32.000", R.drawable.monster_bacon),
-            Dish("Clásica de la Casa", "$ 24.500", R.drawable.clasica_casa),
-            Dish("Papas Supremas", "$ 12.000", R.drawable.papas_supremas)
+            Dish("Monster Bacon", 32000.0, R.drawable.monster_bacon),
+            Dish("Clásica de la Casa", 24500.0, R.drawable.clasica_casa),
+            Dish("Papas Supremas", 12000.0, R.drawable.papas_supremas)
         )
     ),
     Restaurant(
@@ -63,9 +63,9 @@ val restaurants = listOf(
         category = "Pizzería",
         latitude = 2.4480, longitude = -76.6025,
         dishes = listOf(
-            Dish("Pepperoni King", "$ 38.000", R.drawable.pepperoni_king),
-            Dish("Hawaiana Especial", "$ 35.000", R.drawable.hawaiana),
-            Dish("Chicago Deep Pizza", "$ 42.000", R.drawable.chicago_pizza)
+            Dish("Pepperoni King", 38000.0, R.drawable.pepperoni_king),
+            Dish("Hawaiana Especial", 35000.0, R.drawable.hawaiana),
+            Dish("Chicago Deep Pizza", 42000.0, R.drawable.chicago_pizza)
         )
     ),
     Restaurant(
@@ -78,9 +78,9 @@ val restaurants = listOf(
         category = "Carnes y Parrilla",
         latitude = 2.4610, longitude = -76.5980,
         dishes = listOf(
-            Dish("Baby Beef 300g", "$ 45.000", R.drawable.baby_beef),
-            Dish("Churrasco Especial", "$ 48.000", R.drawable.churrasco),
-            Dish("Costillas BBQ", "$ 39.900", R.drawable.costillas_bbq)
+            Dish("Baby Beef 300g", 45000.0, R.drawable.baby_beef),
+            Dish("Churrasco Especial", 48000.0, R.drawable.churrasco),
+            Dish("Costillas BBQ", 39900.0, R.drawable.costillas_bbq)
         )
     ),
     Restaurant(
@@ -93,9 +93,9 @@ val restaurants = listOf(
         category = "Comida Japonesa",
         latitude = 2.4390, longitude = -76.6090,
         dishes = listOf(
-            Dish("Roll Philadelphia", "$ 28.000", R.drawable.roll_phila),
-            Dish("Ramen Tradicional", "$ 32.500", R.drawable.ramen),
-            Dish("Gyoza Mixtas", "$ 18.000", R.drawable.gyozas)
+            Dish("Roll Philadelphia", 28000.0, R.drawable.roll_phila),
+            Dish("Ramen Tradicional", 32500.0, R.drawable.ramen),
+            Dish("Gyoza Mixtas", 18000.0, R.drawable.gyozas)
         )
     ),
     Restaurant(
@@ -108,9 +108,9 @@ val restaurants = listOf(
         category = "Comida Mexicana",
         latitude = 2.4350, longitude = -76.6030,
         dishes = listOf(
-            Dish("Tacos al Pastor x3", "$ 21.000", R.drawable.tacos_pastor),
-            Dish("Burrito Supremo", "$ 26.000", R.drawable.burrito),
-            Dish("Quesadilla de Birria", "$ 24.500", R.drawable.quesabirria)
+            Dish("Tacos al Pastor x3", 21000.0, R.drawable.tacos_pastor),
+            Dish("Burrito Supremo", 26000.0, R.drawable.burrito),
+            Dish("Quesadilla de Birria", 24500.0, R.drawable.quesabirria)
         )
     ),
     Restaurant(
@@ -123,9 +123,9 @@ val restaurants = listOf(
         category = "Italiana",
         latitude = 2.4520, longitude = -76.6055,
         dishes = listOf(
-            Dish("Lasaña Boloñesa", "$ 29.000", R.drawable.lasana),
-            Dish("Fettuccine Alfredo", "$ 27.500", R.drawable.fettuccine),
-            Dish("Raviolis de Espinaca", "$ 31.000", R.drawable.raviolis)
+            Dish("Lasaña Boloñesa", 29000.0, R.drawable.lasana),
+            Dish("Fettuccine Alfredo", 27500.0, R.drawable.fettuccine),
+            Dish("Raviolis de Espinaca", 31000.0, R.drawable.raviolis)
         )
     ),
     Restaurant(
@@ -138,9 +138,9 @@ val restaurants = listOf(
         category = "Pescadería",
         latitude = 2.4410, longitude = -76.6010,
         dishes = listOf(
-            Dish("Ceviche de Camarón", "$ 26.000", R.drawable.ceviche),
-            Dish("Mojarra Frita", "$ 32.000", R.drawable.mojarra),
-            Dish("Cazuela de Mariscos", "$ 45.000", R.drawable.cazuela)
+            Dish("Ceviche de Camarón", 26000.0, R.drawable.ceviche),
+            Dish("Mojarra Frita", 32000.0, R.drawable.mojarra),
+            Dish("Cazuela de Mariscos", 45000.0, R.drawable.cazuela)
         )
     ),
     Restaurant(
@@ -153,21 +153,25 @@ val restaurants = listOf(
         category = "Pollo Frito",
         latitude = 2.4440, longitude = -76.6075,
         dishes = listOf(
-            Dish("Combo 8 Presas", "$ 48.000", R.drawable.combo_pollo),
-            Dish("Alitas Picantes x12", "$ 29.900", R.drawable.alitas),
-            Dish("Sándwich de Pollo", "$ 19.500", R.drawable.sand_pollo)
+            Dish("Combo 8 Presas", 48000.0, R.drawable.combo_pollo),
+            Dish("Alitas Picantes x12", 29900.0, R.drawable.alitas),
+            Dish("Sándwich de Pollo", 19500.0, R.drawable.sand_pollo)
         )
     )
 )
 
 val allProducts = listOf(
-    FoodProduct(1, "Cheeseburger", "$25.000", R.drawable.cheese, "Hamburguesas"),
-    FoodProduct(2, "Big Mac", "$32.000", R.drawable.bicmac, "Hamburguesas"),
-    FoodProduct(7, "Hamburguesa", "$15.000", R.drawable.clasica, "Hamburguesas"),
-    FoodProduct(3, "Philadelphia", "$28.000", R.drawable.philadelphia, "Sushi"),
-    FoodProduct(4, "Ojo de Tigre", "$35.000", R.drawable.ojotigre, "Sushi"),
-    FoodProduct(5, "Coca Cola 1L", "$6.000", R.drawable.cocacola, "Bebidas"),
-    FoodProduct(6, "Ramen Tonkotsu", "$22.000", R.drawable.ramen, "Sopas")
+    FoodProduct(1, "Cheeseburger", 25.000, R.drawable.cheese, "Rapida"),
+    FoodProduct(2, "Big Mac", 32.000, R.drawable.bicmac, "Rapida"),
+    FoodProduct(7, "Hamburguesa", 15.000, R.drawable.clasica, "Rapida"),
+    FoodProduct(3, "Philadelphia", 28.000, R.drawable.philadelphia, "Oriental"),
+    FoodProduct(4, "Ojo de Tigre", 35.000, R.drawable.ojotigre, "Oriental"),
+    FoodProduct(5, "Coca Cola 1L", 6.000, R.drawable.cocacola, "Bebidas"),
+    FoodProduct(6, "Ramen Tonkotsu", 22.000, R.drawable.ramen, "Oriental"),
+    FoodProduct(7,"Mega-Taco", 23.000, R.drawable.cheese, "Mexicana"),
+    FoodProduct(8, "Sopa de guisantes", 16.000, R.drawable.lomosaltado, "Mexicana"),
+    FoodProduct(9, "Helado de Yogurt", 9.000, R.drawable.helado, "Postres"),
+    FoodProduct(10, "Pastel de Chocolate", 8.000, R.drawable.ensaladacesar, "Postres")
 )
 
 fun searchRestaurants(query: String): List<Restaurant> {

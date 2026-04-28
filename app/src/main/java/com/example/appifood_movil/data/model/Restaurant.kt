@@ -8,7 +8,7 @@ data class HomeFilter(
 
 data class Dish(
     val name: String,
-    val price: String,
+    val price: Double,
     val imageRes: Int
 )
 

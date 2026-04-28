@@ -30,7 +30,7 @@ fun CarouselHeader(
 ) {
     val images = listOf(
         R.drawable.flat_carousel,
-        R.drawable.plate_carousel, // Cambia por tus imágenes reales
+        R.drawable.plate_carousel,
         R.drawable.top_carousel,
         R.drawable.helado
     )
@@ -43,20 +43,17 @@ fun CarouselHeader(
         pageCount = { virtualPageCount }
     )
 
-    // Lógica Automática (Aquí está el secreto)
     LaunchedEffect(Unit) {
         while (true) {
             delay(2000)
-            // Usamos animateScrollToPage para que el valor de offset cambie suavemente
             pagerState.animateScrollToPage(
                 page = pagerState.currentPage + 1,
-                animationSpec = tween(durationMillis = 1000) // Transición de segundo y medio
+                animationSpec = tween(durationMillis = 1000)
             )
         }
     }
 
     Box(modifier = Modifier.fillMaxWidth().height(height)) {
-        // HorizontalPager con el efecto de desvanecido (graphicsLayer)
         HorizontalPager(
             state = pagerState,
             modifier = Modifier.fillMaxSize()
@@ -76,7 +73,6 @@ fun CarouselHeader(
             )
         }
 
-        // Gradiente blanco
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -89,11 +85,9 @@ fun CarouselHeader(
                 )
         )
 
-        // CONTENIDO: Logo, Ubicación y Saludo
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                // Bajamos el bottom de 40.dp a 60.dp (o más) para que los elementos suban
                 .padding(start = 24.dp, end = 24.dp, bottom = 65.dp),
             verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.Start

@@ -23,7 +23,6 @@ fun ImageHeader() {
             .fillMaxWidth()
             .height(300.dp)
     ) {
-        // 1. IMAGEN DE FONDO
         Image(
             painter = painterResource(id = R.drawable.hero_login),
             contentDescription = null,
@@ -31,7 +30,6 @@ fun ImageHeader() {
             modifier = Modifier.fillMaxSize()
         )
 
-        // 2. GRADIENTE (Desvanecido de Blanco a Transparente)
         Box(
             modifier = Modifier
                 .fillMaxSize()
@@ -48,30 +46,28 @@ fun ImageHeader() {
                 )
         )
 
-        // 3. LOGO Y TEXTO
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(bottom = 40.dp), // Padding inferior con .dp
+                .padding(bottom = 40.dp),
             verticalArrangement = Arrangement.Center,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Image(
-                painter = painterResource(id = R.drawable.logomau), // Cambia por el nombre de tu archivo de logo
+                painter = painterResource(id = R.drawable.logomau),
                 contentDescription = "Logo AppiFood",
                 modifier = Modifier
-                    .width(310.dp) // <--- Aumenta este valor para hacerlo más grande (antes era 220.dp)
+                    .width(310.dp)
                     .wrapContentHeight()
             )
 
-            // CORRECCIÓN AQUÍ: Asegúrate de que top y horizontal usen .dp
             Text(
                 text = "Descubre, ordena y disfruta la mejor comida",
                 color = Color.White.copy(alpha = 0.9f),
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.padding(
-                    top = 4.dp, // <--- Reduce este valor (antes era 10.dp) para pegarlo al logo
+                    top = 4.dp,
                     start = 40.dp,
                     end = 40.dp
                 )

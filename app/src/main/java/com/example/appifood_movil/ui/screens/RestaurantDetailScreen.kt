@@ -11,7 +11,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
@@ -26,181 +25,164 @@ import com.google.maps.android.compose.GoogleMap
 import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.MarkerState
 import com.google.maps.android.compose.rememberCameraPositionState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
+import androidx.compose.foundation.layout.PaddingValues
+import com.example.appifood_movil.ui.components.SwipeActionButton
 @Composable
-fun RestaurantDetailScreen(navController: NavController, name: String?) { // nombre -> name
-    // Buscamos el restaurante en la lista (ajustado a nombres en inglés)
+fun RestaurantDetailScreen(navController: NavController, name: String?) {
     val restaurant = restaurants.find { it.name == name }
-    var isFavorite by remember { mutableStateOf(false) } // esFavorito -> isFavorite
+    var isFavorite by remember { mutableStateOf(false) }
 
-    Scaffold(
-        bottomBar = {
-            Button(
-                onClick = { /* TODO: Order logic */ },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp)
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF4B3A)),
-                shape = RoundedCornerShape(18.dp)
-            ) {
-                Text("Hacer un Pedido Ahora", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    ) { padding ->
+    // Lista simulada de imágenes para la galería
+    val galleryImages = listOf(
+        R.drawable.burger_background_2,
+        R.drawable.burger_background_2,
+        R.drawable.burger_background_2,
+        R.drawable.burger_background_2
+    )
+
+    Box(modifier = Modifier.fillMaxSize().background(Color.White)) {
+
+        // 1. CONTENIDO CON SCROLL
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(bottom = 100.dp) // Espacio para que el contenido no quede oculto tras el botón
                 .verticalScroll(rememberScrollState())
-                .background(Color.White)
         ) {
-            // Header Image Box
-            Box(modifier = Modifier.fillMaxWidth().height(320.dp)) {
+            // --- CABECERA (Solo una vez) ---
+            Box(modifier = Modifier.fillMaxWidth().height(300.dp)) {
                 Image(
                     painter = painterResource(id = restaurant?.imageRes ?: R.drawable.burger_background_2),
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
-
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(
-                            Brush.verticalGradient(
-                                colors = listOf(Color.Black.copy(alpha = 0.4f), Color.Transparent),
-                                endY = 300f
-                            )
-                        )
-                )
-
                 IconButton(
                     onClick = { navController.popBackStack() },
-                    modifier = Modifier
-                        .padding(16.dp)
-                        .background(Color.White.copy(alpha = 0.7f), CircleShape)
+                    modifier = Modifier.padding(16.dp).background(Color.White.copy(alpha = 0.5f), CircleShape)
                 ) {
                     Icon(Icons.Default.ArrowBack, contentDescription = "Back")
                 }
             }
 
-            // Info Content Column
-            Column(
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // --- INFO DEL RESTAURANTE ---
+            Column(modifier = Modifier.padding(horizontal = 24.dp)) {
+                // 1. Etiqueta de descuento (10% OFF)
+                Surface(
+                    color = Color(0xFFFF4B3A).copy(alpha = 0.1f),
+                    shape = RoundedCornerShape(8.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
+                ) {
+                    Row(modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.LocalOffer, contentDescription = null, tint = Color(0xFFFF4B3A), modifier = Modifier.size(16.dp))
+                        Text(" 10% OFF", color = Color(0xFFFF4B3A), fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                }
+
+                // 2. Nombre y Calificación
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Text(text = name ?: "Restaurant", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Star, contentDescription = null, tint = Color(0xFFFFB800), modifier = Modifier.size(20.dp))
+                        Text(" 4.8 (567 reseñas)", fontWeight = FontWeight.Medium, color = Color.Gray)
+                    }
+                }
+
+                // 3. Categoría y Precio
+                Text(text = "Italian, Mediterranean • $$", color = Color.Gray, fontSize = 16.sp, modifier = Modifier.padding(vertical = 4.dp))
+
+                // 4. Ubicación con icono
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(vertical = 8.dp)) {
+                    Icon(Icons.Default.LocationOn, contentDescription = null, tint = Color(0xFFFF4B3A), modifier = Modifier.size(20.dp))
+                    Text(text = " " + (restaurant?.address ?: "Dirección"), color = Color.Gray, fontWeight = FontWeight.Bold)
+                }
+
+                // 5. Tabs
+                TabRow(
+                    selectedTabIndex = 2,
+                    containerColor = Color.Transparent,
+                    indicator = { tabPositions ->
+                        TabRowDefaults.SecondaryIndicator(
+                            Modifier.tabIndicatorOffset(tabPositions[2]),
+                            color = Color(0xFFFF4B3A)
+                        )
+                    }
+                ) {
+                    listOf("Acerca de", "Menu", "Galeria", "Reseña").forEachIndexed { index, title ->
+                        Tab(
+                            selected = index == 2,
+                            onClick = {},
+                            text = {
+                                Text(
+                                    title,
+                                    color = if(index == 2) Color(0xFFFF4B3A) else Color.Gray,
+                                    fontWeight = if(index == 2) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
+                        )
+                    }
+                }
+            }
+// Datos de prueba para el collage (puedes usar imágenes de tus platos o restaurante)
+// Usaremos alturas diferentes para simular el efecto mosaico
+            val collageItems = listOf(
+                Pair(R.drawable.arrozchaufa, 220.dp), // Imagen alta
+                Pair(R.drawable.lomosaltado, 140.dp),   // Imagen baja
+                Pair(R.drawable.tallarinsaltarin, 140.dp),// Imagen baja
+                Pair(R.drawable.restaurantechino, 140.dp) // Imagen alta
+            )
+
+// Usamos StaggeredGrid para el efecto mosaico elegante
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(2), // 2 columnas
                 modifier = Modifier
                     .fillMaxWidth()
-                    .offset(y = (-30).dp)
-                    .background(Color.White, RoundedCornerShape(topStart = 35.dp, topEnd = 35.dp))
-                    .padding(24.dp)
+                    .height(400.dp) // Altura fija para que el scroll principal funcione
+                    .padding(horizontal = 20.dp),
+                contentPadding = PaddingValues(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalItemSpacing = 8.dp
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = name ?: "Restaurant",
-                            fontSize = 28.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                        Text(
-                            text = restaurant?.address ?: "Dirección no disponible", // direccion -> address
-                            color = Color.Gray,
-                            fontSize = 14.sp
-                        )
-                    }
-
-                    IconButton(
-                        onClick = { isFavorite = !isFavorite },
-                        modifier = Modifier.background(Color(0xFFF5F5F5), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = if (isFavorite) Icons.Default.Favorite else Icons.Default.FavoriteBorder,
-                            contentDescription = null,
-                            tint = if (isFavorite) Color.Red else Color.Gray,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                }
-
-                // Info Cards Row
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 25.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp, Alignment.CenterHorizontally),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    InfoCard(
-                        icon = Icons.Default.Schedule,
-                        label = "Horario",
-                        value = restaurant?.schedule ?: "9:00 - 21:00" // horario -> schedule
-                    )
-                    InfoCard(
-                        icon = Icons.Default.Star,
-                        label = "Rating",
-                        value = "4.8",
-                        iconColor = Color(0xFFFFB800)
-                    )
-                    InfoCard(
-                        icon = Icons.Default.DeliveryDining,
-                        label = "Envío",
-                        value = if (restaurant?.hasDelivery == true) "Gratis" else "No", // tieneDomicilio -> hasDelivery
-                        iconColor = Color(0xFF4CAF50)
+                items(collageItems) { item ->
+                    Image(
+                        painter = painterResource(id = item.first),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(item.second) // Altura variable del Pair
+                            .clip(RoundedCornerShape(16.dp)), // Bordes muy redondeados para toque moderno
+                        contentScale = ContentScale.Crop
                     )
                 }
-
-                Text(
-                    text = "Platos Populares",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                // List of Dishes (Platos)
-                restaurant?.dishes?.forEach { dish -> // platos -> dishes
-                    DishItem( // PlatoItem -> DishItem
-                        name = dish.name,
-                        price = dish.price,
-                        imageRes = dish.imageRes
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Ubicación",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-// Configuramos la cámara del mapa
-                val restaurantLocation = LatLng(restaurant?.latitude ?: 2.4435, restaurant?.longitude ?: -76.6063)
-                val cameraPositionState = rememberCameraPositionState {
-                    position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(restaurantLocation, 16f)
-                }
-
-// Renderizamos el componente del mapa
-                GoogleMap(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(200.dp)
-                        .clip(RoundedCornerShape(15.dp)),
-                    cameraPositionState = cameraPositionState
-                ) {
-                    Marker(
-                        state = MarkerState(position = restaurantLocation),
-                        title = restaurant?.name ?: "Restaurante"
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(30.dp))
             }
-        }
+
+            Spacer(modifier = Modifier.height(24.dp))
+// --- FIN DE LA SECCIÓN DE GALERÍA COLLAGE ---
+
+            // --- MAPA ---
+            Spacer(modifier = Modifier.height(20.dp))
+            Text("Ubicación", fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 24.dp))
+
+            val restaurantLocation = LatLng(restaurant?.latitude ?: 2.4435, restaurant?.longitude ?: -76.6063)
+            GoogleMap(
+                modifier = Modifier.fillMaxWidth().height(200.dp).padding(24.dp).clip(RoundedCornerShape(15.dp)),
+                cameraPositionState = rememberCameraPositionState { position = com.google.android.gms.maps.model.CameraPosition.fromLatLngZoom(restaurantLocation, 15f) }
+            ) {
+                Marker(state = MarkerState(position = restaurantLocation))
+            }
+
+            }
     }
 }
+
+
+
 
 @Composable
 fun InfoCard(
@@ -249,7 +231,7 @@ fun InfoCard(
 }
 
 @Composable
-fun DishItem(name: String, price: String, imageRes: Int) { // PlatoItem -> DishItem
+fun DishItem(name: String, price: String, imageRes: Int) {
     Card(
         modifier = Modifier
             .fillMaxWidth()

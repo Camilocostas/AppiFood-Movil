@@ -1,8 +1,10 @@
 package com.example.appifood_movil.data.model
 
-// Esta clase solo guarda datos, por eso va en 'model'
+// Archivo: data/model/ReceiptItem.kt
+// Asegúrate de que ReceiptItem tenga 'var quantity' para permitir cambios
 data class ReceiptItem(
     val name: String,
-    val quantity: Int,
-    val totalPrice: String
+    var quantity: Int,
+    val price: Int,
+    val imageRes: Int
 )

@@ -33,11 +33,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.graphicsLayer
 @Composable
 fun PromoBanner(onClick: () -> Unit) {
-    // --- ANIMACIÓN DE PULSACIÓN ---
     val infiniteTransition = rememberInfiniteTransition(label = "pulse")
     val scale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.03f, // Se agranda un 3%
+        targetValue = 1.03f,
         animationSpec = infiniteRepeatable(
             animation = tween(1000, easing = LinearEasing),
             repeatMode = RepeatMode.Reverse
@@ -49,13 +48,13 @@ fun PromoBanner(onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 10.dp)
-            .graphicsLayer(scaleX = scale, scaleY = scale) // Aplicamos la animación
+            .graphicsLayer(scaleX = scale, scaleY = scale)
             .clickable { onClick() },
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFFD700) // Amarillo vibrante/oro
+            containerColor = Color(0xFFFFD700)
         ),
-        elevation = CardDefaults.cardElevation(8.dp) // Un poco más de sombra para que resalte
+        elevation = CardDefaults.cardElevation(8.dp)
     ) {
         Row(
             modifier = Modifier
@@ -94,7 +93,6 @@ fun PromoBanner(onClick: () -> Unit) {
                 )
             }
 
-            // Imagen o Icono llamativo
             Box(
                 modifier = Modifier
                     .size(60.dp)

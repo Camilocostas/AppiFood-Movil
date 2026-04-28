@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import com.example.appifood_movil.data.model.HomeFilter
 import com.example.appifood_movil.data.restaurants
 import com.example.appifood_movil.data.searchRestaurants
+import com.example.appifood_movil.data.model.FoodProduct
+import com.example.appifood_movil.data.allProducts
 
 class HomeViewModel : ViewModel() {
 
@@ -34,18 +36,15 @@ class HomeViewModel : ViewModel() {
 
     fun onCategorySelected(category: String) {
         selectedCategory = category
-        searchResults = if (category == "Todas") {
-            restaurants
+    }
+
+    val filteredProducts: List<FoodProduct>
+        get() = if (selectedCategory == "Todos" || selectedCategory == "Todas") {
+            allProducts
         } else {
-            restaurants.filter { it.category == category }
+            allProducts.filter { it.category == selectedCategory }
         }
-    }
-
-    fun onApplyFilter(newFilter: HomeFilter) {
-        filter = newFilter
-    }
-
-    fun onAddToCart() {
-        cartCount++
-    }
 }
+
+
+

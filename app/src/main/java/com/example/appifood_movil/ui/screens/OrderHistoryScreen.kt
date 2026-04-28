@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.appifood_movil.R
 
-// --- Models ---
 data class Order(
     val orderId: String,
     val productName: String,
@@ -44,13 +43,10 @@ enum class OrderStatus(val label: String, val color: Color) {
     DELIVERED("Entregado", Color(0xFF4CAF50)),
     CANCELLED("Cancelado", Color(0xFFF44336))
 }
-
 sealed class PaymentMethod(val type: String, val icon: ImageVector) {
     class Cash(val amountToPay: Double) : PaymentMethod("Efectivo", Icons.Default.Payments)
     class Transfer(val platform: String, val accountNumber: String) : PaymentMethod("Transferencia", Icons.Default.AccountBalanceWallet)
 }
-
-// --- Mock Data ---
 val mockOrderList = listOf(
     Order(
         orderId = "AF-1024",

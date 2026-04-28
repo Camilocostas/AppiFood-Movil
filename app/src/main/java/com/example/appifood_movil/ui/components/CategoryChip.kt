@@ -21,22 +21,19 @@ fun CategoryChip(
 ) {
     Surface(
         modifier = Modifier.clickable { onClick() },
-        shape = RoundedCornerShape(20.dp),
-        // Si está seleccionado: Fondo Rojo AppiFood. Si no: Blanco.
+        shape = RoundedCornerShape(15.dp),
         color = if (isSelected) Color(0xFFFF4B3A) else Color.White,
-        // Borde suave cuando no está seleccionado
         border = BorderStroke(
-            width = 1.dp,
+            width = 2.dp,
             color = if (isSelected) Color(0xFFFF4B3A) else Color(0xFFFEECEB)
         )
     ) {
         Text(
             text = text,
             modifier = Modifier.padding(horizontal = 22.dp, vertical = 8.dp),
-            // Texto blanco si está seleccionado, rojo si no.
             color = if (isSelected) Color.White else Color(0xFFFF4B3A),
             fontWeight = FontWeight.Medium,
-            fontSize = 14.sp
+            fontSize = 13.sp
         )
     }
 }

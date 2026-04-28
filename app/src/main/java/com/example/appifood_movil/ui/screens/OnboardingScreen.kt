@@ -22,11 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.launch
 import androidx.compose.ui.layout.ContentScale
-
-// Importa el R de tu proyecto para las imágenes
 import com.example.appifood_movil.R
 
-// 1. MODELO DE DATOS
 data class OnboardingPage(
     val title: String,
     val description: String,
@@ -107,25 +104,21 @@ fun OnboardingPageUI(page: OnboardingPage) {
             .fillMaxSize()
             .padding(top = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top // Cambiamos de Center a Top para controlar nosotros los espacios
+        verticalArrangement = Arrangement.Top
     ) {
-        // 1. Espacio flexible arriba para que la imagen no toque el borde
         Spacer(modifier = Modifier.height(60.dp))
 
-        // 2. La Imagen (Ajustamos el tamaño si es necesario para que suba más)
         Image(
             painter = painterResource(id = page.image),
             contentDescription = null,
             modifier = Modifier
-                .size(380.dp) // Un poco más grande para llenar el espacio superior
+                .size(380.dp)
                 .padding(40.dp),
             contentScale = ContentScale.Fit
         )
 
-        // 3. Este Spacer empuja las letras hacia ABAJO
         Spacer(modifier = Modifier.weight(1f))
 
-        // 4. Bloque de Textos (Ahora quedarán más abajo gracias al weight de arriba)
         Text(
             text = page.title,
             fontSize = 28.sp,
@@ -141,7 +134,7 @@ fun OnboardingPageUI(page: OnboardingPage) {
             text = page.description,
             modifier = Modifier
                 .padding(horizontal = 40.dp)
-                .padding(bottom = 60.dp), // El padding bottom asegura que no choquen con los botones
+                .padding(bottom = 60.dp),
             color = Color.White,
             textAlign = TextAlign.Center,
             fontSize = 16.sp,
