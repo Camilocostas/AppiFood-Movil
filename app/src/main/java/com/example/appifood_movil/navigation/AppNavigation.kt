@@ -7,7 +7,6 @@ import androidx.navigation.navArgument
 import com.example.appifood_movil.ui.screens.*
 import androidx.compose.animation.*
 import com.example.appifood_movil.ui.viewmodel.SearchViewModel
-import com.example.appifood_movil.ui.screens.FavoritesScreen
 
 @Composable
 fun AppNavigation(searchViewModel: SearchViewModel) {
@@ -15,23 +14,9 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
 
     NavHost(
         navController = navController,
-        startDestination = Screen.Splash.route // Usamos la constante
+        startDestination = Screen.Splash.route
     ) {
-        composable(Screen.Home.route) {
-            HomeScreen(navController = navController, searchViewModel = searchViewModel)
-        }
-
-        composable(
-            route = "search",
-            enterTransition = { slideInHorizontally(initialOffsetX = { 1000 }) + fadeIn() },
-            exitTransition = { slideOutHorizontally(targetOffsetX = { 1000 }) + fadeOut() }
-        ) {
-            // AQUÍ ESTÁ EL TRUCO: Pasamos EL MISMO searchViewModel
-            SearchScreen(viewModel = searchViewModel, navController = navController)
-        }
-
         composable(Screen.Splash.route) {
-            // Asumiendo que tenías una pantalla de splash o onboarding
             OnboardingScreen(onFinished = {
                 navController.navigate(Screen.Auth.route) {
                     popUpTo(Screen.Splash.route) { inclusive = true }
@@ -48,11 +33,18 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         }
 
         composable(Screen.Home.route) {
-            // AQUÍ ESTÁ EL CAMBIO: Le pasamos el searchViewModel
             HomeScreen(
                 navController = navController,
                 searchViewModel = searchViewModel
             )
+        }
+
+        composable(
+            route = Screen.Search.route,
+            enterTransition = { slideInHorizontally(initialOffsetX = { 1000 }) + fadeIn() },
+            exitTransition = { slideOutHorizontally(targetOffsetX = { 1000 }) + fadeOut() }
+        ) {
+            SearchScreen(viewModel = searchViewModel, navController = navController)
         }
 
         composable(
@@ -63,7 +55,7 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
             RestaurantDetailScreen(navController, name)
         }
 
-        composable("cart") {
+        composable(Screen.Cart.route) {
             CartScreen(navController = navController)
         }
 
@@ -88,14 +80,25 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         composable(Screen.OrderHistory.route) {
             OrderHistoryScreen(navController)
         }
-        composable("favorites") { FavoritesScreen(navController) }
-        composable("addresses") { AddressesScreen(navController) }
-        composable("settings") { SettingsScreen(navController) }
-        composable("help") { HelpCenterScreen(navController) }
+
+        composable(Screen.Favorites.route) { 
+            FavoritesScreen(navController) 
+        }
+
+        composable(Screen.Addresses.route) { 
+            AddressesScreen(navController) 
+        }
+
         composable(
-            route = "settings",
+            route = Screen.Settings.route,
             enterTransition = { slideInVertically(initialOffsetY = { 500 }) + fadeIn() },
             exitTransition = { slideOutVertically(targetOffsetY = { 500 }) + fadeOut() }
-        ) { SettingsScreen(navController) }
+        ) { 
+            SettingsScreen(navController) 
+        }
+
+        composable(Screen.Help.route) { 
+            HelpCenterScreen(navController) 
+        }
     }
 }

@@ -26,7 +26,6 @@ import androidx.navigation.NavController
 import com.example.appifood_movil.ui.viewmodel.HomeViewModel
 import com.example.appifood_movil.ui.components.AppiFoodFooter
 import com.example.appifood_movil.ui.components.CategoryChip
-import com.example.appifood_movil.data.restaurants
 import com.example.appifood_movil.ui.components.PromoBanner
 import com.example.appifood_movil.ui.components.CarouselHeader
 import com.example.appifood_movil.R
@@ -43,7 +42,8 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel
 ) {
-    val filteredRestaurants by searchViewModel.filteredRestaurants.collectAsState(initial = restaurants)
+    // Ya no usamos 'restaurants' de data, usamos el estado inicial del ViewModel (lista vacía)
+    val filteredRestaurants by searchViewModel.filteredRestaurants.collectAsState()
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()

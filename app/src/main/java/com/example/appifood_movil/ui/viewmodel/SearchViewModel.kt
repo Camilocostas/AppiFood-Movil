@@ -2,12 +2,12 @@ package com.example.appifood_movil.ui.viewmodel
 
 import android.location.Location
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import com.example.appifood_movil.data.LocationManager
-import com.example.appifood_movil.data.restaurants
+import com.example.appifood_movil.data.model.Restaurant
+import com.example.appifood_movil.domain.repository.FoodRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 import javax.inject.Inject
 
 data class SearchCriteria(
@@ -20,22 +20,30 @@ data class SearchCriteria(
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
-    private val locationManager: LocationManager
+    private val locationManager: LocationManager,
+    private val foodRepository: FoodRepository
 ) : ViewModel() {
     private val _criteria = MutableStateFlow(SearchCriteria(maxPrice = 50000.0))
     val criteria = _criteria.asStateFlow()
 
-    val filteredRestaurants = _criteria.map { c ->
+    // Combinamos el flujo de criterios con el flujo de datos del repositorio
+    val filteredRestaurants: StateFlow<List<Restaurant>> = combine(
+        foodRepository.getRestaurants(),
+        _criteria
+    ) { restaurants, c ->
         restaurants.filter { rest ->
+            // 1. Filtro por nombre o categoría
             val matchesQuery = c.query.isBlank() ||
                     rest.name.contains(c.query, true) ||
                     rest.category.contains(c.query, true) ||
                     rest.dishes.any { it.name.contains(c.query, true) }
 
+            // 2. Filtro por precio
             val matchesPrice = rest.dishes.any { dish ->
                 dish.price <= c.maxPrice
             }
 
+            // 3. Filtro por distancia
             val matchesDistance = if (c.userLocation != null) {
                 val results = FloatArray(1)
                 Location.distanceBetween(
@@ -52,7 +60,7 @@ class SearchViewModel @Inject constructor(
 
             matchesQuery && matchesPrice && matchesDistance
         }
-    }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun fetchUserLocation() {
         locationManager.getCurrentLocation { loc ->
