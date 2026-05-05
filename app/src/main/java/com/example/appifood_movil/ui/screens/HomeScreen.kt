@@ -17,65 +17,54 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.appifood_movil.ui.viewmodel.HomeViewModel
 import com.example.appifood_movil.ui.components.AppiFoodFooter
 import com.example.appifood_movil.ui.components.CategoryChip
-import com.example.appifood_movil.data.allProducts
-import com.example.appifood_movil.data.restaurants
 import com.example.appifood_movil.ui.components.PromoBanner
 import com.example.appifood_movil.ui.components.CarouselHeader
 import com.example.appifood_movil.R
-import com.example.appifood_movil.ui.components.SearchBottomSheet
 import com.example.appifood_movil.ui.viewmodel.SearchViewModel
-import androidx.compose.ui.platform.LocalContext
-import com.example.appifood_movil.data.LocationManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
-import com.example.appifood_movil.ui.components.MinimalRestaurantCard
+import com.example.appifood_movil.navigation.Screen
+import com.example.appifood_movil.ui.theme.FoodRating
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: HomeViewModel = viewModel(),
+    viewModel: HomeViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel
 ) {
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
-    val filteredRestaurants by searchViewModel.filteredRestaurants.collectAsState(initial = restaurants)
-    val context = LocalContext.current // Necesitas esto para el LocationManager
-    val locationManager = remember { LocationManager(context) }
+    // Ya no usamos 'restaurants' de data, usamos el estado inicial del ViewModel (lista vacía)
+    val filteredRestaurants by searchViewModel.filteredRestaurants.collectAsState()
 
-    // 1. Lanzador de permisos
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            // Si dio permiso, obtenemos la ubicación y la mandamos al ViewModel
-            locationManager.getCurrentLocation { location ->
-                searchViewModel.updateLocation(location)
-            }
+            searchViewModel.fetchUserLocation()
         }
     }
 
-    // 2. Pedir permiso al iniciar la pantalla
     LaunchedEffect(Unit) {
         permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
     }
-
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
         bottomBar = {
             AppiFoodFooter(
                 navController = navController,
-                currentRoute = "home",
+                currentRoute = Screen.Home.route,
                 cartCount = 6,
-                onSearchClick = { navController.navigate("search") }// 2. Conectamos la acción
+                onSearchClick = { navController.navigate(Screen.Search.route) }
             )
         }
     ) { paddingValues ->
@@ -83,19 +72,17 @@ fun HomeScreen(
          LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.White)
+                    .background(MaterialTheme.colorScheme.background)
                     .padding(bottom = paddingValues.calculateBottomPadding())
             ) {
                 item {
                     CarouselHeader(height = 300.dp) {
-
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(top = 40.dp, start = 20.dp),
                             verticalArrangement = Arrangement.Top
                         ) {
-
                             Image(
                                 painter = painterResource(id = R.drawable.logomau),
                                 contentDescription = null,
@@ -113,7 +100,7 @@ fun HomeScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "Popayán, Cauca",
+                                    text = stringResource(id = R.string.default_location),
                                     color = Color.White.copy(alpha = 0.9f),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium
@@ -121,7 +108,7 @@ fun HomeScreen(
                             }
 
                             Text(
-                                "Hola, Camilo",
+                                text = stringResource(id = R.string.welcome_user),
                                 color = Color.White,
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold
@@ -133,12 +120,12 @@ fun HomeScreen(
 
                 item {
                     PromoBanner(onClick = {
-                        navController.navigate("home")
+                        navController.navigate(Screen.Home.route)
                     })
                 }
 
                 item {
-                    SectionHeader(title = "Categorías")
+                    SectionHeader(title = stringResource(id = R.string.section_categories))
                     val categories = listOf("Todos", "Bebidas", "Postres", "Rapida", "Oriental", "Mexicana", "Vegetariana")
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 20.dp),
@@ -155,7 +142,11 @@ fun HomeScreen(
                 }
 
              item {
-                 SectionHeader(title = "Promociones de Hoy", showViewAll = true)
+                 SectionHeader(
+                     title = stringResource(id = R.string.section_promotions),
+                     showViewAll = true,
+                     onViewAllClick = { /* TODO */ }
+                 )
              }
 
              item {
@@ -163,7 +154,6 @@ fun HomeScreen(
                      contentPadding = PaddingValues(horizontal = 20.dp),
                      horizontalArrangement = Arrangement.spacedBy(15.dp)
                  ) {
-                     // AQUÍ ESTÁ EL CAMBIO: Usamos la lista filtrada del ViewModel
                      items(viewModel.filteredProducts) { product ->
                          PromoFoodCard(
                              name = product.name,
@@ -171,17 +161,22 @@ fun HomeScreen(
                              oldPrice = "$35.000",
                              imageRes = product.imageRes,
                              onNavigate = {
-                                 navController.navigate("productDetail/${product.name}/${product.price}/${product.imageRes}")
+                                 navController.navigate("${Screen.ProductDetail.route}/${product.name}/${product.price}/${product.imageRes}")
                              }
                          )
                      }
                  }
              }
 
-             item { SectionHeader(title = "Restaurantes Populares", showViewAll = true) }
+             item { 
+                 SectionHeader(
+                     title = stringResource(id = R.string.section_popular_restaurants), 
+                     showViewAll = true,
+                     onViewAllClick = { /* TODO */ }
+                 ) 
+             }
 
              item {
-                 // ESTA LÍNEA ES LA CLAVE: Observamos el flujo filtrado/ordenad
                  LazyRow(
                      contentPadding = PaddingValues(horizontal = 20.dp),
                      horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -190,9 +185,9 @@ fun HomeScreen(
                          MinimalRestaurantCard(
                              name = restaurant.name,
                              rating = restaurant.rating,
-                             time = "25-40 min",
+                             time = stringResource(id = R.string.delivery_time_range),
                              imageRes = restaurant.imageRes,
-                             onClick = { navController.navigate("restaurantDetail/${restaurant.name}") }
+                             onClick = { navController.navigate("${Screen.RestaurantDetail.route}/${restaurant.name}") }
                          )
                      }
                  }
@@ -221,13 +216,13 @@ fun PromoFoodCard(name: String, price: String, oldPrice: String, imageRes: Int, 
                 contentScale = ContentScale.Crop
             )
             Surface(
-                color = Color(0xFFFF4B3A),
+                color = MaterialTheme.colorScheme.primary,
                 shape = RoundedCornerShape(topStart = 24.dp, bottomEnd = 12.dp),
                 modifier = Modifier.align(Alignment.TopStart)
             ) {
                 Text(
-                    "OFERTA",
-                    color = Color.White,
+                    text = stringResource(id = R.string.label_offer),
+                    color = MaterialTheme.colorScheme.onPrimary,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
@@ -237,7 +232,7 @@ fun PromoFoodCard(name: String, price: String, oldPrice: String, imageRes: Int, 
         Spacer(modifier = Modifier.height(8.dp))
         Text(name, fontWeight = FontWeight.Bold, fontSize = 15.sp, maxLines = 1)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(price, color = Color(0xFFFF4B3A), fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
+            Text(price, color = MaterialTheme.colorScheme.primary, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp)
             Spacer(modifier = Modifier.width(6.dp))
             Text(
                 oldPrice,
@@ -261,7 +256,7 @@ fun MinimalRestaurantCard(
         modifier = Modifier
             .width(130.dp)
             .clip(RoundedCornerShape(20.dp))
-            .background(Color(0xFFF8F8F8))
+            .background(MaterialTheme.colorScheme.surface)
             .clickable { onClick() }
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
@@ -277,12 +272,13 @@ fun MinimalRestaurantCard(
         Spacer(modifier = Modifier.height(8.dp))
         Text(name, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(Icons.Default.Star, null, tint = Color(0xFFFFB800), modifier = Modifier.size(12.dp))
+            Icon(Icons.Default.Star, null, tint = FoodRating, modifier = Modifier.size(12.dp))
             Text(" $rating", fontSize = 11.sp, fontWeight = FontWeight.Bold)
             Text(" • $time", fontSize = 11.sp, color = Color.Gray)
         }
     }
 }
+
 @Composable
 fun SectionHeader(
     title: String,
@@ -300,12 +296,12 @@ fun SectionHeader(
             text = title,
             fontSize = 18.sp,
             fontWeight = FontWeight.Bold,
-            color = Color(0xFF1A1D26)
+            color = MaterialTheme.colorScheme.secondary
         )
         if (showViewAll) {
             Text(
-                text = "Ver todos",
-                color = Color(0xFFFF4B3A),
+                text = stringResource(id = R.string.label_view_all),
+                color = MaterialTheme.colorScheme.primary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
                 modifier = Modifier.clickable { onViewAllClick() }

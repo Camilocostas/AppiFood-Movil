@@ -3,12 +3,16 @@ package com.example.appifood_movil.ui.viewmodel
 import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import com.example.appifood_movil.data.model.HomeFilter
-import com.example.appifood_movil.data.restaurants
-import com.example.appifood_movil.data.searchRestaurants
 import com.example.appifood_movil.data.model.FoodProduct
-import com.example.appifood_movil.data.allProducts
+import com.example.appifood_movil.data.model.Restaurant
+import com.example.appifood_movil.domain.repository.FoodRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class HomeViewModel : ViewModel() {
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val foodRepository: FoodRepository
+) : ViewModel() {
 
     var searchText by mutableStateOf("")
         private set
@@ -22,15 +26,20 @@ class HomeViewModel : ViewModel() {
     var cartCount by mutableStateOf(0)
         private set
 
-    var searchResults by mutableStateOf(restaurants)
+    var searchResults by mutableStateOf<List<Restaurant>>(emptyList())
         private set
+
+    init {
+        // Carga inicial
+        searchResults = foodRepository.searchRestaurants("")
+    }
 
     fun onSearchChange(newText: String) {
         searchText = newText
         searchResults = if (newText.length > 2) {
-            searchRestaurants(newText)
+            foodRepository.searchRestaurants(newText)
         } else {
-            restaurants
+            foodRepository.searchRestaurants("")
         }
     }
 
@@ -39,12 +48,12 @@ class HomeViewModel : ViewModel() {
     }
 
     val filteredProducts: List<FoodProduct>
-        get() = if (selectedCategory == "Todos" || selectedCategory == "Todas") {
-            allProducts
-        } else {
-            allProducts.filter { it.category == selectedCategory }
+        get() {
+            val allProducts = foodRepository.getProducts()
+            return if (selectedCategory == "Todos" || selectedCategory == "Todas") {
+                allProducts
+            } else {
+                allProducts.filter { it.category == selectedCategory }
+            }
         }
 }
-
-
-
