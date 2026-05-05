@@ -7,8 +7,11 @@ import com.example.appifood_movil.data.restaurants
 import com.example.appifood_movil.data.searchRestaurants
 import com.example.appifood_movil.data.model.FoodProduct
 import com.example.appifood_movil.data.allProducts
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class HomeViewModel : ViewModel() {
+@HiltViewModel
+class HomeViewModel @Inject constructor() : ViewModel() {
 
     var searchText by mutableStateOf("")
         private set
@@ -45,6 +48,3 @@ class HomeViewModel : ViewModel() {
             allProducts.filter { it.category == selectedCategory }
         }
 }
-
-
-

@@ -20,7 +20,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.example.appifood_movil.ui.viewmodel.HomeViewModel
 import com.example.appifood_movil.ui.components.AppiFoodFooter
@@ -30,8 +30,6 @@ import com.example.appifood_movil.ui.components.PromoBanner
 import com.example.appifood_movil.ui.components.CarouselHeader
 import com.example.appifood_movil.R
 import com.example.appifood_movil.ui.viewmodel.SearchViewModel
-import androidx.compose.ui.platform.LocalContext
-import com.example.appifood_movil.data.LocationManager
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
 import com.example.appifood_movil.navigation.Screen
@@ -41,20 +39,16 @@ import com.example.appifood_movil.ui.theme.FoodRating
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: HomeViewModel = viewModel(),
+    viewModel: HomeViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel
 ) {
     val filteredRestaurants by searchViewModel.filteredRestaurants.collectAsState(initial = restaurants)
-    val context = LocalContext.current
-    val locationManager = remember { LocationManager(context) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) { isGranted ->
         if (isGranted) {
-            locationManager.getCurrentLocation { location ->
-                searchViewModel.updateLocation(location)
-            }
+            searchViewModel.fetchUserLocation()
         }
     }
 

@@ -3,7 +3,7 @@ package com.example.appifood_movil
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge // Asegúrate de tener este import
+import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.example.appifood_movil.navigation.AppNavigation
 import com.example.appifood_movil.ui.theme.AppifoodMovilTheme
@@ -12,9 +12,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.appifood_movil.ui.viewmodel.SearchViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -25,7 +27,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AppifoodMovilTheme {
-                val searchViewModel: SearchViewModel = viewModel()
+                val searchViewModel: SearchViewModel = hiltViewModel()
 
                 // Se lo pasamos a la función
                 AppNavigation(searchViewModel = searchViewModel)
@@ -33,6 +35,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 }
+
 @Composable
 fun RequestLocationPermission() {
     val permissionLauncher = rememberLauncherForActivityResult(
