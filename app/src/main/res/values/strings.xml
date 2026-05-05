@@ -1,3 +1,11 @@
 <resources>
-    <string name="app_name">Appifood</string>
+    <string name="app_name">AppiFood</string>
+    <string name="welcome_user">Hola, Camilo</string>
+    <string name="default_location">Popayán, Cauca</string>
+    <string name="section_categories">Categorías</string>
+    <string name="section_promotions">Promociones de Hoy</string>
+    <string name="section_popular_restaurants">Restaurantes Populares</string>
+    <string name="label_view_all">Ver todos</string>
+    <string name="label_offer">OFERTA</string>
+    <string name="delivery_time_range">25-40 min</string>
 </resources>

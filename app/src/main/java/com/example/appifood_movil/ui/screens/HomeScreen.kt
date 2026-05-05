@@ -17,6 +17,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -99,7 +100,7 @@ fun HomeScreen(
                                 )
                                 Spacer(modifier = Modifier.width(4.dp))
                                 Text(
-                                    text = "Popayán, Cauca",
+                                    text = stringResource(id = R.string.default_location),
                                     color = Color.White.copy(alpha = 0.9f),
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Medium
@@ -107,7 +108,7 @@ fun HomeScreen(
                             }
 
                             Text(
-                                "Hola, Camilo",
+                                text = stringResource(id = R.string.welcome_user),
                                 color = Color.White,
                                 fontSize = 28.sp,
                                 fontWeight = FontWeight.Bold
@@ -124,7 +125,7 @@ fun HomeScreen(
                 }
 
                 item {
-                    SectionHeader(title = "Categorías")
+                    SectionHeader(title = stringResource(id = R.string.section_categories))
                     val categories = listOf("Todos", "Bebidas", "Postres", "Rapida", "Oriental", "Mexicana", "Vegetariana")
                     LazyRow(
                         contentPadding = PaddingValues(horizontal = 20.dp),
@@ -141,7 +142,11 @@ fun HomeScreen(
                 }
 
              item {
-                 SectionHeader(title = "Promociones de Hoy", showViewAll = true)
+                 SectionHeader(
+                     title = stringResource(id = R.string.section_promotions),
+                     showViewAll = true,
+                     onViewAllClick = { /* TODO */ }
+                 )
              }
 
              item {
@@ -163,7 +168,13 @@ fun HomeScreen(
                  }
              }
 
-             item { SectionHeader(title = "Restaurantes Populares", showViewAll = true) }
+             item { 
+                 SectionHeader(
+                     title = stringResource(id = R.string.section_popular_restaurants), 
+                     showViewAll = true,
+                     onViewAllClick = { /* TODO */ }
+                 ) 
+             }
 
              item {
                  LazyRow(
@@ -174,7 +185,7 @@ fun HomeScreen(
                          MinimalRestaurantCard(
                              name = restaurant.name,
                              rating = restaurant.rating,
-                             time = "25-40 min",
+                             time = stringResource(id = R.string.delivery_time_range),
                              imageRes = restaurant.imageRes,
                              onClick = { navController.navigate("${Screen.RestaurantDetail.route}/${restaurant.name}") }
                          )
@@ -210,7 +221,7 @@ fun PromoFoodCard(name: String, price: String, oldPrice: String, imageRes: Int, 
                 modifier = Modifier.align(Alignment.TopStart)
             ) {
                 Text(
-                    "OFERTA",
+                    text = stringResource(id = R.string.label_offer),
                     color = MaterialTheme.colorScheme.onPrimary,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
@@ -289,7 +300,7 @@ fun SectionHeader(
         )
         if (showViewAll) {
             Text(
-                text = "Ver todos",
+                text = stringResource(id = R.string.label_view_all),
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Medium,
