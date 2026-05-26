@@ -1,12 +1,10 @@
 package com.example.appifood_movil.data
 
 import com.example.appifood_movil.R
-import com.example.appifood_movil.data.model.Dish
-import com.example.appifood_movil.data.model.Restaurant
-import com.example.appifood_movil.data.model.FoodProduct
-import com.example.appifood_movil.ui.screens.ForgotPasswordForm
-import com.example.appifood_movil.data.model.Review
-
+import com.example.appifood_movil.domain.model.Dish
+import com.example.appifood_movil.domain.model.Restaurant
+import com.example.appifood_movil.domain.model.FoodProduct
+import com.example.appifood_movil.domain.model.Review
 
 val restaurants = listOf(
     Restaurant(
@@ -52,16 +50,16 @@ val restaurants = listOf(
         ),
         reviews = listOf(
             Review("Camila R.", "¡Las opciones veganas son frescas y llenas de sabor!", 5),
-        Review("Jorge M.", "El bowl vegano me sorprendió gratamente.", 5),
-        Review("Beatriz O.", "Muy saludable, aunque las porciones son pequeñas.", 4),
-        Review("Felipe S.", "La hamburguesa de lenteja es una delicia.", 5),
-        Review("Valentina H.", "Excelente atención y ambiente verde.", 4),
-        Review("Andrés P.", "La ensalada César es de otro nivel.", 5),
-        Review("Clara D.", "Me encanta que tengan ingredientes locales.", 5),
-        Review("Hugo L.", "Un poco caro para ser comida vegetariana.", 3),
-        Review("Sara G.", "El sabor es increíble, muy creativo.", 5),
-        Review("Daniel C.", "Un lugar tranquilo para almorzar.", 4)
-    )
+            Review("Jorge M.", "El bowl vegano me sorprendió gratamente.", 5),
+            Review("Beatriz O.", "Muy saludable, aunque las porciones son pequeñas.", 4),
+            Review("Felipe S.", "La hamburguesa de lenteja es una delicia.", 5),
+            Review("Valentina H.", "Excelente atención y ambiente verde.", 4),
+            Review("Andrés P.", "La ensalada César es de otro nivel.", 5),
+            Review("Clara D.", "Me encanta que tengan ingredientes locales.", 5),
+            Review("Hugo L.", "Un poco caro para ser comida vegetariana.", 3),
+            Review("Sara G.", "El sabor es increíble, muy creativo.", 5),
+            Review("Daniel C.", "Un lugar tranquilo para almorzar.", 4)
+        )
     ),
     Restaurant(
         name = "Burguer House",

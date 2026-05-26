@@ -20,7 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.example.appifood_movil.data.model.Restaurant
+import com.example.appifood_movil.domain.model.Restaurant
 import com.example.appifood_movil.ui.viewmodel.SearchViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)

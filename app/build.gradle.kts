@@ -72,6 +72,9 @@ dependencies {// Google Maps & Location
     implementation(libs.retrofit)
     implementation(libs.retrofit.gson)
 
+    // Coil (Image Loading)
+    implementation(libs.coil.compose)
+
     // Testing
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

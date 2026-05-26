@@ -14,6 +14,7 @@ animationCore = "1.7.6"
 hilt = "2.54"
 ksp = "2.1.0-1.0.29"
 hiltNavigationCompose = "1.2.0"
+coil = "2.7.0"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -42,6 +43,9 @@ retrofit-gson = { group = "com.squareup.retrofit2", name = "converter-gson", ver
 # Hilt
 hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref = "hilt" }
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
+
+# Coil
+coil-compose = { group = "io.coil-kt", name = "coil-compose", version.ref = "coil" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

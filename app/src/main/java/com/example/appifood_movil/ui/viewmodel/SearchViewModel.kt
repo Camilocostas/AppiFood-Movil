@@ -4,7 +4,7 @@ import android.location.Location
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.appifood_movil.data.LocationManager
-import com.example.appifood_movil.data.model.Restaurant
+import com.example.appifood_movil.domain.model.Restaurant
 import com.example.appifood_movil.domain.repository.FoodRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
@@ -27,6 +27,7 @@ class SearchViewModel @Inject constructor(
     val criteria = _criteria.asStateFlow()
 
     // Combinamos el flujo de criterios con el flujo de datos del repositorio
+    // Ahora usamos el modelo de Restaurant de domain
     val filteredRestaurants: StateFlow<List<Restaurant>> = combine(
         foodRepository.getRestaurants(),
         _criteria
