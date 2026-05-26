@@ -22,23 +22,38 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.draw.scale
 import androidx.compose.foundation.lazy.items
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.example.appifood_movil.ui.components.AppiFoodFooter
+import com.example.appifood_movil.ui.viewmodel.ProductDetailViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProductDetailScreen(
     navController: NavController,
-    name: String,
-    price: String,
-    imageRes: Int
+    id: Int,
+    viewModel: ProductDetailViewModel = hiltViewModel()
 ) {
+    val product by viewModel.product.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+
+    LaunchedEffect(id) {
+        viewModel.loadProduct(id)
+    }
+
     var adicionesSeleccionadas by remember { mutableStateOf(setOf<String>()) }
     var cantidad by remember { mutableStateOf(1) }
-    val precioNumerico = price.toDoubleOrNull() ?: 0.0
-
+    
     val appNaranja = Color(0xFFFF4B3A)
+
+    if (isLoading) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = appNaranja)
+        }
+        return
+    }
+
+    val productData = product ?: return
 
     Scaffold(
         bottomBar = {
@@ -83,7 +98,7 @@ fun ProductDetailScreen(
                 // 2. Footer de navegación (Menú)
                 AppiFoodFooter(
                     navController = navController,
-                    currentRoute = "home", // Asegúrate de que esta ruta sea la correcta
+                    currentRoute = "home",
                     cartCount = 6,
                     onSearchClick = { navController.navigate("search") }
                 )
@@ -91,27 +106,25 @@ fun ProductDetailScreen(
         }
     ) { padding ->
         LazyColumn(
-            modifier = Modifier.fillMaxSize(), // Quita el padding bottom manual aquí
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 120.dp)
         ) {
             // Header: Imagen y Título integrados
             item {
                 Box(modifier = Modifier.fillMaxWidth().height(300.dp)) {
                     Image(
-                        modifier = Modifier.fillMaxSize(), // Debe ocupar el 100%
+                        modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop,
-                        painter = painterResource(id = imageRes),
-                        contentDescription = name
+                        painter = painterResource(id = productData.imageRes),
+                        contentDescription = productData.name
                     )
 
                     Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(0.6f)))))
 
-                    // Título y Precio (FORMATO CORRECTO AQUÍ)
-                    val precioNumerico = price.toDoubleOrNull() ?: 0.0
                     Column(modifier = Modifier.align(Alignment.BottomStart).padding(24.dp)) {
-                        Text(name, color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold)
+                        Text(productData.name, color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.ExtraBold)
                         Text(
-                            text = "$ ${String.format("%,.0f", precioNumerico).replace(",", ".")}",
+                            text = "$ ${String.format("%,.0f", productData.price).replace(",", ".")}",
                             color = Color.White,
                             fontSize = 26.sp,
                             fontWeight = FontWeight.Bold
@@ -120,7 +133,6 @@ fun ProductDetailScreen(
 
                     FloatingActionButton(
                         onClick = { navController.popBackStack() },
-                        // MODIFICACIÓN AQUÍ: Añadimos padding para separarlo del borde superior
                         modifier = Modifier
                             .padding(top = 54.dp, start = 16.dp)
                             .size(44.dp),

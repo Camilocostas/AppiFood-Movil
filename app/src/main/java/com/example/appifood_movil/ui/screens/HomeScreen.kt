@@ -32,6 +32,7 @@ import com.example.appifood_movil.R
 import com.example.appifood_movil.ui.viewmodel.SearchViewModel
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.rememberLauncherForActivityResult
+import coil.compose.AsyncImage
 import com.example.appifood_movil.navigation.Screen
 import com.example.appifood_movil.ui.theme.FoodRating
 
@@ -42,7 +43,6 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel
 ) {
-    // Ya no usamos 'restaurants' de data, usamos el estado inicial del ViewModel (lista vacía)
     val filteredRestaurants by searchViewModel.filteredRestaurants.collectAsState()
 
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -161,7 +161,7 @@ fun HomeScreen(
                              oldPrice = "$35.000",
                              imageRes = product.imageRes,
                              onNavigate = {
-                                 navController.navigate("${Screen.ProductDetail.route}/${product.name}/${product.price}/${product.imageRes}")
+                                 navController.navigate("${Screen.ProductDetail.route}/${product.id}")
                              }
                          )
                      }
@@ -186,8 +186,9 @@ fun HomeScreen(
                              name = restaurant.name,
                              rating = restaurant.rating,
                              time = stringResource(id = R.string.delivery_time_range),
+                             imageUrl = restaurant.imageUrl,
                              imageRes = restaurant.imageRes,
-                             onClick = { navController.navigate("${Screen.RestaurantDetail.route}/${restaurant.name}") }
+                             onClick = { navController.navigate("${Screen.RestaurantDetail.route}/${restaurant.id}") }
                          )
                      }
                  }
@@ -249,6 +250,7 @@ fun MinimalRestaurantCard(
     name: String,
     rating: String,
     time: String,
+    imageUrl: String? = null,
     imageRes: Int,
     onClick: () -> Unit
 ) {
@@ -261,13 +263,14 @@ fun MinimalRestaurantCard(
             .padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Image(
-            painter = painterResource(id = imageRes),
+        AsyncImage(
+            model = imageUrl ?: imageRes,
             contentDescription = null,
             modifier = Modifier
                 .size(70.dp)
                 .clip(CircleShape),
-            contentScale = ContentScale.Crop
+            contentScale = ContentScale.Crop,
+            error = painterResource(R.drawable.restaurantechino)
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(name, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)

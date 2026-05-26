@@ -48,11 +48,11 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         }
 
         composable(
-            route = "${Screen.RestaurantDetail.route}/{name}",
-            arguments = listOf(navArgument("name") { type = NavType.StringType })
+            route = "${Screen.RestaurantDetail.route}/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.IntType })
         ) { backStackEntry ->
-            val name = backStackEntry.arguments?.getString("name") ?: ""
-            RestaurantDetailScreen(navController, name)
+            val id = backStackEntry.arguments?.getInt("id") ?: 0
+            RestaurantDetailScreen(navController, id)
         }
 
         composable(Screen.Cart.route) {
@@ -60,17 +60,11 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         }
 
         composable(
-            route = "${Screen.ProductDetail.route}/{name}/{price}/{image}",
-            arguments = listOf(
-                navArgument("name") { type = NavType.StringType },
-                navArgument("price") { type = NavType.StringType },
-                navArgument("image") { type = NavType.IntType }
-            )
+            route = "${Screen.ProductDetail.route}/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.IntType })
         ) { backStackEntry ->
-            val name = backStackEntry.arguments?.getString("name") ?: ""
-            val price = backStackEntry.arguments?.getString("price") ?: ""
-            val image = backStackEntry.arguments?.getInt("image") ?: 0
-            ProductDetailScreen(navController, name, price, image)
+            val id = backStackEntry.arguments?.getInt("id") ?: 0
+            ProductDetailScreen(navController, id)
         }
 
         composable(Screen.Profile.route) {
