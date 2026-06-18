@@ -13,8 +13,8 @@ import javax.inject.Inject
 data class SearchCriteria(
     val query: String = "",
     val category: String? = null,
-    val maxPrice: Double = 50000.0,
-    val radiusKm: Double = 5.0,
+    val maxPrice: Double = 100000.0, // Precio máximo inicial alto para mostrar todo al inicio
+    val radiusKm: Double = 500.0,    // Radio inicial amplio para evitar listas vacías por ubicación
     val userLocation: Location? = null
 )
 
@@ -23,29 +23,31 @@ class SearchViewModel @Inject constructor(
     private val locationManager: LocationManager,
     private val foodRepository: FoodRepository
 ) : ViewModel() {
-    private val _criteria = MutableStateFlow(SearchCriteria(maxPrice = 50000.0))
+    private val _criteria = MutableStateFlow(SearchCriteria())
     val criteria = _criteria.asStateFlow()
 
-    // Combinamos el flujo de criterios con el flujo de datos del repositorio
-    // Ahora usamos el modelo de Restaurant de domain
+    // Combinamos el flujo de restaurantes del repo con los criterios de búsqueda
     val filteredRestaurants: StateFlow<List<Restaurant>> = combine(
         foodRepository.getRestaurants(),
         _criteria
     ) { restaurants, c ->
         restaurants.filter { rest ->
-            // 1. Filtro por nombre o categoría
+            // 1. Filtro por búsqueda de texto (Nombre, Categoría o Platos)
             val matchesQuery = c.query.isBlank() ||
                     rest.name.contains(c.query, true) ||
                     rest.category.contains(c.query, true) ||
                     rest.dishes.any { it.name.contains(c.query, true) }
 
-            // 2. Filtro por precio
-            val matchesPrice = rest.dishes.any { dish ->
+            // 2. Filtro por precio máximo
+            // Si el restaurante tiene platos, verificamos si alguno entra en el presupuesto.
+            // Si no tiene platos (datos de API parciales), lo mostramos para no ser tan restrictivos.
+            val matchesPrice = rest.dishes.isEmpty() || rest.dishes.any { dish ->
                 dish.price <= c.maxPrice
             }
 
             // 3. Filtro por distancia
-            val matchesDistance = if (c.userLocation != null) {
+            // Solo filtramos por distancia si tenemos la ubicación del usuario y el radio no es el máximo (500)
+            val matchesDistance = if (c.userLocation != null && c.radiusKm < 500) {
                 val results = FloatArray(1)
                 Location.distanceBetween(
                     c.userLocation.latitude,
@@ -54,9 +56,10 @@ class SearchViewModel @Inject constructor(
                     rest.longitude,
                     results
                 )
-                (results[0] / 1000.0) <= c.radiusKm
+                val distanceInKm = results[0] / 1000.0
+                distanceInKm <= c.radiusKm
             } else {
-                true
+                true // Si no hay ubicación o el radio es "ilimitado" (500), mostramos todo
             }
 
             matchesQuery && matchesPrice && matchesDistance
@@ -69,9 +72,19 @@ class SearchViewModel @Inject constructor(
         }
     }
 
-    fun updateQuery(q: String) { _criteria.value = _criteria.value.copy(query = q) }
-    fun updateCategory(cat: String?) { _criteria.value = _criteria.value.copy(category = cat) }
-    fun updateLocation(loc: Location) { _criteria.value = _criteria.value.copy(userLocation = loc) }
-    fun updateRadius(radius: Double) { _criteria.value = _criteria.value.copy(radiusKm = radius) }
-    fun updateMaxPrice(price: Double) { _criteria.value = _criteria.value.copy(maxPrice = price) }
+    fun updateQuery(q: String) {
+        _criteria.value = _criteria.value.copy(query = q)
+    }
+
+    fun updateLocation(loc: Location) {
+        _criteria.value = _criteria.value.copy(userLocation = loc)
+    }
+
+    fun updateRadius(radius: Double) {
+        _criteria.value = _criteria.value.copy(radiusKm = radius)
+    }
+
+    fun updateMaxPrice(price: Double) {
+        _criteria.value = _criteria.value.copy(maxPrice = price)
+    }
 }

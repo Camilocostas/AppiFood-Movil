@@ -28,16 +28,13 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Person
 import com.example.appifood_movil.ui.components.ImageHeader
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import android.R.attr.password
 import com.example.appifood_movil.ui.theme.AppColors
 
-
-
 enum class AuthState { LOGIN, REGISTER, FORGOT_PASSWORD, VERIFY_CODE }
+
 @Composable
 fun AuthScreen(onLoginNavigation: () -> Unit) {
     var screenState by remember { mutableStateOf(AuthState.LOGIN) }
@@ -141,6 +138,7 @@ fun VerificationCodeForm(onContinue: () -> Unit, onBack: () -> Unit) {
         }
     }
 }
+
 @Composable
 fun RegisterForm(onLoginSwitch: () -> Unit) {
     var email by remember { mutableStateOf("") }
@@ -151,8 +149,8 @@ fun RegisterForm(onLoginSwitch: () -> Unit) {
             label = "Correo electrónico",
             placeholder = "tucorreo@email.com",
             icon = Icons.Default.Email,
-            text = email,           // <--- Nuevo
-            onTextChange = { email = it } // <--- Nuevo
+            text = email,
+            onTextChange = { email = it }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -172,7 +170,7 @@ fun RegisterForm(onLoginSwitch: () -> Unit) {
             placeholder = "Repite tu contraseña",
             icon = Icons.Default.Lock,
             isPassword = true,
-            text = confirmPassword,            // <--- Aquí guardas el valor
+            text = confirmPassword,
             onTextChange = { confirmPassword = it }
         )
 
@@ -225,7 +223,6 @@ fun LoginForm(onLoginClick: () -> Unit, onRegisterSwitch: () -> Unit, onForgotCl
             onTextChange = { password = it }
         )
 
-        // 2. Mostrar el mensaje de error si existe
         if (errorMessage != null) {
             Text(
                 text = errorMessage!!,
@@ -245,7 +242,7 @@ fun LoginForm(onLoginClick: () -> Unit, onRegisterSwitch: () -> Unit, onForgotCl
                 Checkbox(
                     checked = checked,
                     onCheckedChange = { checked = it },
-                    modifier = Modifier.scale(0.8f), // <--- Lo hace más pequeño
+                    modifier = Modifier.scale(0.8f),
                     colors = CheckboxDefaults.colors(checkedColor = Color(0xFFFF4B3A))
                 )
                 Text(
@@ -267,11 +264,10 @@ fun LoginForm(onLoginClick: () -> Unit, onRegisterSwitch: () -> Unit, onForgotCl
             text = "Iniciar sesión",
             icon = Icons.Default.ArrowForward
         ) {
-            // 3. Lógica de validación
-            if (email == "yo@ejemplo.com" && password == "123") {
-                onLoginClick() // Datos correctos, navegamos al home
+            if (email == "m" && password == "1") {
+                onLoginClick()
             } else {
-                errorMessage = "Correo o contraseña incorrectos" // Datos inválidos
+                errorMessage = "Correo o contraseña incorrectos"
             }
         }
 
@@ -305,7 +301,6 @@ fun CustomTextField(
     text: String,
     onTextChange: (String) -> Unit
 ) {
-    // 1. Añadimos un estado local para controlar la visibilidad
     var isPasswordVisible by remember { mutableStateOf(false) }
 
     Column {
@@ -320,17 +315,13 @@ fun CustomTextField(
             onValueChange = onTextChange,
             placeholder = { Text(placeholder, color = Color.Gray, fontSize = 14.sp) },
             leadingIcon = { Icon(icon, null, tint = Color.Gray, modifier = Modifier.size(20.dp)) },
-
-            // 2. Usamos el estado para decidir si aplicar la transformación
             visualTransformation = if (isPassword && !isPasswordVisible)
                 PasswordVisualTransformation()
             else VisualTransformation.None,
-
             trailingIcon = {
                 if (isPassword) {
-                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) { // 3. Cambiamos el estado al hacer clic
+                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
                         Icon(
-                            // Opcional: Podrías cambiar el icono a uno de "ojo tachado" si quieres
                             painter = painterResource(id = R.drawable.ic_eye),
                             contentDescription = if (isPasswordVisible) "Ocultar" else "Ver",
                             modifier = Modifier.size(18.dp),

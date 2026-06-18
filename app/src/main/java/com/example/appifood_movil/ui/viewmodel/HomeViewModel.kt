@@ -4,7 +4,7 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.appifood_movil.data.model.HomeFilter
-import com.example.appifood_movil.data.model.FoodProduct
+import com.example.appifood_movil.domain.model.FoodProduct
 import com.example.appifood_movil.domain.model.Restaurant
 import com.example.appifood_movil.domain.repository.FoodRepository
 import dagger.hilt.android.lifecycle.HiltViewModel

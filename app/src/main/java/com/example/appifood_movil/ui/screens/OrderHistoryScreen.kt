@@ -34,7 +34,7 @@ data class Order(
     val date: String,
     val estimatedTimeMin: Int,
     val status: OrderStatus,
-    val paymentMethod: PaymentMethod
+    val paymentMethod: OrderPaymentMethod
 )
 
 enum class OrderStatus(val label: String, val color: Color) {
@@ -43,10 +43,12 @@ enum class OrderStatus(val label: String, val color: Color) {
     DELIVERED("Entregado", Color(0xFF4CAF50)),
     CANCELLED("Cancelado", Color(0xFFF44336))
 }
-sealed class PaymentMethod(val type: String, val icon: ImageVector) {
-    class Cash(val amountToPay: Double) : PaymentMethod("Efectivo", Icons.Default.Payments)
-    class Transfer(val platform: String, val accountNumber: String) : PaymentMethod("Transferencia", Icons.Default.AccountBalanceWallet)
+
+sealed class OrderPaymentMethod(val type: String, val icon: ImageVector) {
+    class Cash(val amountToPay: Double) : OrderPaymentMethod("Efectivo", Icons.Default.Payments)
+    class Transfer(val platform: String, val accountNumber: String) : OrderPaymentMethod("Transferencia", Icons.Default.AccountBalanceWallet)
 }
+
 val mockOrderList = listOf(
     Order(
         orderId = "AF-1024",
@@ -58,7 +60,7 @@ val mockOrderList = listOf(
         date = "Hoy, 2:30 PM",
         estimatedTimeMin = 25,
         status = OrderStatus.ON_THE_WAY,
-        paymentMethod = PaymentMethod.Transfer("Nequi", "3154567890")
+        paymentMethod = OrderPaymentMethod.Transfer("Nequi", "3154567890")
     ),
     Order(
         orderId = "AF-1020",
@@ -70,7 +72,7 @@ val mockOrderList = listOf(
         date = "Ayer",
         estimatedTimeMin = 0,
         status = OrderStatus.DELIVERED,
-        paymentMethod = PaymentMethod.Transfer("Paypal", "mauricio.b@mail.com")
+        paymentMethod = OrderPaymentMethod.Transfer("Paypal", "mauricio.b@mail.com")
     )
 )
 
@@ -100,7 +102,7 @@ fun OrderHistoryScreen(navController: NavController) {
                 selectedTabIndex = selectedTabIndex,
                 contentColor = Color(0xFFFF4B3A),
                 indicator = { tabPositions ->
-                    TabRowDefaults.Indicator(
+                    TabRowDefaults.SecondaryIndicator(
                         modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
                         color = Color(0xFFFF4B3A)
                     )
@@ -192,7 +194,7 @@ fun OrderHistoryCard(order: Order) {
 }
 
 @Composable
-fun PaymentInfoSection(method: PaymentMethod, total: Double, isPaid: Boolean) {
+fun PaymentInfoSection(method: OrderPaymentMethod, total: Double, isPaid: Boolean) {
     val formattedTotal = "$ ${String.format("%,.0f", total)}"
     val successColor = Color(0xFF4CAF50)
 

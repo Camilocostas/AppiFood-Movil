@@ -1,9 +1,10 @@
 package com.example.appifood_movil.data.repository
 
 import com.example.appifood_movil.data.allProducts
+import com.example.appifood_movil.data.restaurants
 import com.example.appifood_movil.data.api.ApiService
 import com.example.appifood_movil.data.api.response.RestaurantDto
-import com.example.appifood_movil.data.model.FoodProduct
+import com.example.appifood_movil.domain.model.FoodProduct
 import com.example.appifood_movil.domain.model.Dish
 import com.example.appifood_movil.domain.model.Restaurant
 import com.example.appifood_movil.domain.model.Review
@@ -19,16 +20,20 @@ class FoodRepositoryImpl @Inject constructor(
 ) : FoodRepository {
 
     override fun getRestaurants(): Flow<List<Restaurant>> = flow {
+        // Emitimos primero los datos locales de FakeData para asegurar que siempre haya contenido
+        emit(restaurants)
+
         try {
             val response = apiService.getRestaurants()
             if (response.success) {
                 val domainRestaurants = response.data.map { it.toDomain() }
-                emit(domainRestaurants)
-            } else {
-                emit(emptyList())
+                if (domainRestaurants.isNotEmpty()) {
+                    // Si la API devuelve datos, los emitimos (podrías elegir combinarlos o reemplazarlos)
+                    emit(domainRestaurants)
+                }
             }
         } catch (e: Exception) {
-            emit(emptyList())
+            // Si la API falla, nos quedamos con los datos de FakeData ya emitidos
         }
     }
 
@@ -41,10 +46,18 @@ class FoodRepositoryImpl @Inject constructor(
     }
 
     override fun searchRestaurants(query: String): List<Restaurant> {
-        return emptyList()
+        // Podrías implementar una búsqueda local aquí si fuera necesario
+        return restaurants.filter { 
+            it.name.contains(query, ignoreCase = true) || 
+            it.category.contains(query, ignoreCase = true) 
+        }
     }
 
     override suspend fun getRestaurantById(id: Int): Restaurant? {
+        // Primero buscamos en FakeData
+        val fakeResult = restaurants.find { it.id == id }
+        if (fakeResult != null) return fakeResult
+
         return try {
             val response = apiService.getRestaurantById(id)
             if (response.success) {
