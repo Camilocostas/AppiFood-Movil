@@ -20,6 +20,9 @@ android {
         versionCode = 1
         versionName = "1.0"
 
+        // Manifest placeholder for Maps API key. Provide MAPS_API_KEY in local.properties or as a CI secret.
+        manifestPlaceholders["com.google.android.geo.API_KEY"] = project.findProperty("MAPS_API_KEY") ?: ""
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 

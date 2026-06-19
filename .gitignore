@@ -31,3 +31,8 @@ captures/
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Ignore local Firebase config and IDE settings
+/app/google-services.json
+/.idea/
+*.iml
