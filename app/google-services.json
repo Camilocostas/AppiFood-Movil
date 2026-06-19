@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1059401661862",
+    "project_id": "appifood-cc357",
+    "storage_bucket": "appifood-cc357.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1059401661862:android:b5d0ae2ccf54c89845e367",
+        "android_client_info": {
+          "package_name": "com.example.appifood_movil"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCZKF1KLsD8a70OpBjfmOS0maevy1bfOU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

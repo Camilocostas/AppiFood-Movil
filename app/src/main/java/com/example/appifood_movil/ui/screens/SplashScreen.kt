@@ -19,7 +19,7 @@ import kotlinx.coroutines.delay
 @Composable
 fun SplashScreen(onFinished: () -> Unit) {
 
-    val appiFoodRed = Color(0xFFFF4B3A)
+    val appiFoodRed = Color(0xFFD32F2F)
 
     // Cargar la animación
     val composition by rememberLottieComposition(

@@ -6,6 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
+    id("com.google.gms.google-services")
 }
 
 android {
@@ -45,6 +46,9 @@ android {
 
 dependencies {
     // Google Maps & Location
+    implementation(platform("com.google.firebase:firebase-bom:33.5.0"))
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.maps.android:maps-compose:4.3.0")
     implementation("com.google.android.gms:play-services-maps:19.0.0")
@@ -63,6 +67,9 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.foundation)
     implementation(libs.androidx.compose.animation.core)
+
+    // Google Play Services Auth
+    implementation("com.google.android.gms:play-services-auth:21.2.0")
 
     // Iconos extendidos (no está en el TOML, lo pongo manual)
     implementation("androidx.compose.material:material-icons-extended")
