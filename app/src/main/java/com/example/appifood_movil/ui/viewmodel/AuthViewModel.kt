@@ -1,6 +1,7 @@
 package com.example.appifood_movil.ui.viewmodel
 
 import android.content.Context
+import android.content.Intent
 import androidx.lifecycle.ViewModel
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
@@ -11,6 +12,7 @@ import com.google.firebase.auth.GoogleAuthProvider
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 
 class AuthViewModel : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
@@ -40,6 +42,10 @@ class AuthViewModel : ViewModel() {
         googleSignInClient = GoogleSignIn.getClient(context, gso)
     }
 
+    fun getGoogleSignInIntent(): Intent {
+        return googleSignInClient.signInIntent
+    }
+
     fun setError(message: String) {
         _error.value = message
     }
@@ -56,7 +62,7 @@ class AuthViewModel : ViewModel() {
                     _error.value = null
                     onAuthSuccessCallback?.invoke()
                 } else {
-                    _error.value = task.exception?.message ?: "Error al iniciar sesión"
+                    _error.value = task.exception?.message ?: "Error al iniciar sesión con Google"
                 }
             }
     }
@@ -76,7 +82,6 @@ class AuthViewModel : ViewModel() {
             }
     }
 
-    // ⭐ NUEVO: Crear cuenta con email y contraseña
     fun createUserWithEmail(email: String, password: String, onSuccess: () -> Unit) {
         _isLoading.value = true
         _error.value = null
@@ -87,11 +92,9 @@ class AuthViewModel : ViewModel() {
                 if (task.isSuccessful) {
                     _user.value = auth.currentUser
                     _error.value = null
-                    android.util.Log.d("AuthViewModel", "✅ Cuenta creada: ${auth.currentUser?.email}")
                     onSuccess()
                 } else {
                     _error.value = task.exception?.message ?: "Error al crear cuenta"
-                    android.util.Log.e("AuthViewModel", "❌ Error: ${task.exception?.message}")
                 }
             }
     }
