@@ -12,18 +12,13 @@
           "package_name": "com.example.appifood_movil"
         }
       },
-      "oauth_client": [],
       "api_key": [
         {
           "current_key": "REPLACE_WITH_YOUR_API_KEY"
         }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
+      ]
     }
   ],
-  "configuration_version": "1"
+  "configuration_version": "1",
+  "note": "This file is a placeholder. DO NOT commit real credentials. Developers must use app/google-services.json.example and store real credentials in GitHub Actions secrets or local files ignored by git."
 }
