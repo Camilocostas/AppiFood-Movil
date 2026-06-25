@@ -55,11 +55,16 @@ dependencies {
     implementation("com.google.android.gms:play-services-location:21.3.0")
     implementation("com.google.maps.android:maps-compose:4.3.0")
     implementation("com.google.android.gms:play-services-maps:19.0.0")
+    // Generación de códigos QR
+    implementation("com.google.zxing:core:3.5.3")
 
     // ⚠️ SOLO UN BOM - Este es el principal
     implementation(platform(libs.androidx.compose.bom))
 
     // Compose & UI (usando libs del TOML)
+    // Logging interceptor para OkHttp — necesario para HttpLoggingInterceptor
+    implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")
+    implementation("androidx.security:security-crypto:1.1.0-alpha06")
     implementation("com.airbnb.android:lottie-compose:6.4.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
@@ -94,6 +99,8 @@ dependencies {
 
     // Coil (Image Loading)
     implementation(libs.coil.compose)
+
+    implementation("com.google.firebase:firebase-firestore-ktx")
 
     // Testing
     testImplementation(libs.junit)

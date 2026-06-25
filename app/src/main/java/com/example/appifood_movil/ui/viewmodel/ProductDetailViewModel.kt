@@ -21,10 +21,16 @@ class ProductDetailViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading
 
+    // ── ESTADO PARA LA DESCRIPCIÓN ──────────────────────────────
+    private val _description = MutableStateFlow("")
+    val description: StateFlow<String> = _description
+
     fun loadProduct(id: Int) {
         viewModelScope.launch {
             _isLoading.value = true
-            _product.value = repository.getProductById(id)
+            val product = repository.getProductById(id)
+            _product.value = product
+            _description.value = product?.description ?: "Delicioso plato preparado con los mejores ingredientes para satisfacer tu paladar."
             _isLoading.value = false
         }
     }

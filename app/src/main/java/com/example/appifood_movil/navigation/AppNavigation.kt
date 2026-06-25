@@ -8,7 +8,6 @@ import com.example.appifood_movil.ui.screens.*
 import androidx.compose.animation.*
 import com.example.appifood_movil.ui.viewmodel.SearchViewModel
 import com.example.appifood_movil.navigation.Screen
-import android.window.SplashScreen
 
 @Composable
 fun AppNavigation(searchViewModel: SearchViewModel) {
@@ -18,29 +17,32 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         navController = navController,
         startDestination = Screen.Splash.route
     ) {
-        // 1️⃣ SPLASH - Animación Lottie
         composable(Screen.Splash.route) {
-            SplashScreen(
-                onFinished = {
-                    navController.navigate(Screen.Onboarding.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
-                    }
+            SplashScreen(onFinished = {
+                navController.navigate(Screen.Onboarding.route) {
+                    popUpTo(Screen.Splash.route) { inclusive = true }
                 }
-            )
+            })
         }
 
-        // 2️⃣ ONBOARDING - 3 páginas con imágenes
         composable(Screen.Onboarding.route) {
-            OnboardingScreen(
-                onFinished = {
-                    navController.navigate(Screen.Auth.route) {
-                        popUpTo(Screen.Onboarding.route) { inclusive = true }
-                    }
+            OnboardingScreen(onFinished = {
+                navController.navigate(Screen.Auth.route) {
+                    popUpTo(Screen.Onboarding.route) { inclusive = true }
                 }
+            })
+        }
+
+        // Añade estos dos bloques dentro de tu NavHost existente
+
+        composable(Screen.OrderConfirmation.route) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+            OrderConfirmationScreen(
+                navController = navController,
+                orderId       = orderId
             )
         }
 
-        // 3️⃣ AUTH - Login
         composable(Screen.Auth.route) {
             AuthScreen(onLoginNavigation = {
                 navController.navigate(Screen.Home.route) {
@@ -49,12 +51,8 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
             })
         }
 
-        // 4️⃣ HOME - Principal
         composable(Screen.Home.route) {
-            HomeScreen(
-                navController = navController,
-                searchViewModel = searchViewModel
-            )
+            HomeScreen(navController = navController, searchViewModel = searchViewModel)
         }
 
         composable(
@@ -66,40 +64,34 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         }
 
         composable(
-            route = "${Screen.RestaurantDetail.route}/{id}",
+            route     = Screen.ProductDetail.route,          // "productDetail/{id}"
             arguments = listOf(navArgument("id") { type = NavType.IntType })
         ) { backStackEntry ->
             val id = backStackEntry.arguments?.getInt("id") ?: 0
-            RestaurantDetailScreen(navController, id)
+            ProductDetailScreen(navController = navController, id = id)
+        }
+
+// ── RestaurantDetail ──────────────────────────────────────────
+        composable(
+            route     = Screen.RestaurantDetail.route,       // "restaurantDetail/{id}"
+            arguments = listOf(navArgument("id") { type = NavType.IntType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getInt("id") ?: 0
+            RestaurantDetailScreen(navController = navController, id = id)
         }
 
         composable(Screen.Cart.route) {
             CartScreen(navController = navController)
         }
 
-        composable(
-            route = "${Screen.ProductDetail.route}/{id}",
-            arguments = listOf(navArgument("id") { type = NavType.IntType })
-        ) { backStackEntry ->
-            val id = backStackEntry.arguments?.getInt("id") ?: 0
-            ProductDetailScreen(navController, id)
-        }
-
-        composable(Screen.Profile.route) {
-            ProfileScreen(navController)
-        }
-
-        composable(Screen.OrderHistory.route) {
-            OrderHistoryScreen(navController)
-        }
-
-        composable(Screen.Favorites.route) {
-            FavoritesScreen(navController)
-        }
-
-        composable(Screen.Addresses.route) {
-            AddressesScreen(navController)
-        }
+        composable(Screen.Profile.route) { ProfileScreen(navController) }
+        composable(Screen.OrderHistory.route) { OrderHistoryScreen(navController) }
+        composable(Screen.Favorites.route) { FavoritesScreen(navController) }
+        composable(Screen.Addresses.route) { AddressesScreen(navController) }
+        composable(Screen.Help.route) { HelpCenterScreen(navController) }
+        composable(Screen.Subscription.route) { SubscriptionScreen(navController) }
+        composable(Screen.Payments.route) { PaymentsScreen(navController) }
+        composable(Screen.NotificationsCenter.route) { NotificationsCenterScreen(navController) }
 
         composable(
             route = Screen.Settings.route,
@@ -107,23 +99,6 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
             exitTransition = { slideOutVertically(targetOffsetY = { 500 }) + fadeOut() }
         ) {
             SettingsScreen(navController)
-        }
-
-        composable(Screen.Help.route) {
-            HelpCenterScreen(navController)
-        }
-
-        // Nuevas rutas de perfil
-        composable(Screen.Subscription.route) {
-            SubscriptionScreen(navController)
-        }
-
-        composable(Screen.Payments.route) {
-            PaymentsScreen(navController)
-        }
-
-        composable(Screen.NotificationsCenter.route) {
-            NotificationsCenterScreen(navController)
         }
     }
 }

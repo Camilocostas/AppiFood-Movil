@@ -31,13 +31,20 @@ fun AppiFoodFooter(
     cartCount: Int = 0,
     onSearchClick: () -> Unit
 ) {
-    val activeColor = Color(0xFFFF4B3A)
-    val inactiveColor = Color.Gray
+    // ✅ Obtener colores del tema
+    val colorScheme = MaterialTheme.colorScheme
+    val surface = colorScheme.surface
+    val primary = colorScheme.primary
+    val onSurface = colorScheme.onSurface
+    val onSurfaceVariant = colorScheme.onSurfaceVariant
+
+    val activeColor = primary  // ✅ Usa el color primario del tema (rojo)
+    val inactiveColor = onSurfaceVariant  // ✅ Usa el color secundario del tema
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.White)
+            .background(surface)  // ✅ Usa surface del tema
     ) {
 
         Row(
@@ -72,8 +79,8 @@ fun AppiFoodFooter(
                 badge = {
                     if (cartCount > 0) {
                         Badge(
-                            containerColor = activeColor, // Fondo rojo (0xFFFF4B3A)
-                            contentColor = Color.White    // <--- ESTA ES LA CLAVE: Color blanco para el texto
+                            containerColor = activeColor,  // ✅ Usa color primario del tema
+                            contentColor = Color.White
                         ) {
                             Text("$cartCount", fontSize = 9.sp)
                         }
@@ -92,6 +99,7 @@ fun AppiFoodFooter(
                 )
             }
 
+            // ✅ Historial de pedidos - se mantiene
             Icon(
                 imageVector = Icons.Outlined.Assignment,
                 contentDescription = null,

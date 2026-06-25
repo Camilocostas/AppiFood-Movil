@@ -25,8 +25,16 @@ class RestaurantDetailViewModel @Inject constructor(
     fun loadRestaurant(id: Int) {
         viewModelScope.launch {
             _isLoading.value = true
-            _restaurant.value = repository.getRestaurantById(id)
-            _isLoading.value = false
+            try {
+                // Buscamos el restaurante a través del repositorio
+                val found = repository.getRestaurantById(id)
+                _restaurant.value = found
+            } catch (e: Exception) {
+                android.util.Log.e("RestaurantDetailVM", "Error cargando restaurante", e)
+                _restaurant.value = null
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 }

@@ -1,3 +1,4 @@
+# Root .gitignore - updated to ensure IDE and firebase config are ignored
 *.iml
 .gradle
 /local.properties
