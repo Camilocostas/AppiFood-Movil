@@ -87,7 +87,6 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         composable(Screen.Profile.route) { ProfileScreen(navController) }
         composable(Screen.OrderHistory.route) { OrderHistoryScreen(navController) }
         composable(Screen.Favorites.route) { FavoritesScreen(navController) }
-        composable(Screen.Addresses.route) { AddressesScreen(navController) }
         composable(Screen.Help.route) { HelpCenterScreen(navController) }
         composable(Screen.Subscription.route) { SubscriptionScreen(navController) }
         composable(Screen.Payments.route) { PaymentsScreen(navController) }
