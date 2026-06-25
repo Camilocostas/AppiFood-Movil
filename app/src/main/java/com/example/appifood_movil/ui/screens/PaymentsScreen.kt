@@ -1,8 +1,8 @@
 package com.example.appifood_movil.ui.screens
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,286 +15,370 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.appifood_movil.data.model.PaymentMethod
+import com.example.appifood_movil.ui.viewmodel.AuthViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
-data class PaymentMethod(
-    val id: String,
-    val type: String,
-    val label: String,
-    val holderName: String,
-    val lastDigits: String,
-    val isDefault: Boolean
-)
+// ── Paleta unificada ──────────────────────────────────────────────
+private val RedPrimary   = Color(0xFFD32F2F)
+private val RedDark      = Color(0xFFB71C1C)
+private val RedDeep      = Color(0xFF7F0000)
+private val YellowAccent = Color(0xFFFFD600)
+private val TextPrimary  = Color(0xFF1A1A1A)
+private val TextMuted    = Color(0xFF888888)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PaymentsScreen(navController: NavController) {
-    val appiFoodRed = Color(0xFFFF4B3A)
-    var showAddPaymentForm by remember { mutableStateOf(false) }
-    var paymentMethods by remember {
-        mutableStateOf(
-            listOf<PaymentMethod>()
-        )
+fun PaymentsScreen(
+    navController: NavController,
+    authViewModel: AuthViewModel = viewModel()
+) {
+    val user by authViewModel.user.collectAsState()
+    val paymentMethods by authViewModel.paymentMethods.collectAsState()
+    val isLoading by authViewModel.isLoading.collectAsState()
+    val scope = rememberCoroutineScope()
+
+    // ── ESTADOS ──────────────────────────────────────────────────────
+    var showAddPaymentDialog by remember { mutableStateOf(false) }
+    var showSuccessAnimation by remember { mutableStateOf(false) }
+    var isDeleting by remember { mutableStateOf(false) }
+
+    // ── ANIMACIÓN DE ENTRADA ──────────────────────────────────────
+    var visible by remember { mutableStateOf(false) }
+
+    val screenAlpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(400, easing = FastOutSlowInEasing),
+        label = "paymentsFadeIn"
+    )
+
+    LaunchedEffect(Unit) {
+        visible = true
+        user?.uid?.let { uid ->
+            authViewModel.loadPaymentMethods(uid)
+        }
     }
 
     Scaffold(
+        modifier = Modifier.graphicsLayer { alpha = screenAlpha },
+        containerColor = Color(0xFFF5F5F5),
         topBar = {
-            TopAppBar(
-                title = {
-                    // Título vacío o solo el ícono
-                    if (showAddPaymentForm) {
-                        Text(
-                            "Nuevo Método de Pago",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                },
-                navigationIcon = {
-                    IconButton(onClick = {
-                        if (showAddPaymentForm) {
-                            showAddPaymentForm = false
-                        } else {
-                            navController.popBackStack()
-                        }
-                    }) {
-                        Icon(
-                            if (showAddPaymentForm) Icons.Default.Close else Icons.Default.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = Color.White
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = appiFoodRed)
+            AnimatedPaymentsTopBar(
+                onBack = { navController.popBackStack() },
+                onAddPayment = { showAddPaymentDialog = true }
             )
         }
     ) { paddingValues ->
-        if (showAddPaymentForm) {
-            AddPaymentForm(
-                onSave = { newMethod ->
-                    paymentMethods = paymentMethods + newMethod
-                    showAddPaymentForm = false
-                },
-                onCancel = { showAddPaymentForm = false }
-            )
-        } else {
-            // Lista de métodos de pago
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .background(Color.White)
-            ) {
-                // Header del perfil
-                item {
-                    ProfileHeader()
-                }
-
-                // Mensaje de error
-                item {
-                    ErrorCard()
-                }
-
-                // Botón Agregar Método de Pago
-                item {
-                    Button(
-                        onClick = { showAddPaymentForm = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                            .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = appiFoodRed,
-                            contentColor = Color.White
-                        ),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Add,
-                            contentDescription = null,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Agregar Método de Pago",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (paymentMethods.isEmpty() && !isLoading) {
+                // ── SIN MÉTODOS DE PAGO ──────────────────────────────
+                AnimatedEmptyPayments(
+                    onAddPayment = { showAddPaymentDialog = true }
+                )
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(horizontal = 20.dp, vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // ── TARJETA DE RESUMEN ────────────────────────────
+                    item {
+                        PaymentSummaryCard(
+                            totalMethods = paymentMethods.size,
+                            defaultMethod = paymentMethods.find { it.isDefault }
                         )
                     }
-                }
 
-                // Mis Métodos de Pago
-                item {
-                    Text(
-                        text = "Mis Métodos de Pago",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                    // ── LISTA DE MÉTODOS ──────────────────────────────
+                    items(paymentMethods) { method ->
+                        AnimatedPaymentMethodItem(
+                            method = method,
+                            isDefault = method.isDefault,
+                            onSetDefault = {
+                                user?.uid?.let { uid ->
+                                    authViewModel.setDefaultPaymentMethod(uid, method.id) { success ->
+                                        if (success) {
+                                            scope.launch {
+                                                showSuccessAnimation = true
+                                                delay(1000)
+                                                showSuccessAnimation = false
+                                            }
+                                        }
+                                    }
+                                }
+                            },
+                            onDelete = {
+                                user?.uid?.let { uid ->
+                                    isDeleting = true
+                                    authViewModel.removePaymentMethod(uid, method.id) { success ->
+                                        isDeleting = false
+                                        if (success) {
+                                            scope.launch {
+                                                showSuccessAnimation = true
+                                                delay(1000)
+                                                showSuccessAnimation = false
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        )
+                    }
+
+                    item { Spacer(modifier = Modifier.height(30.dp)) }
+                }
+            }
+
+            // ── LOADING ──────────────────────────────────────────────────
+            if (isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.35f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        color = YellowAccent,
+                        strokeWidth = 3.dp,
+                        modifier = Modifier.size(48.dp)
                     )
                 }
+            }
 
-                if (paymentMethods.isEmpty()) {
-                    // Mensaje cuando no hay métodos de pago
-                    item {
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 4.dp),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, Color(0xFFEEEEEE))
+            // ── ANIMACIÓN DE ÉXITO ──────────────────────────────────
+            AnimatedVisibility(
+                visible = showSuccessAnimation,
+                enter = fadeIn() + scaleIn(initialScale = 0.8f),
+                exit = fadeOut() + scaleOut(targetScale = 1.2f)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.4f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Surface(
+                        modifier = Modifier.size(220.dp, 180.dp),
+                        shape = RoundedCornerShape(28.dp),
+                        color = Color.White,
+                        shadowElevation = 8.dp
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                            modifier = Modifier.padding(16.dp)
                         ) {
-                            Column(
+                            Box(
                                 modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(24.dp),
-                                horizontalAlignment = Alignment.CenterHorizontally
+                                    .size(72.dp)
+                                    .clip(CircleShape)
+                                    .background(RedPrimary),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    Icons.Default.CreditCard,
+                                    imageVector = Icons.Default.Check,
                                     contentDescription = null,
-                                    tint = Color.Gray.copy(alpha = 0.5f),
-                                    modifier = Modifier.size(48.dp)
+                                    tint = Color.White,
+                                    modifier = Modifier.size(40.dp)
                                 )
-                                Spacer(modifier = Modifier.height(12.dp))
-                                Text(
-                                    text = "No tienes métodos de pago registrados",
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF333333)
-                                )
-                                Text(
-                                    text = "Agrega uno para comprar más rápido",
-                                    fontSize = 14.sp,
-                                    color = Color.Gray
-                                )
+                            }
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "¡Actualizado!",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 17.sp,
+                                color = Color.Black
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── DIÁLOGO PARA AGREGAR MÉTODO DE PAGO ──────────────────────
+    if (showAddPaymentDialog) {
+        AddPaymentMethodDialog(
+            onDismiss = { showAddPaymentDialog = false },
+            onAdd = { paymentMethod ->
+                user?.uid?.let { uid ->
+                    authViewModel.addPaymentMethod(uid, paymentMethod) { success ->
+                        if (success) {
+                            showAddPaymentDialog = false
+                            scope.launch {
+                                showSuccessAnimation = true
+                                delay(1000)
+                                showSuccessAnimation = false
                             }
                         }
                     }
-                } else {
-                    // Lista de métodos de pago guardados
-                    items(paymentMethods) { method ->
-                        PaymentMethodCard(
-                            method = method,
-                            onSetDefault = { methodId ->
-                                paymentMethods = paymentMethods.map {
-                                    it.copy(isDefault = it.id == methodId)
-                                }
-                            },
-                            onDelete = { methodId ->
-                                paymentMethods = paymentMethods.filter { it.id != methodId }
-                            }
-                        )
-                    }
                 }
+            },
+            isLoading = isLoading
+        )
+    }
+}
 
-                // Cerrar sesión
-                item {
-                    LogoutButton(navController)
+// ── TOP BAR ANIMADA ──────────────────────────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AnimatedPaymentsTopBar(
+    onBack: () -> Unit,
+    onAddPayment: () -> Unit
+) {
+    TopAppBar(
+        title = {
+            Text(
+                text = "💳 Mis Métodos de Pago",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+        },
+        navigationIcon = {
+            Surface(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .clickable { onBack() },
+                color = Color.White,
+                shadowElevation = 4.dp
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.Default.ArrowBack,
+                        contentDescription = "Atrás",
+                        tint = TextPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
+            }
+        },
+        actions = {
+            Button(
+                onClick = onAddPayment,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = RedPrimary,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(50)
+            ) {
+                Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Agregar",
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text("Agregar", fontWeight = FontWeight.Bold)
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(
+            containerColor = Color.White,
+            scrolledContainerColor = Color.White
+        )
+    )
+}
 
-                item {
-                    Spacer(modifier = Modifier.height(80.dp))
+// ── RESUMEN DE PAGOS ──────────────────────────────────────────────
+@Composable
+fun PaymentSummaryCard(
+    totalMethods: Int,
+    defaultMethod: PaymentMethod?
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text(
+                    text = "💳 Métodos guardados",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "$totalMethods método(s) de pago",
+                    color = TextMuted,
+                    fontSize = 13.sp
+                )
+                if (defaultMethod != null) {
+                    Text(
+                        text = "Predeterminado: ${defaultMethod.type}",
+                        color = RedPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+            Surface(
+                shape = CircleShape,
+                color = RedPrimary.copy(alpha = 0.1f),
+                modifier = Modifier.size(48.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(
+                        text = "$totalMethods",
+                        color = RedPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp
+                    )
                 }
             }
         }
     }
 }
 
+// ── ITEM DE MÉTODO DE PAGO ANIMADO ──────────────────────────────
 @Composable
-fun ProfileHeader() {
-    val appiFoodRed = Color(0xFFFF4B3A)
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(appiFoodRed)
-            .padding(20.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(70.dp)
-                .clip(CircleShape)
-                .background(Color(0xFFFF8A80)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "M",
-                color = Color.White,
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Mauricio Bustamante",
-            color = Color.White,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "yo@ejemplo.com",
-            color = Color.White.copy(alpha = 0.8f),
-            fontSize = 13.sp
-        )
-    }
-}
-
-@Composable
-fun ErrorCard() {
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF0EE)),
-        border = BorderStroke(1.dp, Color(0xFFFF4B3A).copy(alpha = 0.3f))
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                Icons.Default.Error,
-                contentDescription = null,
-                tint = Color(0xFFFF4B3A),
-                modifier = Modifier.size(24.dp)
-            )
-            Spacer(modifier = Modifier.width(12.dp))
-            Text(
-                text = "Error al cargar los métodos de pago",
-                fontSize = 14.sp,
-                color = Color(0xFF333333)
-            )
-        }
-    }
-}
-
-@Composable
-fun PaymentMethodCard(
+fun AnimatedPaymentMethodItem(
     method: PaymentMethod,
-    onSetDefault: (String) -> Unit,
-    onDelete: (String) -> Unit
+    isDefault: Boolean,
+    onSetDefault: () -> Unit,
+    onDelete: () -> Unit
 ) {
-    val appiFoodRed = Color(0xFFFF4B3A)
+    var isPressed by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.97f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "methodScale"
+    )
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(
-            if (method.isDefault) 2.dp else 1.dp,
-            if (method.isDefault) appiFoodRed else Color(0xFFEEEEEE)
-        )
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clickable { isPressed = true },
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isDefault) RedPrimary.copy(alpha = 0.05f) else Color.White
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDefault) 4.dp else 2.dp)
     ) {
         Column(
             modifier = Modifier
@@ -302,426 +386,374 @@ fun PaymentMethodCard(
                 .padding(16.dp)
         ) {
             Row(
-                verticalAlignment = Alignment.CenterVertically
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(appiFoodRed.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.CreditCard,
-                        contentDescription = null,
-                        tint = appiFoodRed,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    // ── ICONO ──────────────────────────────────────────
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(RedPrimary.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = method.label,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        )
-                        if (method.isDefault) {
-                            Surface(
-                                shape = RoundedCornerShape(20.dp),
-                                color = appiFoodRed.copy(alpha = 0.1f)
-                            ) {
-                                Text(
-                                    text = "Predeterminado",
-                                    fontSize = 10.sp,
-                                    color = appiFoodRed,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                )
-                            }
-                        }
-                    }
-                    Text(
-                        text = "${method.type} --- ${method.lastDigits}",
-                        fontSize = 13.sp,
-                        color = Color.Gray
-                    )
-                    Text(
-                        text = "Titular: ${method.holderName}",
-                        fontSize = 12.sp,
-                        color = Color.Gray
-                    )
-                }
-
-                // Menú de opciones
-                var expanded by remember { mutableStateOf(false) }
-                Box {
-                    IconButton(onClick = { expanded = true }) {
-                        Icon(
-                            Icons.Default.MoreVert,
-                            contentDescription = "Opciones",
-                            tint = Color.Gray
+                            text = method.getIcon(),
+                            fontSize = 24.sp
                         )
                     }
 
-                    DropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false }
-                    ) {
-                        if (!method.isDefault) {
-                            DropdownMenuItem(
-                                text = { Text("Establecer como predeterminado") },
-                                onClick = {
-                                    onSetDefault(method.id)
-                                    expanded = false
-                                }
+                    Spacer(modifier = Modifier.width(14.dp))
+
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = method.type,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = TextPrimary
                             )
-                        }
-                        DropdownMenuItem(
-                            text = { Text("Eliminar", color = Color.Red) },
-                            onClick = {
-                                onDelete(method.id)
-                                expanded = false
+                            if (isDefault) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = RedPrimary
+                                ) {
+                                    Text(
+                                        text = "Predeterminado",
+                                        color = Color.White,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                                    )
+                                }
                             }
+                        }
+                        Text(
+                            text = method.identifier,
+                            color = TextMuted,
+                            fontSize = 13.sp
+                        )
+                        Text(
+                            text = "Titular: ${method.holderName}",
+                            color = TextMuted,
+                            fontSize = 12.sp
                         )
                     }
                 }
             }
-        }
-    }
-}
 
-@Composable
-fun AddPaymentForm(
-    onSave: (PaymentMethod) -> Unit,
-    onCancel: () -> Unit
-) {
-    val appiFoodRed = Color(0xFFFF4B3A)
-    var selectedType by remember { mutableStateOf("Tarjeta") }
-    var label by remember { mutableStateOf("Método principal") }
-    var holderName by remember { mutableStateOf("") }
-    var cardNumber by remember { mutableStateOf("") }
-    var month by remember { mutableStateOf("") }
-    var year by remember { mutableStateOf("") }
-    var cvv by remember { mutableStateOf("") }
-    var isDefault by remember { mutableStateOf(false) }
-
-    val paymentTypes = listOf(
-        "Tarjeta" to "Crédito o débito en una sola opción",
-        "Nequi" to "Billetera digital",
-        "Bancolombia" to "Transferencia / cuenta bancaria",
-        "PSE" to "Pago por banco en línea"
-    )
-
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Color.White)
-            .padding(16.dp)
-    ) {
-        // Título del formulario
-        item {
-            Text(
-                text = "Nuevo Método de Pago",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(vertical = 16.dp)
-            )
-        }
-
-        // Tipo de método
-        item {
-            Text(
-                text = "Tipo de método",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(bottom = 8.dp)
-            )
-        }
-
-        // Opciones de tipo de pago
-        items(paymentTypes) { (type, description) ->
-            PaymentTypeOption(
-                type = type,
-                description = description,
-                isSelected = selectedType == type,
-                onClick = { selectedType = type }
-            )
-        }
-
-        // Etiqueta
-        item {
-            Text(
-                text = "Etiqueta",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
-            )
-        }
-
-        item {
-            OutlinedTextField(
-                value = label,
-                onValueChange = { label = it },
-                label = { Text("Método principal") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true
-            )
-        }
-
-        // Nombre del titular
-        item {
-            Text(
-                text = "Nombre del Titular *",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
-            )
-        }
-
-        item {
-            OutlinedTextField(
-                value = holderName,
-                onValueChange = { holderName = it },
-                placeholder = { Text("Juan Pérez") },
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                singleLine = true
-            )
-        }
-
-        // Número de tarjeta / cuenta
-        if (selectedType == "Tarjeta") {
-            item {
-                Text(
-                    text = "Número de Tarjeta *",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
-                )
-            }
-
-            item {
-                OutlinedTextField(
-                    value = cardNumber,
-                    onValueChange = { cardNumber = it },
-                    placeholder = { Text("1234 5678 9101 1121") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
-            }
-
-            // Fila de fecha y CVV
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    OutlinedTextField(
-                        value = month,
-                        onValueChange = { month = it },
-                        placeholder = { Text("Mes") },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = year,
-                        onValueChange = { year = it },
-                        placeholder = { Text("Año") },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = cvv,
-                        onValueChange = { cvv = it },
-                        placeholder = { Text("CVV") },
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
-                }
-            }
-        } else {
-            // Para Nequi, Bancolombia, PSE
-            item {
-                Text(
-                    text = "Número de teléfono / cuenta *",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    modifier = Modifier.padding(top = 12.dp, bottom = 4.dp)
-                )
-            }
-
-            item {
-                OutlinedTextField(
-                    value = cardNumber,
-                    onValueChange = { cardNumber = it },
-                    placeholder = { Text("3001234567") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true
-                )
-            }
-        }
-
-        // Checkbox predeterminado
-        item {
+            // ── ACCIONES ──────────────────────────────────────────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp)
-                    .clickable { isDefault = !isDefault },
+                    .padding(top = 12.dp),
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Checkbox(
-                    checked = isDefault,
-                    onCheckedChange = { isDefault = it },
-                    colors = CheckboxDefaults.colors(
-                        checkedColor = appiFoodRed
-                    )
-                )
-                Text(
-                    text = "Usar como método de pago predeterminado",
-                    fontSize = 14.sp,
-                    color = Color(0xFF333333)
-                )
-            }
-        }
-
-        // Botón Guardar
-        item {
-            Button(
-                onClick = {
-                    if (holderName.isNotBlank() && cardNumber.isNotBlank()) {
-                        val lastDigits = cardNumber.takeLast(4)
-                        val newMethod = PaymentMethod(
-                            id = System.currentTimeMillis().toString(),
-                            type = selectedType,
-                            label = label,
-                            holderName = holderName,
-                            lastDigits = if (lastDigits.isNotEmpty()) lastDigits else "1234",
-                            isDefault = isDefault
+                if (!isDefault) {
+                    TextButton(
+                        onClick = onSetDefault,
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = RedPrimary
                         )
-                        onSave(newMethod)
+                    ) {
+                        Icon(
+                            Icons.Default.Check,
+                            contentDescription = "Establecer por defecto",
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Establecer por defecto", fontSize = 12.sp)
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .padding(vertical = 8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = appiFoodRed,
-                    contentColor = Color.White
-                ),
-                shape = RoundedCornerShape(12.dp),
-                enabled = holderName.isNotBlank() && cardNumber.isNotBlank()
-            ) {
-                Text(
-                    text = "Guardar Método de Pago",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
 
-        item {
-            Spacer(modifier = Modifier.height(80.dp))
-        }
-    }
-}
-
-@Composable
-fun PaymentTypeOption(
-    type: String,
-    description: String,
-    isSelected: Boolean,
-    onClick: () -> Unit
-) {
-    val appiFoodRed = Color(0xFFFF4B3A)
-
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp)
-            .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        border = BorderStroke(
-            if (isSelected) 2.dp else 1.dp,
-            if (isSelected) appiFoodRed else Color(0xFFEEEEEE)
-        ),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isSelected) Color(0xFFFFF0EE) else Color.White
-        )
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            RadioButton(
-                selected = isSelected,
-                onClick = onClick,
-                colors = RadioButtonDefaults.colors(
-                    selectedColor = appiFoodRed
-                )
-            )
-            Column {
-                Text(
-                    text = type,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                    fontSize = 15.sp,
-                    color = if (isSelected) appiFoodRed else Color(0xFF333333)
-                )
-                Text(
-                    text = description,
-                    fontSize = 12.sp,
-                    color = Color.Gray
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun LogoutButton(navController: NavController) {
-    val appiFoodRed = Color(0xFFFF4B3A)
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable {
-                navController.navigate("auth") {
-                    popUpTo("home") { inclusive = true }
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier.size(32.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Eliminar",
+                        tint = TextMuted,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
-            .padding(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center
-    ) {
-        Icon(
-            Icons.Default.ExitToApp,
-            contentDescription = null,
-            tint = appiFoodRed,
-            modifier = Modifier.size(24.dp)
-        )
-        Spacer(modifier = Modifier.width(12.dp))
-        Text(
-            text = "Cerrar sesión",
-            color = appiFoodRed,
-            fontWeight = FontWeight.Bold,
-            fontSize = 16.sp
-        )
+        }
     }
+}
+
+// ── ESTADO VACÍO ANIMADO ──────────────────────────────────────────
+@Composable
+fun AnimatedEmptyPayments(onAddPayment: () -> Unit) {
+    var bounce by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (bounce) 1.05f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "emptyScale"
+    )
+
+    LaunchedEffect(Unit) {
+        bounce = true
+        delay(1000)
+        bounce = false
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .graphicsLayer {
+                    scaleX = scale
+                    scaleY = scale
+                },
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(48.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(100.dp)
+                        .clip(CircleShape)
+                        .background(RedPrimary.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "💳",
+                        fontSize = 48.sp
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Text(
+                    text = "No tienes métodos de pago",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Text(
+                    text = "Agrega un método de pago para realizar pedidos fácilmente",
+                    color = TextMuted,
+                    fontSize = 14.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onAddPayment,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = RedPrimary,
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(50),
+                    modifier = Modifier.fillMaxWidth(0.7f)
+                ) {
+                    Icon(
+                        Icons.Default.Add,
+                        contentDescription = "Agregar",
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Agregar método de pago",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── DIÁLOGO PARA AGREGAR MÉTODO DE PAGO ──────────────────────────
+@Composable
+fun AddPaymentMethodDialog(
+    onDismiss: () -> Unit,
+    onAdd: (PaymentMethod) -> Unit,
+    isLoading: Boolean
+) {
+    var selectedType by remember { mutableStateOf("Nequi") }
+    var identifier by remember { mutableStateOf("") }
+    var holderName by remember { mutableStateOf("") }
+    var isDefault by remember { mutableStateOf(false) }
+
+    val paymentTypes = listOf("Nequi", "Bancolombia", "PSE", "Daviplata")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Agregar método de pago",
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp
+            )
+        },
+        text = {
+            Column {
+                // ── TIPO DE PAGO ──────────────────────────────────────
+                Text(
+                    text = "Tipo de pago",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    color = TextPrimary
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    paymentTypes.forEach { type ->
+                        FilterChip(
+                            selected = selectedType == type,
+                            onClick = { selectedType = type },
+                            label = {
+                                Text(
+                                    text = type,
+                                    fontSize = 12.sp
+                                )
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = RedPrimary.copy(alpha = 0.1f),
+                                selectedLabelColor = RedPrimary
+                            )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // ── IDENTIFICADOR ─────────────────────────────────────
+                OutlinedTextField(
+                    value = identifier,
+                    onValueChange = { identifier = it },
+                    label = { Text("Identificador") },
+                    placeholder = {
+                        when (selectedType) {
+                            "Nequi" -> Text("Número de celular")
+                            "Bancolombia" -> Text("Número de cuenta")
+                            "PSE" -> Text("Número de cuenta o correo")
+                            "Daviplata" -> Text("Número de celular")
+                            else -> Text("Identificador")
+                        }
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = RedPrimary,
+                        focusedLabelColor = RedPrimary,
+                        cursorColor = RedPrimary
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // ── NOMBRE DEL TITULAR ──────────────────────────────
+                OutlinedTextField(
+                    value = holderName,
+                    onValueChange = { holderName = it },
+                    label = { Text("Nombre del titular") },
+                    placeholder = { Text("Como aparece en la cuenta") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = RedPrimary,
+                        focusedLabelColor = RedPrimary,
+                        cursorColor = RedPrimary
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // ── PREDETERMINADO ────────────────────────────────────
+                Row(
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Switch(
+                        checked = isDefault,
+                        onCheckedChange = { isDefault = it },
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = RedPrimary,
+                            checkedTrackColor = RedPrimary.copy(alpha = 0.5f),
+                            uncheckedThumbColor = TextMuted,
+                            uncheckedTrackColor = TextMuted.copy(alpha = 0.3f)
+                        )
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Establecer como método predeterminado",
+                        fontSize = 13.sp,
+                        color = TextPrimary
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (identifier.isNotBlank() && holderName.isNotBlank()) {
+                        val paymentMethod = PaymentMethod(
+                            type = selectedType,
+                            identifier = identifier,
+                            holderName = holderName,
+                            isDefault = isDefault
+                        )
+                        onAdd(paymentMethod)
+                    }
+                },
+                enabled = !isLoading && identifier.isNotBlank() && holderName.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = RedPrimary,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(
+                        color = Color.White,
+                        strokeWidth = 2.dp,
+                        modifier = Modifier.size(20.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                }
+                Text("Agregar")
+            }
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onDismiss,
+                enabled = !isLoading
+            ) {
+                Text("Cancelar", color = TextMuted)
+            }
+        },
+        shape = RoundedCornerShape(24.dp)
+    )
 }

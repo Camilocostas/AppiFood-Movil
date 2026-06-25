@@ -1,61 +1,99 @@
+// ui/theme/Theme.kt
 package com.example.appifood_movil.ui.theme
 
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 
-
 private val DarkColorScheme = darkColorScheme(
-    primary = FoodPrimary,
-    secondary = FoodSecondary,
-    tertiary = Pink80,
-    background = Color(0xFF121212),
-    surface = Color(0xFF121212),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onBackground = Color.White,
-    onSurface = Color.White,
+    primary          = FoodPrimary,
+    onPrimary        = Color.White,
+    primaryContainer = FoodDeep,
+    secondary        = FoodYellow,
+    onSecondary      = Color(0xFF1A0000),
+    tertiary         = FoodGreen,
+    background       = DarkBackground,
+    onBackground     = DarkTextPrimary,
+    surface          = DarkSurface,
+    onSurface        = DarkTextPrimary,
+    surfaceVariant   = DarkSurfaceVar,
+    onSurfaceVariant = DarkTextMuted,
+    outline          = DarkBorder,
+    error            = Color(0xFFCF6679)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = FoodPrimary,
-    secondary = FoodSecondary,
-    tertiary = Pink40,
-    background = FoodBackground,
-    surface = Color.White,
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onBackground = FoodSecondary,
-    onSurface = FoodSecondary,
+    primary          = FoodPrimary,
+    onPrimary        = Color.White,
+    primaryContainer = Color(0xFFFFEBEB),
+    secondary        = FoodYellow,
+    onSecondary      = Color(0xFF1A0000),
+    tertiary         = FoodGreen,
+    background       = LightBackground,
+    onBackground     = LightTextPrimary,
+    surface          = LightSurface,
+    onSurface        = LightTextPrimary,
+    surfaceVariant   = LightSurfaceVar,
+    onSurfaceVariant = LightTextMuted,
+    outline          = LightBorder,
+    error            = FoodPrimary
 )
+
+// ── Estado global del tema — accesible desde cualquier composable ─
+data class ThemeState(
+    val isDarkMode : Boolean,
+    val toggle     : () -> Unit
+)
+
+val LocalThemeState = staticCompositionLocalOf<ThemeState> {
+    error("ThemeState no provisto")
+}
 
 @Composable
 fun AppifoodMovilTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = false, // Set to false to maintain brand consistency
-    content: @Composable () -> Unit
+    darkTheme    : Boolean = isSystemInDarkTheme(),  // ← Cambio: ahora usa el sistema por defecto
+    dynamicColor : Boolean = false,
+    content      : @Composable () -> Unit
 ) {
+    // Si darkTheme es null, usa el sistema
+    var isDark by remember { mutableStateOf(darkTheme) }
+
+    // ✅ Esto hace que el tema se actualice cuando cambia el sistema
+    val currentIsDark = if (darkTheme) {
+        // Si darkTheme es true, usa el modo oscuro siempre
+        true
+    } else {
+        // Si es false, usa el modo claro siempre
+        false
+    }
+
+    // Actualiza isDark cuando cambie el sistema
+    LaunchedEffect(darkTheme) {
+        isDark = darkTheme
+    }
+
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
             val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (isDark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
         }
-
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        isDark -> DarkColorScheme
+        else   -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
+    val themeState = ThemeState(
+        isDarkMode = isDark,
+        toggle     = { isDark = !isDark }  // El toggle manual también funciona
     )
+
+    CompositionLocalProvider(LocalThemeState provides themeState) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography  = Typography,
+            content     = content
+        )
+    }
 }

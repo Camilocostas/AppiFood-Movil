@@ -290,17 +290,17 @@ val restaurants = listOf(
 )
 
 val allProducts = listOf(
-    FoodProduct(1, "Cheeseburger", 25000.0, R.drawable.cheese, "Rapida"),
-    FoodProduct(2, "Big Mac", 32000.0, R.drawable.bicmac, "Rapida"),
-    FoodProduct(7, "Hamburguesa", 15000.0, R.drawable.clasica, "Rapida"),
-    FoodProduct(3, "Philadelphia", 28000.0, R.drawable.philadelphia, "Oriental"),
-    FoodProduct(4, "Ojo de Tigre", 35000.0, R.drawable.ojotigre, "Oriental"),
-    FoodProduct(5, "Coca Cola 1L", 6000.0, R.drawable.cocacola, "Bebidas"),
-    FoodProduct(6, "Ramen Tonkotsu", 22000.0, R.drawable.ramen, "Oriental"),
-    FoodProduct(7,"Mega-Taco", 23000.0, R.drawable.cheese, "Mexicana"),
-    FoodProduct(8, "Sopa de guisantes", 16000.0, R.drawable.lomosaltado, "Mexicana"),
-    FoodProduct(9, "Helado de Yogurt", 9000.0, R.drawable.helado, "Postres"),
-    FoodProduct(10, "Pastel de Chocolate", 8000.0, R.drawable.ensaladacesar, "Postres")
+    FoodProduct(1, "Cheeseburger", 25000.0, R.drawable.cheese, "Rapida", "Hamburguesa clásica con queso cheddar fundido, carne de res a la parrilla, vegetales frescos y nuestra salsa especial."),
+    FoodProduct(2, "Big Mac", 32000.0, R.drawable.bicmac, "Rapida", "La legendaria hamburguesa de dos pisos con salsa secreta, lechuga, queso, pepinillos y cebolla."),
+    FoodProduct(7, "Hamburguesa", 15000.0, R.drawable.clasica, "Rapida", "Sencilla pero deliciosa hamburguesa de res con los acompañamientos tradicionales."),
+    FoodProduct(3, "Philadelphia", 28000.0, R.drawable.philadelphia, "Oriental", "Roll de sushi relleno de salmón fresco, queso crema y aguacate, cubierto con sésamo."),
+    FoodProduct(4, "Ojo de Tigre", 35000.0, R.drawable.ojotigre, "Oriental", "Sushi especial relleno de atún, langostino crocante y topping de salsa dulce picante."),
+    FoodProduct(5, "Coca Cola 1L", 6000.0, R.drawable.cocacola, "Bebidas", "Refrescante bebida gaseosa de un litro ideal para compartir."),
+    FoodProduct(6, "Ramen Tonkotsu", 22000.0, R.drawable.ramen, "Oriental", "Sopa japonesa tradicional con fideos artesanales, caldo de cerdo cremoso, huevo ajitama y lomo de cerdo."),
+    FoodProduct(7,"Mega-Taco", 23000.0, R.drawable.cheese, "Mexicana", "Gran taco relleno de carne al pastor, pico de gallo, guacamole y queso fundido."),
+    FoodProduct(8, "Sopa de guisantes", 16000.0, R.drawable.lomosaltado, "Mexicana", "Sopa casera nutritiva con guisantes frescos y un toque de especias."),
+    FoodProduct(9, "Helado de Yogurt", 9000.0, R.drawable.helado, "Postres", "Copa de yogurt helado natural con frutas de temporada y granola."),
+    FoodProduct(10, "Pastel de Chocolate", 8000.0, R.drawable.ensaladacesar, "Postres", "Porción de bizcocho de chocolate húmedo relleno y cubierto con ganache de cacao puro.")
 )
 
 fun searchRestaurants(query: String): List<Restaurant> {

@@ -1,11 +1,13 @@
+// data/repository/FoodRepositoryImpl.kt
 package com.example.appifood_movil.data.repository
 
+import android.util.Log
 import com.example.appifood_movil.data.allProducts
-import com.example.appifood_movil.data.restaurants
 import com.example.appifood_movil.data.api.ApiService
 import com.example.appifood_movil.data.api.response.RestaurantDto
-import com.example.appifood_movil.domain.model.FoodProduct
+import com.example.appifood_movil.data.restaurants
 import com.example.appifood_movil.domain.model.Dish
+import com.example.appifood_movil.domain.model.FoodProduct
 import com.example.appifood_movil.domain.model.Restaurant
 import com.example.appifood_movil.domain.model.Review
 import com.example.appifood_movil.domain.repository.FoodRepository
@@ -20,70 +22,79 @@ class FoodRepositoryImpl @Inject constructor(
 ) : FoodRepository {
 
     override fun getRestaurants(): Flow<List<Restaurant>> = flow {
-        // Emitimos primero los datos locales de FakeData para asegurar que siempre haya contenido
+        // 1. Emitir datos locales inmediatamente (UX sin espera)
         emit(restaurants)
 
+        // 2. Intentar obtener datos frescos de la API
         try {
             val response = apiService.getRestaurants()
-            if (response.success) {
-                val domainRestaurants = response.data.map { it.toDomain() }
-                if (domainRestaurants.isNotEmpty()) {
-                    // Si la API devuelve datos, los emitimos (podrías elegir combinarlos o reemplazarlos)
-                    emit(domainRestaurants)
+            if (response.isSuccessful) {
+                val body = response.body()
+                val domainList = body?.data?.map { it.toDomain() } ?: emptyList()
+                if (domainList.isNotEmpty()) {
+                    // Emitir datos de la API — reemplaza los locales
+                    emit(domainList)
+                    Log.d("FoodRepo", "Restaurantes de API: ${domainList.size}")
                 }
+            } else {
+                Log.w("FoodRepo", "API error ${response.code()}: ${response.message()}")
             }
         } catch (e: Exception) {
-            // Si la API falla, nos quedamos con los datos de FakeData ya emitidos
+            // Sin conexión o Railway en cold start — nos quedamos con locales
+            Log.e("FoodRepo", "Error de red, usando datos locales: ${e.message}")
         }
     }
 
-    override fun getProducts(): List<FoodProduct> {
-        return allProducts
-    }
+    override fun getProducts(): List<FoodProduct> = allProducts
 
-    override suspend fun getProductById(id: Int): FoodProduct? {
-        return allProducts.find { it.id == id }
-    }
+    override suspend fun getProductById(id: Int): FoodProduct? =
+        allProducts.find { it.id == id }
 
-    override fun searchRestaurants(query: String): List<Restaurant> {
-        // Podrías implementar una búsqueda local aquí si fuera necesario
-        return restaurants.filter { 
-            it.name.contains(query, ignoreCase = true) || 
-            it.category.contains(query, ignoreCase = true) 
+    override fun searchRestaurants(query: String): List<Restaurant> =
+        restaurants.filter {
+            it.name.contains(query, ignoreCase = true) ||
+                    it.category.contains(query, ignoreCase = true)
         }
-    }
 
     override suspend fun getRestaurantById(id: Int): Restaurant? {
-        // Primero buscamos en FakeData
-        val fakeResult = restaurants.find { it.id == id }
-        if (fakeResult != null) return fakeResult
+        // Primero buscar en local (respuesta inmediata)
+        val local = restaurants.find { it.id == id }
 
         return try {
             val response = apiService.getRestaurantById(id)
-            if (response.success) {
-                response.data.toDomain()
+            if (response.isSuccessful) {
+                response.body()?.data?.toDomain() ?: local
             } else {
-                null
+                Log.w("FoodRepo", "getRestaurantById error ${response.code()}")
+                local
             }
         } catch (e: Exception) {
-            null
+            Log.e("FoodRepo", "Error obteniendo restaurante $id: ${e.message}")
+            local
         }
     }
 
-    private fun RestaurantDto.toDomain(): Restaurant {
-        return Restaurant(
-            id = this.id,
-            name = this.name,
-            address = this.address,
-            imageUrl = this.image ?: this.logo,
-            schedule = this.time ?: "Horario no disponible",
-            hasDelivery = this.deliveryCost > 0.0,
-            rating = this.averageRating.toString(),
-            category = "General",
-            latitude = this.latitude ?: this.lat ?: 0.0,
-            longitude = this.longitude ?: this.lng ?: 0.0,
-            dishes = emptyList(), 
-            reviews = emptyList()
-        )
-    }
+    // ── Mapper: RestaurantDto → Restaurant (dominio) ──────────────
+    private fun RestaurantDto.toDomain(): Restaurant = Restaurant(
+        id          = this.id,
+        name        = this.name,
+        phone       = this.phone,
+        address     = this.address,
+        imageUrl    = this.image ?: this.logo ?: "",
+        imageRes    = com.example.appifood_movil.R.drawable.restaurantechino, // fallback local
+        schedule    = this.time ?: "Horario no disponible",
+        hasDelivery = this.deliveryCost > 0.0,
+        rating      = this.averageRating.takeIf { it > 0 }?.toString()
+            ?: this.rating,
+        category    = this.category.ifBlank { "General" },
+        latitude    = this.latitude ?: this.lat ?: 0.0,
+        longitude   = this.longitude ?: this.lng ?: 0.0,
+        dishes      = this.dishes.map { d ->
+            Dish(name = d.name, price = d.price, imageRes =
+                com.example.appifood_movil.R.drawable.cheese)
+        },
+        reviews     = this.reviews.map { r ->
+            Review(user = r.user, comment = r.comment, rating = r.rating)
+        }
+    )
 }
