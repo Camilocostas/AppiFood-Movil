@@ -1,6 +1,7 @@
 package com.example.appifood_movil.ui.screens
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,194 +16,358 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.tooling.preview.Preview
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
-import com.example.appifood_movil.R
-import com.example.appifood_movil.data.model.Restaurant
-import com.example.appifood_movil.data.model.HomeFilter
-import com.example.appifood_movil.data.model.FoodProduct
-import com.example.appifood_movil.data.model.sampleProducts
-import com.example.appifood_movil.ui.theme.AppifoodMovilTheme
 import com.example.appifood_movil.ui.viewmodel.HomeViewModel
-import kotlinx.coroutines.launch
+import com.example.appifood_movil.ui.components.AppiFoodFooter
+import com.example.appifood_movil.ui.components.CarouselHeader
+import com.example.appifood_movil.R
+import com.example.appifood_movil.ui.viewmodel.SearchViewModel
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.compose.rememberLauncherForActivityResult
+import coil.compose.AsyncImage
+import com.example.appifood_movil.navigation.Screen
+import com.example.appifood_movil.ui.theme.FoodRating
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     navController: NavController,
-    viewModel: HomeViewModel = viewModel() // <--- Integramos el ViewModel
+    viewModel: HomeViewModel = hiltViewModel(),
+    searchViewModel: SearchViewModel
 ) {
-    val drawerState = rememberDrawerState(DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
+    val filteredRestaurants by searchViewModel.filteredRestaurants.collectAsState()
 
-    ModalNavigationDrawer(
-        drawerState = drawerState,
-        drawerContent = {
-            ModalDrawerSheet {
-                FilterContent(
-                    filter = viewModel.filter,
-                    onApply = {
-                        viewModel.onApplyFilter(it)
-                        scope.launch { drawerState.close() }
-                    },
-                    onClose = { scope.launch { drawerState.close() } }
-                )
-            }
+    // ✅ Obtener colores del tema
+    val colorScheme = MaterialTheme.colorScheme
+    val background = colorScheme.background
+    val surface = colorScheme.surface
+    val onSurface = colorScheme.onSurface
+    val onSurfaceVariant = colorScheme.onSurfaceVariant
+    val primary = colorScheme.primary
+
+    // Animación de entrada
+    var visible by remember { mutableStateOf(false) }
+
+    val screenAlpha by animateFloatAsState(
+        targetValue = if (visible) 1f else 0f,
+        animationSpec = tween(500, easing = FastOutSlowInEasing),
+        label = "homeFadeIn"
+    )
+
+    LaunchedEffect(Unit) {
+        visible = true
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            searchViewModel.fetchUserLocation()
         }
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            LazyColumn(contentPadding = PaddingValues(bottom = 100.dp)) {
-                item {
-                    HeaderSection(
-                        searchText = viewModel.searchText,
-                        onSearchChange = { viewModel.onSearchChange(it) },
-                        selectedCategory = viewModel.selectedCategory,
-                        onCategorySelected = { viewModel.onCategorySelected(it) },
-                        onMenuClick = { scope.launch { drawerState.open() } }
-                    )
-                }
+    }
 
-                if (viewModel.searchText.length > 2) {
-                    items(viewModel.searchResults) { restaurant ->
-                        RestaurantSearchResultCard(restaurant) {
-                            navController.navigate("restaurantDetail/${restaurant.name}")
+    LaunchedEffect(Unit) {
+        permissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+    }
+
+    Scaffold(
+        modifier = Modifier
+            .fillMaxSize()
+            .graphicsLayer { alpha = screenAlpha },
+        bottomBar = {
+            AppiFoodFooter(
+                navController = navController,
+                currentRoute = Screen.Home.route,
+                cartCount = 6,
+                onSearchClick = { navController.navigate(Screen.Search.route) }
+            )
+        }
+    ) { paddingValues ->
+        LazyColumn(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(background)  // ✅ Usa color del tema
+                .padding(bottom = paddingValues.calculateBottomPadding())
+        ) {
+            // ── CARRUSEL HEADER ────────────────────────────────────
+            item {
+                CarouselHeader(height = 300.dp) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(top = 40.dp, start = 20.dp),
+                        verticalArrangement = Arrangement.Top
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.logomau),
+                            contentDescription = null,
+                            modifier = Modifier.width(130.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = Color.White.copy(alpha = 0.18f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = stringResource(id = R.string.default_location),
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
                         }
-                    }
-                } else {
-                    item {
-                        CategoryProductsRow(
-                            category = viewModel.selectedCategory,
-                            filter = viewModel.filter,
-                            navController = navController,
-                            onAddToCart = { viewModel.onAddToCart() }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        Text(
+                            text = stringResource(id = R.string.welcome_user),
+                            color = Color.White,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        Text(
+                            text = "¿Qué antojo tienes hoy? 🍔",
+                            color = Color.White.copy(alpha = 0.7f),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
             }
-            BottomNavigationBar(cartCount = viewModel.cartCount, navController = navController)
-        }
-    }
-}
 
-@Composable
-fun CategoryProductsRow(
-    category: String,
-    filter: HomeFilter,
-    navController: NavController,
-    onAddToCart: () -> Unit
-) {
-    val filtered = sampleProducts.filter { product ->
-        val matchesCategory = filter.category == "Todas" || product.category == category
-        val priceValue = product.price.replace("$", "").replace(".", "").replace(",", "").replace(" ", "").filter { it.isDigit() }.toFloatOrNull() ?: 0f
-        val matchesPrice = priceValue <= filter.maxPrice
-        matchesCategory && matchesPrice
-    }
+            // ── PROMO BANNER ──────────────────────────────────────
+            item {
+                AnimatedPromoBanner(
+                    onClick = { /* Navegar a promociones */ },
+                    primary = primary  // ✅ Pasamos el color del tema
+                )
+            }
 
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 20.dp),
-        horizontalArrangement = Arrangement.spacedBy(15.dp)
-    ) {
-        items(filtered, key = { it.id }) { product ->
-            FoodItemCard(
-                name = product.name,
-                imageRes = product.imageRes,
-                price = product.price,
-                onNavigate = {
-                    navController.navigate("productDetail/${product.name}/${product.price}/${product.imageRes}")
-                },
-                onAddToCart = onAddToCart
-            )
-        }
-    }
-}
-
-@Composable
-fun FilterContent(
-    filter: HomeFilter,
-    onApply: (HomeFilter) -> Unit,
-    onClose: () -> Unit
-) {
-    var price by remember { mutableStateOf(filter.maxPrice) }
-    var selectedCategory by remember { mutableStateOf(filter.category) }
-    var rating by remember { mutableStateOf(filter.minRating) }
-
-    val categories = listOf("Todas", "Hamburguesas", "Sushi", "Bebidas", "Sopas")
-
-    Column(modifier = Modifier.fillMaxWidth().padding(20.dp)) {
-        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text("Filtros", fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text("Cerrar", color = Color(0xFFFF4B3A), modifier = Modifier.clickable { onClose() })
-        }
-
-        Spacer(modifier = Modifier.height(20.dp))
-        Text("Precio máximo", fontWeight = FontWeight.Bold)
-        Slider(
-            value = price,
-            onValueChange = { price = it },
-            valueRange = 10000f..100000f,
-            colors = SliderDefaults.colors(thumbColor = Color(0xFFFF4B3A), activeTrackColor = Color(0xFFFF4B3A))
-        )
-        Text("$${price.toInt()}", color = Color.Gray)
-
-        Spacer(modifier = Modifier.height(20.dp))
-        Text("Categoría", fontWeight = FontWeight.Bold)
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.horizontalScroll(rememberScrollState())) {
-            categories.forEach { cat ->
-                val isSelected = cat == selectedCategory
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(if (isSelected) Color(0xFFFF4B3A) else Color(0xFFF1F1F1))
-                        .clickable { selectedCategory = cat }
-                        .padding(horizontal = 15.dp, vertical = 8.dp)
+            // ── CATEGORÍAS ─────────────────────────────────────────
+            // ── CATEGORÍAS ─────────────────────────────────────────
+            item {
+                AnimatedSectionHeader(
+                    title = stringResource(id = R.string.section_categories),
+                    onSurface = onSurface,
+                    primary = primary
+                )
+                val categories = listOf("Todos", "Bebidas", "Postres", "Rapida", "Oriental", "Mexicana", "Vegetariana")
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text(cat, color = if (isSelected) Color.White else Color.Black, fontSize = 13.sp)
+                    items(categories) { cat ->
+                        val isSelected = (cat == "Todos" && viewModel.selectedCategory == "Todas") || viewModel.selectedCategory == cat
+                        AnimatedCategoryChip(
+                            text = cat,
+                            isSelected = isSelected,
+                            onClick = { viewModel.onCategorySelected(cat) },
+                            primary = primary,
+                            onSurface = onSurface,
+                            surface = surface  // ✅ AÑADE ESTA LÍNEA
+                        )
+                    }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(30.dp))
-        Button(
-            onClick = { onApply(HomeFilter(selectedCategory, price, rating)) },
-            modifier = Modifier.fillMaxWidth().height(55.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF4B3A))
-        ) {
-            Text("APLICAR FILTROS", color = Color.White)
+            // ── PROMOCIONES ────────────────────────────────────────
+            item {
+                AnimatedSectionHeader(
+                    title = stringResource(id = R.string.section_promotions),
+                    showViewAll = true,
+                    onViewAllClick = { /* TODO */ },
+                    onSurface = onSurface,
+                    primary = primary
+                )
+            }
+
+            item {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(15.dp)
+                ) {
+                    items(viewModel.filteredProducts) { product ->
+                        AnimatedPromoFoodCard(
+                            name = product.name,
+                            price = "$ ${String.format("%,.0f", product.price)}",
+                            oldPrice = "$35.000",
+                            imageRes = product.imageRes,
+                            onNavigate = {
+                                navController.navigate(Screen.ProductDetail.passId(product.id))
+                            },
+                            surface = surface,
+                            onSurface = onSurface,
+                            primary = primary
+                        )
+                    }
+                }
+            }
+
+            // ── RESTAURANTES POPULARES ────────────────────────────
+            item {
+                AnimatedSectionHeader(
+                    title = stringResource(id = R.string.section_popular_restaurants),
+                    showViewAll = true,
+                    onViewAllClick = { /* TODO */ },
+                    onSurface = onSurface,
+                    primary = primary
+                )
+            }
+
+            item {
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 20.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    items(filteredRestaurants) { restaurant ->
+                        AnimatedRestaurantCard(
+                            name = restaurant.name,
+                            rating = restaurant.rating,
+                            time = stringResource(id = R.string.delivery_time_range),
+                            imageUrl = restaurant.imageUrl,
+                            imageRes = restaurant.imageRes,
+                            onClick = { navController.navigate(Screen.RestaurantDetail.passId(restaurant.id)) },
+                            surface = surface,
+                            onSurface = onSurface,
+                            onSurfaceVariant = onSurfaceVariant
+                        )
+                    }
+                }
+            }
+
+            item { Spacer(modifier = Modifier.height(30.dp)) }
         }
     }
 }
 
+// ── PROMO BANNER CON ANIMACIÓN ──────────────────────────────────
 @Composable
-fun FoodItemCard(name: String, imageRes: Int, price: String, onNavigate: () -> Unit, onAddToCart: () -> Unit) {
+fun AnimatedPromoBanner(
+    onClick: () -> Unit,
+    primary: Color  // ✅ Recibe el color del tema
+) {
+    var isHovered by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isHovered) 1.02f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "bannerScale"
+    )
+
     Card(
-        modifier = Modifier.width(180.dp).padding(top = 10.dp, bottom = 10.dp).clickable { onNavigate() },
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(7.dp)
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 12.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clickable {
+                isHovered = true
+                onClick()
+            },
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 4.dp,
+            pressedElevation = 8.dp
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = Color.White
+        )
     ) {
-        Column {
-            Image(
-                painter = painterResource(id = imageRes),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxWidth().height(140.dp).clip(RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp))
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(120.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(primary, primary.copy(alpha = 0.7f))  // ✅ Usa el color del tema
+                    )
+                )
+        ) {
+            // Decoración
+            Box(
+                modifier = Modifier
+                    .size(100.dp)
+                    .align(Alignment.TopEnd)
+                    .offset(x = 30.dp, y = (-20).dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.08f))
             )
-            Column(modifier = Modifier.padding(16.dp).fillMaxWidth()) {
-                Text(name, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                Spacer(modifier = Modifier.height(12.dp))
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text(price, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFF4B3A))
-                    IconButton(onClick = onAddToCart, modifier = Modifier.size(35.dp).background(Color(0xFFFF4B3A), CircleShape)) {
-                        Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(20.dp))
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .align(Alignment.BottomStart)
+                    .offset(x = (-20).dp, y = 20.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.06f))
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = "🔥 OFERTA ESPECIAL",
+                        color = Color(0xFFFFD600),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "¡Hasta 50% OFF!",
+                        color = Color.White,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "En tu primer pedido",
+                        color = Color.White.copy(alpha = 0.8f),
+                        fontSize = 13.sp
+                    )
+                }
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFFFFD600),
+                    modifier = Modifier.size(50.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = Icons.Default.ArrowForward,
+                            contentDescription = null,
+                            tint = primary,  // ✅ Usa el color del tema
+                            modifier = Modifier.size(28.dp)
+                        )
                     }
                 }
             }
@@ -210,85 +375,332 @@ fun FoodItemCard(name: String, imageRes: Int, price: String, onNavigate: () -> U
     }
 }
 
+// ── CATEGORY CHIP CON ANIMACIÓN ──────────────────────────────────
+// ── CATEGORY CHIP CON ANIMACIÓN ──────────────────────────────────
 @Composable
-fun HeaderSection(searchText: String, onSearchChange: (String) -> Unit, selectedCategory: String, onCategorySelected: (String) -> Unit, onMenuClick: () -> Unit) {
-    Box(modifier = Modifier.fillMaxWidth().height(410.dp).clip(RoundedCornerShape(bottomStart = 50.dp, bottomEnd = 50.dp))) {
-        Image(painter = painterResource(id = R.drawable.burger_background_2), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        Column(modifier = Modifier.fillMaxSize().padding(top = 60.dp, start = 20.dp, end = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                IconButton(onClick = onMenuClick) { Icon(Icons.Default.Menu, null, tint = Color.White) }
+fun AnimatedCategoryChip(
+    text: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    primary: Color,
+    onSurface: Color,
+    surface: Color  // ✅ Añadimos el color de superficie
+) {
+    val scale by animateFloatAsState(
+        targetValue = if (isSelected) 1.05f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "chipScale"
+    )
+
+    Surface(
+        modifier = Modifier
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
             }
-            Spacer(modifier = Modifier.height(40.dp))
-            Text("¿Qué deseas comer\nhoy?", color = Color.White, fontSize = 28.sp, fontWeight = FontWeight.Bold, lineHeight = 35.sp)
-            Spacer(modifier = Modifier.height(20.dp))
-            OutlinedTextField(
-                value = searchText,
-                onValueChange = onSearchChange,
-                placeholder = { Text("Buscar...", color = Color.Gray) },
-                leadingIcon = { Icon(Icons.Default.Search, null, tint = Color.Gray) },
-                shape = RoundedCornerShape(30.dp),
-                modifier = Modifier.fillMaxWidth().height(55.dp),
-                colors = TextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White, focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent)
+            .clickable { onClick() },
+        shape = RoundedCornerShape(50),
+        color = if (isSelected) primary else surface,  // ✅ Cambiado: usa surface en lugar de Color.White
+        shadowElevation = if (isSelected) 4.dp else 0.dp
+    ) {
+        Text(
+            text = text,
+            color = if (isSelected) Color.White else onSurface,  // ✅ Usa onSurface para texto
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            fontSize = 13.sp,
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
+        )
+    }
+}
+
+// ── SECTION HEADER CON ANIMACIÓN ─────────────────────────────────
+@Composable
+fun AnimatedSectionHeader(
+    title: String,
+    showViewAll: Boolean = false,
+    onViewAllClick: () -> Unit = {},
+    onSurface: Color,
+    primary: Color
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .width(40.dp)
+                .height(3.dp)
+                .clip(RoundedCornerShape(50))
+                .background(primary)  // ✅ Usa color del tema
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = onSurface  // ✅ Usa color del tema
             )
-            Spacer(modifier = Modifier.height(30.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                listOf("Hamburguesas", "Sushi", "Bebidas", "Sopas").forEach { name ->
-                    CategoryText(text = name, active = selectedCategory == name) { onCategorySelected(name) }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun CategoryText(text: String, active: Boolean, onSelect: () -> Unit) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable { onSelect() }) {
-        Text(text = text, color = if (active) Color.White else Color.White.copy(alpha = 0.6f), fontWeight = if (active) FontWeight.Bold else FontWeight.Normal, fontSize = 14.sp)
-        if (active) {
-            Box(modifier = Modifier.width(40.dp).height(4.dp).background(Color(0xFFFF4B3A), RoundedCornerShape(2.dp)))
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun BottomNavigationBar(cartCount: Int, navController: NavController) {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-        Row(modifier = Modifier.fillMaxWidth().height(80.dp).background(Color(0xFFFF4B3A), RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)).padding(horizontal = 30.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { navController.navigate("home") }) { Icon(Icons.Default.Home, null, tint = Color.White) }
-            IconButton(onClick = { navController.navigate("profile") }) { Icon(Icons.Default.Person, null, tint = Color.White) }
-            Spacer(modifier = Modifier.width(40.dp))
-            IconButton(onClick = { navController.navigate("orderHistory") }) { Icon(Icons.Default.Message, null, tint = Color.White) }
-            IconButton(onClick = { navController.navigate("favorites") }) { Icon(Icons.Default.Favorite, null, tint = Color.White) }
-        }
-        Box(modifier = Modifier.align(Alignment.BottomCenter).offset(y = (-42).dp).size(80.dp).border(4.dp, Color.White, CircleShape).background(Color(0xFFFF4B3A), CircleShape).clickable { navController.navigate("cart") }, contentAlignment = Alignment.Center) {
-            BadgedBox(badge = { if (cartCount > 0) Badge(containerColor = Color.White, contentColor = Color(0xFFFF4B3A)) { Text("$cartCount") } }) {
-                Icon(Icons.Default.ShoppingCart, null, tint = Color.White, modifier = Modifier.size(30.dp)
+            if (showViewAll) {
+                Text(
+                    text = stringResource(id = R.string.label_view_all),
+                    color = primary,  // ✅ Usa color del tema
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.clickable { onViewAllClick() }
                 )
             }
         }
     }
 }
 
+// ── PROMO FOOD CARD CON ANIMACIÓN ───────────────────────────────
 @Composable
-fun RestaurantSearchResultCard(restaurant: Restaurant, onClick: () -> Unit) {
-    Card(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp).clickable { onClick() }, shape = RoundedCornerShape(20.dp), colors = CardDefaults.cardColors(containerColor = Color.White), elevation = CardDefaults.cardElevation(4.dp)) {
-        Row(modifier = Modifier.padding(12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Image(painter = painterResource(id = restaurant.imageRes), contentDescription = null, modifier = Modifier.size(85.dp).clip(RoundedCornerShape(15.dp)), contentScale = ContentScale.Crop)
-            Spacer(modifier = Modifier.width(15.dp))
-            Column {
-                Text(restaurant.name, fontWeight = FontWeight.Bold, fontSize = 18.sp)
-                Text(restaurant.address, color = Color.Gray, fontSize = 13.sp)
+fun AnimatedPromoFoodCard(
+    name: String,
+    price: String,
+    oldPrice: String,
+    imageRes: Int,
+    onNavigate: () -> Unit,
+    surface: Color,
+    onSurface: Color,
+    primary: Color
+) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "cardScale"
+    )
+
+    Card(
+        modifier = Modifier
+            .width(160.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clickable {
+                isPressed = true
+                onNavigate()
+            },
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 8.dp
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = surface  // ✅ Usa color del tema
+        )
+    ) {
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Box {
+                Image(
+                    painter = painterResource(id = imageRes),
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
+                    contentScale = ContentScale.Crop
+                )
+                Surface(
+                    color = primary,  // ✅ Usa color del tema
+                    shape = RoundedCornerShape(topStart = 20.dp, bottomEnd = 12.dp),
+                    modifier = Modifier.align(Alignment.TopStart)
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.label_offer),
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
+                }
+                Surface(
+                    color = Color(0xFFFFD600),
+                    shape = CircleShape,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(8.dp)
+                        .size(32.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Text(
+                            text = "%",
+                            color = primary,  // ✅ Usa color del tema
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                Text(
+                    text = name,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    color = onSurface  // ✅ Usa color del tema
+                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(top = 4.dp)
+                ) {
+                    Text(
+                        text = price,
+                        color = primary,  // ✅ Usa color del tema
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 16.sp
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = oldPrice,
+                        color = onSurface.copy(alpha = 0.5f),  // ✅ Usa color del tema
+                        fontSize = 11.sp,
+                        style = androidx.compose.ui.text.TextStyle(
+                            textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                        )
+                    )
+                }
             }
         }
     }
 }
 
-@Preview(showBackground = true, showSystemUi = true)
+// ── RESTAURANT CARD CON ANIMACIÓN ───────────────────────────────
 @Composable
-fun HomeScreenPreview() {
-    val navController = rememberNavController()
-    AppifoodMovilTheme {
-        HomeScreen(navController)
+fun AnimatedRestaurantCard(
+    name: String,
+    rating: String,
+    time: String,
+    imageUrl: String? = null,
+    imageRes: Int,
+    onClick: () -> Unit,
+    surface: Color,
+    onSurface: Color,
+    onSurfaceVariant: Color
+) {
+    var isPressed by remember { mutableStateOf(false) }
+
+    val scale by animateFloatAsState(
+        targetValue = if (isPressed) 0.95f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "restCardScale"
+    )
+
+    Card(
+        modifier = Modifier
+            .width(140.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+            }
+            .clickable {
+                isPressed = true
+                onClick()
+            },
+        shape = RoundedCornerShape(20.dp),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 8.dp
+        ),
+        colors = CardDefaults.cardColors(
+            containerColor = surface  // ✅ Usa color del tema
+        )
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(80.dp)
+                    .clip(CircleShape)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                onSurface.copy(alpha = 0.05f),
+                                onSurface.copy(alpha = 0.02f)
+                            )
+                        )
+                    )
+                    .padding(3.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = imageUrl ?: imageRes,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(70.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(R.drawable.restaurantechino)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = name,
+                fontWeight = FontWeight.Bold,
+                fontSize = 13.sp,
+                maxLines = 1,
+                color = onSurface  // ✅ Usa color del tema
+            )
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.padding(top = 4.dp)
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = FoodRating.copy(alpha = 0.15f),
+                    modifier = Modifier.size(18.dp)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            Icons.Default.Star,
+                            contentDescription = null,
+                            tint = FoodRating,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = rating,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = onSurface  // ✅ Usa color del tema
+                )
+                Text(
+                    text = " • $time",
+                    fontSize = 11.sp,
+                    color = onSurfaceVariant  // ✅ Usa color del tema
+                )
+            }
+        }
     }
 }

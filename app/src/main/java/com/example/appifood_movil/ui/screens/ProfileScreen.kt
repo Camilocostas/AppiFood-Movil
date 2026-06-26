@@ -1,200 +1,447 @@
 package com.example.appifood_movil.ui.screens
 
-import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.CreditCard
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Phone
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.appifood_movil.R
+import com.example.appifood_movil.data.model.UserData
+import com.example.appifood_movil.navigation.Screen
+import com.example.appifood_movil.ui.viewmodel.AuthViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
+// ── Paleta unificada ──────────────────────────────────────────────
+private val RedPrimary   = Color(0xFFD32F2F)
+private val RedDark      = Color(0xFFB71C1C)
+private val RedDeep      = Color(0xFF7F0000)
+private val YellowAccent = Color(0xFFFFD600)
+private val FieldBg      = Color(0xFFF7F7F7)
+private val TextPrimary  = Color(0xFF1A1A1A)
+private val TextMuted    = Color(0xFF888888)
 
 @Composable
-fun ProfileScreen(navController: NavController) {
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFFFBFBFB))) {
-        LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 40.dp)
+fun ProfileScreen(
+    navController : NavController,
+    authViewModel : AuthViewModel = viewModel()
+) {
+    val scope = rememberCoroutineScope()
+
+    val user     by authViewModel.user.collectAsState()
+    // ── FIX: observar userData como StateFlow en lugar de callback ──
+    // getUserDataFromFirestore(uid) solo acepta uid y expone el
+    // resultado a través de _userData StateFlow. Recolectarlo aquí
+    // es el patrón correcto — sin callbacks, sin parámetros extras.
+    val userData by authViewModel.userData.collectAsState()
+    val isLoading by authViewModel.isLoading.collectAsState()
+
+    var showSaveAnimation by remember { mutableStateOf(false) }
+    var isLoggingOut      by remember { mutableStateOf(false) }
+
+    // Cargar datos cuando el usuario esté disponible
+    LaunchedEffect(user) {
+        user?.uid?.let { uid ->
+            authViewModel.getUserDataFromFirestore(uid)
+        }
+    }
+
+    // ── Animación de entrada ──────────────────────────────────────
+    var visible by remember { mutableStateOf(false) }
+
+    val screenAlpha by animateFloatAsState(
+        targetValue   = if (visible) 1f else 0f,
+        animationSpec = tween(500, easing = FastOutSlowInEasing),
+        label         = "profileFadeIn"
+    )
+    val headerOffsetY by animateDpAsState(
+        targetValue   = if (visible) 0.dp else (-30).dp,
+        animationSpec = tween(600, easing = FastOutSlowInEasing),
+        label         = "headerSlide"
+    )
+    val cardOffsetY by animateDpAsState(
+        targetValue   = if (visible) 0.dp else 40.dp,
+        animationSpec = tween(550, delayMillis = 100, easing = FastOutSlowInEasing),
+        label         = "cardSlide"
+    )
+
+    LaunchedEffect(Unit) { visible = true }
+
+    val initial = userData?.names?.firstOrNull()?.toString()?.uppercase() ?: "U"
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(RedPrimary, RedDark, RedDeep)))
+            .graphicsLayer { alpha = screenAlpha }
+    ) {
+        ProfileDecorativeCircles()
+
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
         ) {
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(300.dp)
-                        .clip(RoundedCornerShape(bottomStart = 50.dp, bottomEnd = 50.dp))
-                        .background(
-                            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-                                colors = listOf(Color(0xFFFF4B3A), Color(0xFFFF4B3A))
-                            )
-                        )
-                ) {
-                    Column(
+            ProfileHeader(
+                modifier  = Modifier.offset(y = headerOffsetY),
+                initial   = initial,
+                names     = userData?.names ?: "",
+                lastNames = userData?.lastNames ?: "",
+                email     = userData?.email ?: user?.email ?: "",
+                isLoading = isLoading
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = cardOffsetY)
+                    .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                    .background(Color.White)
+                    .padding(horizontal = 28.dp)
+                    .padding(top = 32.dp, bottom = 40.dp)
+            ) {
+                Column {
+                    // Línea acento amarilla — sistema de diseño unificado
+                    Box(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(top = 50.dp, start = 20.dp, end = 20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            IconButton(
-                                onClick = { navController.popBackStack() },
-                                modifier = Modifier.size(40.dp).background(Color.White.copy(alpha = 0.2f), CircleShape)
-                            ) { Icon(Icons.Default.ArrowBack, null, tint = Color.White) }
+                            .width(40.dp)
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(YellowAccent)
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
+                    Text(
+                        text       = "Información de tu cuenta",
+                        fontSize   = 24.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color      = TextPrimary
+                    )
 
-                            IconButton(
-                                onClick = { },
-                                modifier = Modifier.size(40.dp).background(Color.White.copy(alpha = 0.2f), CircleShape)
-                            ) { Icon(Icons.Default.Edit, null, tint = Color.White) }
-                        }
+                    Spacer(modifier = Modifier.height(24.dp))
 
-                        Box(contentAlignment = Alignment.BottomEnd) {
-                            Image(
-                                painter = painterResource(id = R.drawable.profile_placeholder),
-                                contentDescription = "Foto Mauricio",
-                                modifier = Modifier
-                                    .size(130.dp)
-                                    .clip(CircleShape)
-                                    .border(4.dp, Color.White, CircleShape),
-                                contentScale = ContentScale.Crop
-                            )
-                            Surface(
-                                color = Color.White,
-                                shape = CircleShape,
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .offset(x = (-3).dp, y = (-3).dp),
-                                shadowElevation = 5.dp
-                            ) {
-                                Icon(
-                                    Icons.Default.CameraAlt,
-                                    null,
-                                    tint = Color(0xFFFF4B3A),
-                                    modifier = Modifier.padding(8.dp).size(20.dp)
-                                )
+                    ProfileInfoCard(userData = userData, isLoading = isLoading)
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    ProfileOptionsCard(navController = navController)
+
+                    Spacer(modifier = Modifier.height(32.dp))
+
+                    ProfileSaveButton(
+                        onClick = {
+                            scope.launch {
+                                // Aquí conectar con updateUserDataInFirestore cuando
+                                // implementes edición real de campos
+                                showSaveAnimation = true
+                                delay(1500)
+                                showSaveAnimation = false
                             }
                         }
+                    )
 
-                        Text("Mauricio Bustamante", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold, color = Color.White, modifier = Modifier.padding(top = 10.dp))
-                        Text("mauricio@ejemplo.com", color = Color.White.copy(alpha = 0.8f), fontSize = 14.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    ProfileLogoutButton(
+                        isLoading = isLoggingOut,
+                        onClick   = {
+                            scope.launch {
+                                isLoggingOut = true
+                                delay(800)
+                                authViewModel.signOut()
+                                navController.navigate(Screen.Auth.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                                isLoggingOut = false
+                            }
+                        }
+                    )
+                }
+            }
+        }
+
+        // ── Overlay "Cambios guardados" ───────────────────────────
+        AnimatedVisibility(
+            visible      = showSaveAnimation,
+            enter        = fadeIn() + scaleIn(initialScale = 0.8f),
+            exit         = fadeOut() + scaleOut(targetScale = 1.2f)
+        ) {
+            Box(
+                modifier         = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.4f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Surface(
+                    modifier        = Modifier.size(220.dp, 180.dp),
+                    shape           = RoundedCornerShape(28.dp),
+                    color           = Color.White,
+                    shadowElevation = 8.dp
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier            = Modifier.padding(16.dp)
+                    ) {
+                        Box(
+                            modifier         = Modifier
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(RedPrimary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Check, null,
+                                tint     = Color.White,
+                                modifier = Modifier.size(40.dp))
+                        }
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text("¡Cambios guardados!",
+                            fontWeight = FontWeight.Bold,
+                            fontSize   = 17.sp,
+                            color      = Color.Black)
                     }
                 }
             }
-            item {
-                Spacer(modifier = Modifier.height(30.dp))
+        }
 
-                ProfileSection(
-                    titulo = "Detalles Personales",
-                    icono = Icons.Default.Person,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                ) {
-                    InfoRowItem("Dirección", "Calle 123 #45-67, Pasto", Icons.Default.LocationOn)
-                    InfoRowItem("Teléfono", "+57 300 123 4567", Icons.Default.Phone)
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                ProfileSection(
-                    titulo = "Métodos de Pago",
-                    icono = Icons.Default.CreditCard,
-                    modifier = Modifier.padding(horizontal = 20.dp)
-                ) {
-                    InfoRowItem("Principal", "Mastercard **** 1234", Icons.Default.Payment, true)
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-            }
-
-            item {
-                Spacer(modifier = Modifier.height(40.dp))
-                OutlinedButton(
-                    onClick = { },
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 30.dp).height(50.dp),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color.Red),
-                    border = BorderStroke(1.dp, Color.Red),
-                    shape = RoundedCornerShape(15.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Logout, null, modifier = Modifier.size(18.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Cerrar Sesión", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    }
-                }
-                Spacer(modifier = Modifier.height(20.dp))
+        // ── Loading overlay ───────────────────────────────────────
+        if (isLoading) {
+            Box(
+                modifier         = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.35f)),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    color       = YellowAccent,
+                    strokeWidth = 3.dp,
+                    modifier    = Modifier.size(48.dp)
+                )
             }
         }
     }
 }
+
+// ── Círculos decorativos ──────────────────────────────────────────
 @Composable
-fun ProfileSection(
-    titulo: String,
-    icono: androidx.compose.ui.graphics.vector.ImageVector,
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
+fun ProfileDecorativeCircles() {
+    Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.size(260.dp).offset(x = (-80).dp, y = (-60).dp)
+            .clip(CircleShape).background(Color.White.copy(alpha = 0.05f)))
+        Box(modifier = Modifier.size(180.dp).align(Alignment.TopEnd)
+            .offset(x = 60.dp, y = 40.dp)
+            .clip(CircleShape).background(Color.White.copy(alpha = 0.04f)))
+        Box(modifier = Modifier.size(150.dp).align(Alignment.BottomStart)
+            .offset(x = (-40).dp, y = 60.dp)
+            .clip(CircleShape).background(Color.White.copy(alpha = 0.03f)))
+    }
+}
+
+// ── Header del perfil ─────────────────────────────────────────────
+@Composable
+fun ProfileHeader(
+    modifier  : Modifier = Modifier,
+    initial   : String,
+    names     : String,
+    lastNames : String,
+    email     : String,
+    isLoading : Boolean
 ) {
+    Column(
+        modifier            = modifier.fillMaxWidth().padding(top = 56.dp, bottom = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.size(100.dp).clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.12f)))
+            Box(
+                modifier         = Modifier.size(80.dp).clip(CircleShape)
+                    .background(Color(0xFFFF8A80)),
+                contentAlignment = Alignment.Center
+            ) {
+                if (isLoading) {
+                    CircularProgressIndicator(color = Color.White,
+                        strokeWidth = 2.dp, modifier = Modifier.size(30.dp))
+                } else {
+                    Text(initial, color = Color.White,
+                        fontSize = 36.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Surface(shape = RoundedCornerShape(50), color = Color.White.copy(alpha = 0.18f)) {
+            Text("👤 Mi Perfil", color = Color.White, fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
+        }
+
+        if (!isLoading) {
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text       = if (names.isNotBlank() || lastNames.isNotBlank())
+                    "$names $lastNames" else "Usuario AppiFood",
+                color      = Color.White,
+                fontSize   = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(email, color = Color.White.copy(alpha = 0.8f), fontSize = 13.sp)
+        }
+    }
+}
+
+// ── Tarjeta de información ────────────────────────────────────────
+@Composable
+fun ProfileInfoCard(userData: UserData?, isLoading: Boolean) {
     Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        modifier  = Modifier.fillMaxWidth(),
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = FieldBg),
+        elevation = CardDefaults.cardElevation(0.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icono, null, tint = Color(0xFFFF4B3A), modifier = Modifier.size(22.dp))
-                Spacer(modifier = Modifier.width(10.dp))
-                Text(titulo, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+        Column(modifier = Modifier.padding(16.dp)) {
+            if (isLoading) {
+                repeat(4) { i ->
+                    Row(
+                        modifier              = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Box(modifier = Modifier.width(80.dp).height(12.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color.Gray.copy(alpha = 0.2f)))
+                        Box(modifier = Modifier.width(120.dp).height(12.dp)
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color.Gray.copy(alpha = 0.2f)))
+                    }
+                    if (i < 3) HorizontalDivider(color = Color.White, thickness = 1.dp)
+                }
+            } else {
+                ProfileInfoRow("NOMBRE(S)",           userData?.names     ?: "No registrado")
+                ProfileInfoRow("APELLIDO(S)",         userData?.lastNames  ?: "No registrado")
+                ProfileInfoRow("CORREO ELECTRÓNICO",  userData?.email     ?: "No registrado")
+                ProfileInfoRow("TELÉFONO",            userData?.phone     ?: "No registrado",
+                    isLast = true)
             }
-            HorizontalDivider(modifier = Modifier.padding(vertical = 15.dp), color = Color(0xFFF0F0F0))
-            Column(content = content)
         }
     }
 }
 
+// ── Fila de información ───────────────────────────────────────────
 @Composable
-fun InfoRowItem(
-    label: String,
-    value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    isPayment: Boolean = false
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Surface(
-            color = Color(0xFFFF4B3A).copy(alpha = 0.1f),
-            shape = CircleShape,
-            modifier = Modifier.size(40.dp)
-        ) { Icon(icon, null, tint = Color(0xFFFF4B3A), modifier = Modifier.padding(10.dp)) }
-
-        Spacer(modifier = Modifier.width(15.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(label, fontSize = 12.sp, color = Color.Gray, fontWeight = FontWeight.Medium)
-            Text(value, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.Black)
+fun ProfileInfoRow(label: String, value: String, isLast: Boolean = false) {
+    Column {
+        Row(
+            modifier              = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text(label, color = TextMuted, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            Text(value.ifEmpty { "No registrado" }, fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp, color = TextPrimary)
         }
+        if (!isLast) HorizontalDivider(color = Color.White, thickness = 1.dp)
+    }
+}
 
-        if (!isPayment) {
-            Icon(Icons.Default.ChevronRight, null, tint = Color.Gray.copy(alpha = 0.5f), modifier = Modifier.size(20.dp))
+// ── Tarjeta de opciones ───────────────────────────────────────────
+@Composable
+fun ProfileOptionsCard(navController: NavController) {
+    Card(
+        modifier  = Modifier.fillMaxWidth(),
+        shape     = RoundedCornerShape(16.dp),
+        colors    = CardDefaults.cardColors(containerColor = FieldBg),
+        elevation = CardDefaults.cardElevation(0.dp)
+    ) {
+        Column(modifier = Modifier.padding(horizontal = 4.dp, vertical = 8.dp)) {
+            ProfileMenuRow(Icons.Default.Person, "Mi Suscripción",
+                onClick = { /* navegar a suscripción */ })
+            ProfileMenuRow(Icons.Default.Payment, "Pagos",
+                onClick = { navController.navigate(Screen.Payments.route) })
+            ProfileMenuRow(Icons.Default.Notifications, "Centro de notificaciones",
+                onClick = { /* navegar a notificaciones */ }, isLast = true)
+        }
+    }
+}
+
+// ── Fila de menú ──────────────────────────────────────────────────
+@Composable
+fun ProfileMenuRow(
+    icon    : ImageVector,
+    title   : String,
+    onClick : () -> Unit = {},
+    isLast  : Boolean   = false
+) {
+    Column {
+        Row(
+            modifier          = Modifier.fillMaxWidth().clickable { onClick() }
+                .padding(vertical = 12.dp, horizontal = 8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(icon, null, tint = RedPrimary,
+                modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
+                    .background(RedPrimary.copy(alpha = 0.1f)).padding(6.dp))
+            Spacer(modifier = Modifier.width(14.dp))
+            Text(title, modifier = Modifier.weight(1f), fontSize = 14.sp,
+                fontWeight = FontWeight.Medium, color = TextPrimary)
+            Icon(Icons.Default.ChevronRight, null, tint = TextMuted,
+                modifier = Modifier.size(20.dp))
+        }
+        if (!isLast) HorizontalDivider(color = Color.White, thickness = 1.dp)
+    }
+}
+
+// ── Botón Guardar Cambios ─────────────────────────────────────────
+@Composable
+fun ProfileSaveButton(onClick: () -> Unit) {
+    Button(
+        onClick   = onClick,
+        modifier  = Modifier.fillMaxWidth().height(54.dp),
+        shape     = RoundedCornerShape(16.dp),
+        colors    = ButtonDefaults.buttonColors(
+            containerColor = RedPrimary, contentColor = Color.White),
+        elevation = ButtonDefaults.buttonElevation(0.dp)
+    ) {
+        Icon(Icons.Default.Save, null, modifier = Modifier.size(20.dp))
+        Spacer(modifier = Modifier.width(10.dp))
+        Text("Guardar Cambios", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+// ── Botón Cerrar Sesión ───────────────────────────────────────────
+@Composable
+fun ProfileLogoutButton(onClick: () -> Unit, isLoading: Boolean) {
+    OutlinedButton(
+        onClick  = onClick,
+        enabled  = !isLoading,
+        modifier = Modifier.fillMaxWidth().height(54.dp),
+        shape    = RoundedCornerShape(16.dp),
+        border   = BorderStroke(2.dp, RedPrimary),
+        colors   = ButtonDefaults.outlinedButtonColors(contentColor = RedPrimary)
+    ) {
+        if (isLoading) {
+            CircularProgressIndicator(color = RedPrimary,
+                strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+        } else {
+            Icon(Icons.AutoMirrored.Filled.ExitToApp, null,
+                modifier = Modifier.size(20.dp))
+            Spacer(modifier = Modifier.width(10.dp))
+            Text("Cerrar Sesión", fontSize = 16.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

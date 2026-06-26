@@ -1,0 +1,24 @@
+{
+  "project_info": {
+    "project_number": "REDACTED",
+    "project_id": "REDACTED",
+    "storage_bucket": "REDACTED"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "REDACTED",
+        "android_client_info": {
+          "package_name": "com.example.appifood_movil"
+        }
+      },
+      "api_key": [
+        {
+          "current_key": "REPLACE_WITH_YOUR_API_KEY"
+        }
+      ]
+    }
+  ],
+  "configuration_version": "1",
+  "note": "Use this file as a template. Keep real google-services.json local and out of the repo; restore it in CI from secrets."
+}

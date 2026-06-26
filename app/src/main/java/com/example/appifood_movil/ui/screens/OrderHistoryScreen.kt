@@ -1,11 +1,12 @@
+// ui/screens/OrderHistoryScreen.kt
 package com.example.appifood_movil.ui.screens
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -16,331 +17,707 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.appifood_movil.R // Asegúrate de que este import sea correcto para tu proyecto
+import com.example.appifood_movil.data.model.Order
+import com.example.appifood_movil.navigation.Screen
+import com.example.appifood_movil.ui.viewmodel.OrderHistoryViewModel
+import kotlinx.coroutines.delay
 
-// 1. Modelo de Datos Actualizado
-data class Pedido(
-    val idPedido: String,
-    val nombreProducto: String,
-    val descripcion: String, // Breve descripción (ej: "Con papas fritas y bebida")
-    val restaurante: String,
-    val imagenRes: Int, // ID de la imagen en drawable
-    val precioTotal: Double,
-    val fecha: String,
-    val tiempoEstimadoMin: Int,
-    val estado: EstadoPedido, // Usamos un Enum para mayor control
-    val metodoPago: MetodoPago // Usamos una Sealed Class para datos de pago
-)
+// ── Paleta unificada ──────────────────────────────────────────────
+private val RedPrimary   = Color(0xFFD32F2F)
+private val RedDark      = Color(0xFFB71C1C)
+private val RedDeep      = Color(0xFF7F0000)
+private val YellowAccent = Color(0xFFFFD600)
+private val SuccessGreen = Color(0xFF1D9E75)
+private val TextPrimary  = Color(0xFF1A1A1A)
+private val TextMuted    = Color(0xFF888888)
+private val SurfaceGray  = Color(0xFFF7F7F7)
 
-enum class EstadoPedido(val texto: String, val color: Color) {
-    EN_PREPARACION("En preparación", Color(0xFFFF9800)), // Naranja
-    EN_CAMINO("En camino", Color(0xFF2196F3)), // Azul
-    ENTREGADO("Entregado", Color(0xFF4CAF50)), // Verde
-    CANCELADO("Cancelado", Color(0xFFF44336)) // Rojo
-}
-
-sealed class MetodoPago(val tipo: String, val icono: ImageVector) {
-    class Efectivo(val montoAPagar: Double) : MetodoPago("Efectivo", Icons.Default.Payments)
-    class Transferencia(val plataforma: String, val numCuenta: String) : MetodoPago("Transferencia", Icons.Default.AccountBalanceWallet)
-}
-
-// 2. Datos de Prueba Ampliados
-val listaPedidosPrueba = listOf(
-    Pedido(
-        idPedido = "AF-1024",
-        nombreProducto = "Cheeseburger Doble",
-        descripcion = "Carne Angus, doble queso cheddar, cebolla caramelizada.",
-        restaurante = "Burger Masters",
-        imagenRes = R.drawable.cheese,
-        precioTotal = 25000.0,
-        fecha = "Hoy, 2:30 PM",
-        tiempoEstimadoMin = 25,
-        estado = EstadoPedido.EN_CAMINO,
-        metodoPago = MetodoPago.Transferencia("Nequi", "3154567890")
-    ),
-    Pedido(
-        idPedido = "AF-1023",
-        nombreProducto = "Pizza Familiar Pepperoni",
-        descripcion = "Masa artesanal, salsa pomodoro, mozzarella.",
-        restaurante = "Bella Pizza",
-        imagenRes = R.drawable.pizza  , // Reemplaza por imagen de pizza si tienes
-        precioTotal = 45000.0,
-        fecha = "Hoy, 1:15 PM",
-        tiempoEstimadoMin = 35,
-        estado = EstadoPedido.EN_PREPARACION,
-        metodoPago = MetodoPago.Efectivo(45000.0)
-    ),
-    Pedido(
-        idPedido = "AF-1020",
-        nombreProducto = "Ramen Tonkotsu Pork",
-        descripcion = "Caldo de cerdo, fideos frescos, huevo ajitama.",
-        restaurante = "Ichiraku Ramen",
-        imagenRes = R.drawable.ramen,
-        precioTotal = 32000.0,
-        fecha = "Ayer",
-        tiempoEstimadoMin = 0,
-        estado = EstadoPedido.ENTREGADO,
-        metodoPago = MetodoPago.Transferencia("Paypal", "mauricio.b@mail.com")
-    ),
-    Pedido(
-        idPedido = "AF-1018",
-        nombreProducto = "Coca Cola 1.5L",
-        descripcion = "Bebida gaseosa original.",
-        restaurante = "Tienda Local",
-        imagenRes = R.drawable.cocacola, // Reemplaza por imagen de bebida
-        precioTotal = 7500.0,
-        fecha = "Ayer",
-        tiempoEstimadoMin = 0,
-        estado = EstadoPedido.ENTREGADO,
-        metodoPago = MetodoPago.Efectivo(7500.0)
-    ),
-    Pedido(
-        idPedido = "AF-1015",
-        nombreProducto = "Combo Philadelphia Sushi",
-        descripcion = "12 piezas de sushi roll con salmón y queso crema.",
-        restaurante = "Sushi Hana",
-        imagenRes = R.drawable.philadelphia,
-        precioTotal = 38000.0,
-        fecha = "Hace 2 días",
-        tiempoEstimadoMin = 0,
-        estado = EstadoPedido.ENTREGADO,
-        metodoPago = MetodoPago.Transferencia("Bancolombia", "Ahorros 456-123456-78")
-    )
-)
-
+// ─────────────────────────────────────────────────────────────────
+// OrderHistoryScreen
+// ─────────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun OrderHistoryScreen(navController: NavController) {
-    // Estado para la pestaña seleccionada (0: En entrega, 1: Finalizados)
-    var selectedTabIndex by remember { mutableStateOf(0) }
-    val tabs = listOf("En entrega", "Finalizados")
+fun OrderHistoryScreen(
+    navController : NavController,
+    viewModel     : OrderHistoryViewModel = hiltViewModel()
+) {
+    val orders    by viewModel.orders.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val error     by viewModel.error.collectAsState()
 
-    // Filtrar pedidos según el estado
-    val pedidosEnEntrega = listaPedidosPrueba.filter { it.estado == EstadoPedido.EN_PREPARACION || it.estado == EstadoPedido.EN_CAMINO }
-    val pedidosFinalizados = listaPedidosPrueba.filter { it.estado == EstadoPedido.ENTREGADO || it.estado == EstadoPedido.CANCELADO }
+    var selectedTabIndex by remember { mutableIntStateOf(0) }
 
-    Scaffold(
-        topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("Historial de pedidos", fontWeight = FontWeight.Bold, fontSize = 20.sp) },
-                navigationIcon = {
-                    IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(imageVector = Icons.Default.ArrowBack, contentDescription = "Atrás")
-                    }
-                },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = Color.White
-                )
+    // ── Animación de entrada ──────────────────────────────────────
+    var visible by remember { mutableStateOf(false) }
+    val screenAlpha by animateFloatAsState(
+        targetValue   = if (visible) 1f else 0f,
+        animationSpec = tween(500, easing = FastOutSlowInEasing),
+        label         = "historyFade"
+    )
+    val headerOffsetY by animateDpAsState(
+        targetValue   = if (visible) 0.dp else (-30).dp,
+        animationSpec = tween(600, easing = FastOutSlowInEasing),
+        label         = "headerSlide"
+    )
+    val contentOffsetY by animateDpAsState(
+        targetValue   = if (visible) 0.dp else 40.dp,
+        animationSpec = tween(550, delayMillis = 100, easing = FastOutSlowInEasing),
+        label         = "contentSlide"
+    )
+    LaunchedEffect(Unit) { visible = true }
+
+    // Filtros por estado
+    val activeOrders = orders.filter { it.status == "pending" || it.status == "on_the_way" }
+    val completedOrders = orders.filter { it.status == "delivered" || it.status == "cancelled" }
+    val ordersToShow = if (selectedTabIndex == 0) activeOrders else completedOrders
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(
+                Brush.verticalGradient(listOf(RedPrimary, RedDark, RedDeep))
             )
-        },
-        containerColor = Color(0xFFF7F7F7) // Fondo gris muy claro para contraste
-    ) { padding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
-            // Pestañas (Tabs) de selección
-            TabRow(
-                selectedTabIndex = selectedTabIndex,
-                containerColor = Color.White,
-                contentColor = Color(0xFFFF4B3A), // Color acento AppiFood
-                indicator = { tabPositions ->
-                    TabRowDefaults.Indicator(
-                        modifier = Modifier.tabIndicatorOffset(tabPositions[selectedTabIndex]),
-                        color = Color(0xFFFF4B3A)
-                    )
-                }
-            ) {
-                tabs.forEachIndexed { index, title ->
-                    Tab(
-                        selected = selectedTabIndex == index,
-                        onClick = { selectedTabIndex = index },
-                        text = {
-                            Text(
-                                text = title,
-                                fontWeight = if (selectedTabIndex == index) FontWeight.Bold else FontWeight.Normal,
-                                fontSize = 15.sp
-                            )
-                        }
-                    )
-                }
-            }
-
-            // Contenido de la pestaña
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                val pedidosAMostrar = if (selectedTabIndex == 0) pedidosEnEntrega else pedidosFinalizados
-
-                if (pedidosAMostrar.isEmpty()) {
-                    item {
-                        Box(modifier = Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) {
-                            Text("No hay pedidos para mostrar", color = Color.Gray)
-                        }
-                    }
-                } else {
-                    items(pedidosAMostrar) { pedido ->
-                        OrderHistoryCard(pedido = pedido)
-                    }
-                }
-            }
-        }
-    }
-}
-
-// 3. Composable de la Tarjeta de Pedido (Inspirado en tu ejemplo)
-@Composable
-fun OrderHistoryCard(pedido: Pedido) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .graphicsLayer { alpha = screenAlpha }
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            // Fila Superior: Imagen y Detalles Principales
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Image(
-                    painter = painterResource(id = pedido.imagenRes),
-                    contentDescription = pedido.nombreProducto,
-                    modifier = Modifier
-                        .size(90.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    contentScale = ContentScale.Crop
-                )
+        // Círculos decorativos — sistema de diseño unificado
+        Box(modifier = Modifier.fillMaxSize()) {
+            Box(
+                modifier = Modifier.size(260.dp).offset(x = (-80).dp, y = (-60).dp)
+                    .clip(CircleShape).background(Color.White.copy(alpha = 0.05f))
+            )
+            Box(
+                modifier = Modifier.size(180.dp).align(Alignment.TopEnd)
+                    .offset(x = 60.dp, y = 40.dp)
+                    .clip(CircleShape).background(Color.White.copy(alpha = 0.04f))
+            )
+        }
 
-                Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.fillMaxSize()) {
 
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = pedido.nombreProducto,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 17.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = pedido.descripcion,
-                        fontSize = 13.sp,
-                        color = Color.Gray,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        lineHeight = 16.sp
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    // Restaurante y Fecha
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Restaurant, contentDescription = null, tint = Color.Gray, modifier = Modifier.size(14.dp))
-                        Text(text = " ${pedido.restaurante}", fontSize = 12.sp, color = Color.Gray)
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(text = "• ${pedido.fecha}", fontSize = 12.sp, color = Color.Gray)
-                    }
-                }
-            }
-
-            // Separador sutil
-            Divider(color = Color(0xFFF1F1F1), modifier = Modifier.padding(vertical = 12.dp))
-
-            // Fila Inferior: Info Adicional (Tiempo/Estado y Pago)
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            // ── Header sobre el gradiente ─────────────────────────
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .offset(y = headerOffsetY)
+                    .padding(top = 56.dp, bottom = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Info de Tiempo o Estado
-                if (pedido.estado == EstadoPedido.EN_PREPARACION || pedido.estado == EstadoPedido.EN_CAMINO) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(imageVector = Icons.Default.Schedule, contentDescription = null, tint = Color(0xFFFF9800), modifier = Modifier.size(16.dp))
-                        Text(
-                            text = " Llega en ~${pedido.tiempoEstimadoMin} mins",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFFFF9800)
+                // Botón volver
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick  = { navController.popBackStack() },
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(Color.White.copy(alpha = 0.15f))
+                    ) {
+                        Icon(
+                            Icons.Default.ArrowBack, "Volver",
+                            tint = Color.White, modifier = Modifier.size(20.dp)
                         )
                     }
-                } else {
-                    // Estado para finalizados
-                    Text(
-                        text = pedido.estado.texto,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = pedido.estado.color,
-                        modifier = Modifier
-                            .background(pedido.estado.color.copy(alpha = 0.1f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Ícono de historial
+                Box(
+                    modifier         = Modifier
+                        .size(72.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Receipt, null,
+                        tint     = Color.White,
+                        modifier = Modifier.size(36.dp)
                     )
                 }
 
-                // Info de Pago
-                PaymentInfoSection(
-                    metodoPago = pedido.metodoPago,
-                    total = pedido.precioTotal,
-                    // Agregamos esta línea para que sepa si debe ponerse verde:
-                    estaPagado = pedido.estado == EstadoPedido.ENTREGADO
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    "Mis Pedidos",
+                    fontSize   = 24.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color      = Color.White
                 )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // Línea acento amarilla
+                Box(
+                    modifier = Modifier
+                        .width(40.dp).height(3.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(YellowAccent)
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Tag pill con total de pedidos
+                Surface(
+                    shape = RoundedCornerShape(50),
+                    color = Color.White.copy(alpha = 0.18f)
+                ) {
+                    Text(
+                        text       = "${orders.size} pedido${if (orders.size != 1) "s" else ""} registrado${if (orders.size != 1) "s" else ""}",
+                        color      = Color.White,
+                        fontSize   = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier   = Modifier.padding(horizontal = 18.dp, vertical = 8.dp)
+                    )
+                }
+            }
+
+            // ── Tarjeta blanca con tabs + lista ───────────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .offset(y = contentOffsetY)
+                    .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
+                    .background(Color(0xFFF5F5F5))
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+
+                    // ── Tabs ──────────────────────────────────────
+                    Surface(
+                        color         = Color.White,
+                        shadowElevation = 2.dp
+                    ) {
+                        TabRow(
+                            selectedTabIndex = selectedTabIndex,
+                            containerColor   = Color.White,
+                            contentColor     = RedPrimary,
+                            indicator        = { tabPositions ->
+                                TabRowDefaults.SecondaryIndicator(
+                                    modifier = Modifier
+                                        .tabIndicatorOffset(tabPositions[selectedTabIndex])
+                                        .height(3.dp),
+                                    color    = RedPrimary
+                                )
+                            }
+                        ) {
+                            listOf(
+                                "En curso" to Icons.Default.LocalShipping,
+                                "Completados" to Icons.Default.CheckCircle
+                            ).forEachIndexed { index, (title, icon) ->
+                                Tab(
+                                    selected = selectedTabIndex == index,
+                                    onClick  = { selectedTabIndex = index },
+                                    text     = {
+                                        Row(
+                                            verticalAlignment     = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                icon, null,
+                                                modifier = Modifier.size(16.dp),
+                                                tint     = if (selectedTabIndex == index)
+                                                    RedPrimary else TextMuted
+                                            )
+                                            Text(
+                                                title,
+                                                color      = if (selectedTabIndex == index)
+                                                    RedPrimary else TextMuted,
+                                                fontWeight = if (selectedTabIndex == index)
+                                                    FontWeight.Bold else FontWeight.Normal,
+                                                fontSize   = 13.sp
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // ── Contenido ─────────────────────────────────
+                    when {
+                        isLoading -> {
+                            Box(
+                                modifier         = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    CircularProgressIndicator(
+                                        color       = RedPrimary,
+                                        strokeWidth = 3.dp,
+                                        modifier    = Modifier.size(48.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text(
+                                        "Cargando pedidos...",
+                                        color = TextMuted, fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        }
+
+                        !error.isNullOrBlank() -> {
+                            Box(
+                                modifier         = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    modifier            = Modifier.padding(32.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Warning, null,
+                                        tint     = RedPrimary,
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(12.dp))
+                                    Text(
+                                        "Error al cargar pedidos",
+                                        fontWeight = FontWeight.Bold,
+                                        color      = TextPrimary
+                                    )
+                                    Spacer(modifier = Modifier.height(8.dp))
+                                    Button(
+                                        onClick = { viewModel.loadOrders() },
+                                        colors  = ButtonDefaults.buttonColors(
+                                            containerColor = RedPrimary
+                                        ),
+                                        shape   = RoundedCornerShape(14.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Refresh, null,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text("Reintentar")
+                                    }
+                                }
+                            }
+                        }
+
+                        ordersToShow.isEmpty() -> {
+                            OrderEmptyState(
+                                isActive = selectedTabIndex == 0,
+                                onExplore = {
+                                    navController.navigate(Screen.Home.route)
+                                }
+                            )
+                        }
+
+                        else -> {
+                            AnimatedContent(
+                                targetState  = selectedTabIndex,
+                                transitionSpec = {
+                                    if (targetState > initialState) {
+                                        (slideInHorizontally { it } + fadeIn()) togetherWith
+                                                (slideOutHorizontally { -it } + fadeOut())
+                                    } else {
+                                        (slideInHorizontally { -it } + fadeIn()) togetherWith
+                                                (slideOutHorizontally { it } + fadeOut())
+                                    }
+                                },
+                                label = "tabContent"
+                            ) { _ ->
+                                LazyColumn(
+                                    contentPadding      = PaddingValues(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                                    modifier            = Modifier.fillMaxSize()
+                                ) {
+                                    itemsIndexed(
+                                        items = ordersToShow,
+                                        key   = { _, order -> order.orderId }
+                                    ) { index, order ->
+                                        // Entrada escalonada por índice
+                                        AnimatedOrderCard(
+                                            order       = order,
+                                            index       = index,
+                                            viewModel   = viewModel,
+                                            onViewDetail = {
+                                                navController.navigate(
+                                                    Screen.OrderConfirmation.passId(order.orderId)
+                                                )
+                                            }
+                                        )
+                                    }
+
+                                    item { Spacer(modifier = Modifier.height(24.dp)) }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 }
 
-// 4. Composable para la sección de pago dinámica
+// ─────────────────────────────────────────────────────────────────
+// AnimatedOrderCard — cada tarjeta entra escalonada
+// ─────────────────────────────────────────────────────────────────
 @Composable
-fun PaymentInfoSection(metodoPago: MetodoPago, total: Double, estaPagado: Boolean = false) {
-    val totalFormateado = "$ ${String.format("%,.0f", total)}"
+fun AnimatedOrderCard(
+    order        : Order,
+    index        : Int,
+    viewModel    : OrderHistoryViewModel,
+    onViewDetail : () -> Unit
+) {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(index * 80L)   // entrada escalonada: cada card 80ms después
+        visible = true
+    }
 
-    Column(horizontalAlignment = Alignment.End) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = metodoPago.icono,
-                contentDescription = null,
-                // Si está pagado, el icono se pone verde
-                tint = if (estaPagado || metodoPago is MetodoPago.Transferencia) Color(0xFF4CAF50) else Color.Gray,
-                modifier = Modifier.size(16.dp)
+    AnimatedVisibility(
+        visible = visible,
+        enter   = fadeIn(tween(300)) + slideInVertically(
+            animationSpec  = tween(380, easing = FastOutSlowInEasing),
+            initialOffsetY = { it / 2 }
+        )
+    ) {
+        OrderHistoryCard(
+            order        = order,
+            viewModel    = viewModel,
+            onViewDetail = onViewDetail
+        )
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// OrderHistoryCard — tarjeta premium de pedido
+// ─────────────────────────────────────────────────────────────────
+@Composable
+fun OrderHistoryCard(
+    order        : Order,
+    viewModel    : OrderHistoryViewModel,
+    onViewDetail : () -> Unit
+) {
+    val statusColor = when (order.status) {
+        "pending"    -> Color(0xFFFF9800)
+        "on_the_way" -> Color(0xFF2196F3)
+        "delivered"  -> SuccessGreen
+        "cancelled"  -> Color(0xFFF44336)
+        else         -> TextMuted
+    }
+    val statusLabel = when (order.status) {
+        "pending"    -> "En preparación"
+        "on_the_way" -> "En camino"
+        "delivered"  -> "Entregado"
+        "cancelled"  -> "Cancelado"
+        else         -> order.status
+    }
+    val statusIcon = when (order.status) {
+        "pending"    -> Icons.Default.HourglassEmpty
+        "on_the_way" -> Icons.Default.LocalShipping
+        "delivered"  -> Icons.Default.CheckCircle
+        "cancelled"  -> Icons.Default.Cancel
+        else         -> Icons.Default.Info
+    }
+
+    // Animación de presión
+    var isPressed by remember { mutableStateOf(false) }
+    val cardScale by animateFloatAsState(
+        targetValue   = if (isPressed) 0.98f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness    = Spring.StiffnessLow
+        ),
+        label = "cardScale"
+    )
+
+    Card(
+        modifier  = Modifier
+            .fillMaxWidth()
+            .graphicsLayer { scaleX = cardScale; scaleY = cardScale }
+            .clickable {
+                isPressed = true
+                onViewDetail()
+            },
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+
+            // ── Banda de estado en la parte superior ──────────────
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(statusColor, statusColor.copy(alpha = 0.4f))
+                        )
+                    )
             )
-            Text(
-                text = " ${metodoPago.tipo}",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (estaPagado || metodoPago is MetodoPago.Transferencia) Color(0xFF4CAF50) else Color.Black
-            )
-        }
 
-        when (metodoPago) {
-            is MetodoPago.Transferencia -> {
-                Text(text = totalFormateado, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
-                Text(text = "${metodoPago.plataforma}: ${metodoPago.numCuenta}", fontSize = 11.sp, color = Color.Gray)
-                Text(text = "Pagado", fontSize = 11.sp, color = Color(0xFF4CAF50), fontWeight = FontWeight.Medium)
-            }
-            is MetodoPago.Efectivo -> {
-                // Si el pedido ya se entregó o marcaste como pagado, sale verde
-                val colorEstado = if (estaPagado) Color(0xFF4CAF50) else Color(0xFFFF4B3A)
-                val textoEstado = if (estaPagado) "Pagado" else "Pendiente de pago"
+            Column(modifier = Modifier.padding(16.dp)) {
 
-                Text(
-                    text = totalFormateado,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = colorEstado
-                )
-                Text(
-                    text = textoEstado,
-                    fontSize = 11.sp,
-                    color = colorEstado,
-                    fontWeight = FontWeight.Medium
-                )
+                // ── Fila superior: número de pedido + estado ──────
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            "#${order.orderId}",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize   = 15.sp,
+                            color      = TextPrimary
+                        )
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(50),
+                        color = statusColor.copy(alpha = 0.12f)
+                    ) {
+                        Row(
+                            modifier          = Modifier.padding(
+                                horizontal = 10.dp, vertical = 5.dp
+                            ),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                statusIcon, null,
+                                tint     = statusColor,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                statusLabel,
+                                color      = statusColor,
+                                fontSize   = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // ── Restaurante ───────────────────────────────────
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier         = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(RedPrimary.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Restaurant, null,
+                            tint     = RedPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Column {
+                        Text(
+                            order.restaurant.name.ifBlank { "Restaurante AppiFood" },
+                            fontWeight = FontWeight.Bold,
+                            fontSize   = 14.sp,
+                            color      = TextPrimary
+                        )
+                        Text(
+                            viewModel.formatDate(order.timestamp),
+                            fontSize = 12.sp,
+                            color    = TextMuted
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                HorizontalDivider(color = Color(0xFFE0E0E0), thickness = 0.5.dp)
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // ── Productos (máximo 3 + "y N más") ─────────────
+                val visibleItems = order.items.take(3)
+                val remainingCount = order.items.size - visibleItems.size
+
+                visibleItems.forEach { item ->
+                    Row(
+                        modifier              = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            "× ${item.quantity}  ${item.name}",
+                            fontSize = 13.sp,
+                            color    = TextPrimary,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            viewModel.formatCurrency(item.subtotal),
+                            fontSize   = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color      = TextPrimary
+                        )
+                    }
+                }
+
+                if (remainingCount > 0) {
+                    Text(
+                        "+$remainingCount producto${if (remainingCount > 1) "s" else ""} más",
+                        fontSize = 12.sp,
+                        color    = TextMuted,
+                        modifier = Modifier.padding(top = 2.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                HorizontalDivider(color = Color(0xFFE0E0E0), thickness = 0.5.dp)
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // ── Fila inferior: método de pago + total + botón ─
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.CenterVertically
+                ) {
+                    // Método de pago
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            getPaymentIcon(order.payment.method),
+                            fontSize = 16.sp
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            order.payment.method.ifBlank { "Efectivo" },
+                            fontSize = 12.sp,
+                            color    = TextMuted
+                        )
+                    }
+
+                    // Total
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            "Total",
+                            fontSize = 11.sp,
+                            color    = TextMuted
+                        )
+                        Text(
+                            viewModel.formatCurrency(order.total),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize   = 16.sp,
+                            color      = RedPrimary
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // ── Botón ver detalle ─────────────────────────────
+                OutlinedButton(
+                    onClick  = onViewDetail,
+                    modifier = Modifier.fillMaxWidth().height(44.dp),
+                    shape    = RoundedCornerShape(12.dp),
+                    border   = BorderStroke(1.5.dp, RedPrimary),
+                    colors   = ButtonDefaults.outlinedButtonColors(
+                        contentColor = RedPrimary
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Receipt, null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Ver comprobante",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize   = 14.sp
+                    )
+                }
             }
         }
     }
+}
+
+// ─────────────────────────────────────────────────────────────────
+// OrderEmptyState — estado vacío animado
+// ─────────────────────────────────────────────────────────────────
+@Composable
+private fun OrderEmptyState(isActive: Boolean, onExplore: () -> Unit) {
+    val infiniteTransition = rememberInfiniteTransition(label = "emptyPulse")
+    val bounce by infiniteTransition.animateFloat(
+        initialValue  = 0f,
+        targetValue   = -12f,
+        animationSpec = infiniteRepeatable(
+            tween(1000, easing = FastOutSlowInEasing), RepeatMode.Reverse
+        ),
+        label = "emptyBounce"
+    )
+
+    Box(
+        modifier         = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier            = Modifier.padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                if (isActive) "🛵" else "📋",
+                fontSize = 72.sp,
+                modifier = Modifier.offset(y = bounce.dp)
+            )
+            Spacer(modifier = Modifier.height(20.dp))
+            Text(
+                if (isActive) "No tienes pedidos activos"
+                else "No tienes pedidos completados",
+                fontWeight = FontWeight.ExtraBold,
+                fontSize   = 18.sp,
+                color      = TextPrimary,
+                textAlign  = TextAlign.Center
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                if (isActive) "¡Haz tu primer pedido y disfruta la mejor comida de Popayán!"
+                else "Tus pedidos completados aparecerán aquí.",
+                color     = TextMuted,
+                fontSize  = 14.sp,
+                textAlign = TextAlign.Center
+            )
+            if (isActive) {
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(
+                    onClick   = onExplore,
+                    colors    = ButtonDefaults.buttonColors(containerColor = RedPrimary),
+                    shape     = RoundedCornerShape(50),
+                    modifier  = Modifier.height(48.dp)
+                ) {
+                    Icon(Icons.Default.Search, null, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text("Explorar restaurantes", fontWeight = FontWeight.Bold)
+                }
+            }
+        }
+    }
+}
+
+// ── Helper: ícono emoji según método de pago ─────────────────────
+private fun getPaymentIcon(method: String): String = when (method.lowercase()) {
+    "nequi"      -> "📱"
+    "bancolombia"-> "🏛️"
+    "pse"        -> "💳"
+    "daviplata"  -> "📲"
+    "efectivo"   -> "💵"
+    else         -> "💰"
 }

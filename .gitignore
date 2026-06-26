@@ -1,3 +1,4 @@
+# Root .gitignore - updated to ensure IDE and firebase config are ignored
 *.iml
 .gradle
 /local.properties
@@ -31,3 +32,8 @@ captures/
 # OS specific
 .DS_Store
 Thumbs.db
+
+# Ignore local Firebase config and IDE settings
+/app/google-services.json
+/.idea/
+*.iml

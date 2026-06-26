@@ -1,45 +1,29 @@
+// MainActivity.kt
 package com.example.appifood_movil
-
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.example.appifood_movil.navigation.AppNavigation
+import androidx.activity.enableEdgeToEdge
 import com.example.appifood_movil.ui.theme.AppifoodMovilTheme
-import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import com.example.appifood_movil.ui.viewmodel.SearchViewModel
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.appifood_movil.navigation.AppNavigation
+import dagger.hilt.android.AndroidEntryPoint
 
-
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
-
-        installSplashScreen()
-
         super.onCreate(savedInstanceState)
-
+        enableEdgeToEdge()
         setContent {
+            // AppifoodMovilTheme ya maneja el estado del tema internamente
+            // y provee LocalThemeState para que cualquier pantalla
+            // pueda leer isDarkMode o llamar toggle()
             AppifoodMovilTheme {
-                AppNavigation()
+                val searchViewModel: SearchViewModel = hiltViewModel()
+                AppNavigation(searchViewModel = searchViewModel)
             }
         }
-    }}
-
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    AppifoodMovilTheme {
-        Greeting("Android")
     }
 }
