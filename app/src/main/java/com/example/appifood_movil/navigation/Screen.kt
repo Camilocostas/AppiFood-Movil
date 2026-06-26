@@ -16,6 +16,9 @@ sealed class Screen(val route: String) {
     object Subscription : Screen("subscription")
     object Payments : Screen("payments")
     object NotificationsCenter : Screen("notificationsCenter")
+    object RoleSelection     : Screen("roleSelection")
+    object RestaurantAuth    : Screen("restaurantAuth")
+    object RestaurantDashboard : Screen("restaurantDashboard")
 
     object RestaurantDetail : Screen("restaurantDetail/{id}") {
         fun passId(id: Int): String = "restaurantDetail/$id"

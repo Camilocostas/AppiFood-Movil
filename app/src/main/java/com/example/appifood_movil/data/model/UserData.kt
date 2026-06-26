@@ -6,7 +6,8 @@ data class UserData(
     val phone: String = "",
     val email: String = "",
     val address: String = "",
+    val imageUrl: String = "",  // ✅ Nuevo campo para la foto de perfil
     val createdAt: Long = System.currentTimeMillis()
 ) {
-    constructor() : this("", "", "", "", "", System.currentTimeMillis())
+    constructor() : this("", "", "", "", "", "", System.currentTimeMillis())
 }

@@ -1,6 +1,7 @@
 // ui/screens/OrderFormBottomSheet.kt
 package com.example.appifood_movil.ui.screens
 
+import android.content.Context
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -16,11 +17,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.appifood_movil.data.model.PaymentMethod
 import com.example.appifood_movil.data.model.RestaurantInfo
+import com.example.appifood_movil.service.LocalNotificationService
 import com.example.appifood_movil.ui.viewmodel.AuthViewModel
 import com.example.appifood_movil.ui.viewmodel.CartViewModel
 import com.example.appifood_movil.ui.viewmodel.OrderViewModel
@@ -39,12 +42,13 @@ fun OrderFormBottomSheet(
     cartViewModel  : CartViewModel,
     authViewModel  : AuthViewModel,
     orderViewModel : OrderViewModel,
-    // restaurantInfo: en producción obtenerlo del ViewModel del restaurante seleccionado
-    // Por ahora se puede pasar desde CartScreen cuando esté vinculado
     restaurantInfo : RestaurantInfo = RestaurantInfo(id = 1, name = "Restaurante AppiFood", phone = "3001234567"),
     onDismiss      : () -> Unit,
     onOrderPlaced  : (orderId: String) -> Unit
 ) {
+    val context = LocalContext.current
+    val notificationService = remember { LocalNotificationService(context) }
+
     val userData       by authViewModel.userData.collectAsState()
     val paymentMethods by authViewModel.paymentMethods.collectAsState()
     val isLoading      by orderViewModel.isLoading.collectAsState()
@@ -62,11 +66,11 @@ fun OrderFormBottomSheet(
     }
 
     // ── Estados del formulario ────────────────────────────────────
-    var deliveryAddress  by remember { mutableStateOf("") }
-    var selectedPayment  by remember { mutableStateOf<PaymentMethod?>(null) }
-    var useCash          by remember { mutableStateOf(false) }
-    var addressError     by remember { mutableStateOf(false) }
-    var paymentError     by remember { mutableStateOf(false) }
+    var deliveryAddress by remember { mutableStateOf("") }
+    var selectedPayment by remember { mutableStateOf<PaymentMethod?>(null) }
+    var useCash by remember { mutableStateOf(false) }
+    var addressError by remember { mutableStateOf(false) }
+    var paymentError by remember { mutableStateOf(false) }
 
     // Preseleccionar método predeterminado
     LaunchedEffect(paymentMethods) {
@@ -289,6 +293,14 @@ fun OrderFormBottomSheet(
 
                     // Guardar en Firestore
                     orderViewModel.confirmAndSaveOrder { orderId ->
+                        // ✅ Notificación local inmediata
+                        notificationService.showOrderNotification(
+                            orderId = orderId,
+                            restaurantName = restaurantInfo.name,
+                            status = "preparing",
+                            address = deliveryAddress.trim()
+                        )
+
                         cartViewModel.clearCart()
                         onOrderPlaced(orderId)
                     }

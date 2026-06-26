@@ -1,5 +1,9 @@
 package com.example.appifood_movil.ui.screens
 
+import android.net.Uri
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -18,12 +22,16 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
+import com.example.appifood_movil.R
 import com.example.appifood_movil.data.model.UserData
+import androidx.compose.ui.res.painterResource
 import com.example.appifood_movil.navigation.Screen
 import com.example.appifood_movil.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
@@ -46,20 +54,58 @@ fun ProfileScreen(
     val scope = rememberCoroutineScope()
 
     val user     by authViewModel.user.collectAsState()
-    // ── FIX: observar userData como StateFlow en lugar de callback ──
-    // getUserDataFromFirestore(uid) solo acepta uid y expone el
-    // resultado a través de _userData StateFlow. Recolectarlo aquí
-    // es el patrón correcto — sin callbacks, sin parámetros extras.
     val userData by authViewModel.userData.collectAsState()
     val isLoading by authViewModel.isLoading.collectAsState()
 
-    var showSaveAnimation by remember { mutableStateOf(false) }
-    var isLoggingOut      by remember { mutableStateOf(false) }
+    // ── Estado de edición ──────────────────────────────────────────
+    var isEditing by remember { mutableStateOf(false) }
+    var editedNames by remember { mutableStateOf("") }
+    var editedLastNames by remember { mutableStateOf("") }
+    var editedPhone by remember { mutableStateOf("") }
 
-    // Cargar datos cuando el usuario esté disponible
+    var showSaveAnimation by remember { mutableStateOf(false) }
+    var isLoggingOut by remember { mutableStateOf(false) }
+    var isUploadingImage by remember { mutableStateOf(false) }
+
+    // ✅ Dialog para opciones de foto
+    var showImageDialog by remember { mutableStateOf(false) }
+
+    // ── Cargar datos cuando el usuario esté disponible ────────────
     LaunchedEffect(user) {
         user?.uid?.let { uid ->
             authViewModel.getUserDataFromFirestore(uid)
+        }
+    }
+
+    // ── Actualizar campos editables cuando cambie userData ────────
+    LaunchedEffect(userData) {
+        userData?.let { data ->
+            editedNames = data.names ?: ""
+            editedLastNames = data.lastNames ?: ""
+            editedPhone = data.phone ?: ""
+        }
+    }
+
+    // ── Launcher para seleccionar imagen ──────────────────────────
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            scope.launch {
+                isUploadingImage = true
+                val uid = user?.uid
+                if (uid != null) {
+                    Log.d("ProfileScreen", "📤 Subiendo imagen...")
+                    val result = authViewModel.uploadProfileImage(uid, it)
+                    if (result != null) {
+                        Log.d("ProfileScreen", "✅ Imagen subida: $result")
+                        authViewModel.getUserDataFromFirestore(uid)
+                    } else {
+                        Log.e("ProfileScreen", "❌ Error al subir imagen")
+                    }
+                }
+                isUploadingImage = false
+            }
         }
     }
 
@@ -85,6 +131,7 @@ fun ProfileScreen(
     LaunchedEffect(Unit) { visible = true }
 
     val initial = userData?.names?.firstOrNull()?.toString()?.uppercase() ?: "U"
+    val imageUrl = userData?.imageUrl ?: ""
 
     Box(
         modifier = Modifier
@@ -102,10 +149,18 @@ fun ProfileScreen(
             ProfileHeader(
                 modifier  = Modifier.offset(y = headerOffsetY),
                 initial   = initial,
-                names     = userData?.names ?: "",
-                lastNames = userData?.lastNames ?: "",
+                names     = if (isEditing) editedNames else userData?.names ?: "",
+                lastNames = if (isEditing) editedLastNames else userData?.lastNames ?: "",
                 email     = userData?.email ?: user?.email ?: "",
-                isLoading = isLoading
+                imageUrl  = imageUrl,
+                isLoading = isLoading,
+                onImageClick = {
+                    if (imageUrl.isNotEmpty()) {
+                        showImageDialog = true  // ✅ Mostrar diálogo
+                    } else {
+                        imagePickerLauncher.launch("image/*")
+                    }
+                }
             )
 
             Box(
@@ -118,7 +173,6 @@ fun ProfileScreen(
                     .padding(top = 32.dp, bottom = 40.dp)
             ) {
                 Column {
-                    // Línea acento amarilla — sistema de diseño unificado
                     Box(
                         modifier = Modifier
                             .width(40.dp)
@@ -127,16 +181,54 @@ fun ProfileScreen(
                             .background(YellowAccent)
                     )
                     Spacer(modifier = Modifier.height(14.dp))
-                    Text(
-                        text       = "Información de tu cuenta",
-                        fontSize   = 24.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color      = TextPrimary
-                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text       = "Información de tu cuenta",
+                            fontSize   = 24.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color      = TextPrimary
+                        )
+
+                        IconButton(
+                            onClick = {
+                                if (isEditing) {
+                                    userData?.let { data ->
+                                        editedNames = data.names ?: ""
+                                        editedLastNames = data.lastNames ?: ""
+                                        editedPhone = data.phone ?: ""
+                                    }
+                                    isEditing = false
+                                } else {
+                                    isEditing = true
+                                }
+                            }
+                        ) {
+                            Icon(
+                                if (isEditing) Icons.Default.Close else Icons.Default.Edit,
+                                contentDescription = if (isEditing) "Cancelar edición" else "Editar",
+                                tint = RedPrimary
+                            )
+                        }
+                    }
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    ProfileInfoCard(userData = userData, isLoading = isLoading)
+                    ProfileInfoCardEditable(
+                        userData = userData,
+                        isLoading = isLoading,
+                        isEditing = isEditing,
+                        editedNames = editedNames,
+                        editedLastNames = editedLastNames,
+                        editedPhone = editedPhone,
+                        onNamesChange = { editedNames = it },
+                        onLastNamesChange = { editedLastNames = it },
+                        onPhoneChange = { editedPhone = it }
+                    )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -145,13 +237,38 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(32.dp))
 
                     ProfileSaveButton(
+                        isEditing = isEditing,
                         onClick = {
-                            scope.launch {
-                                // Aquí conectar con updateUserDataInFirestore cuando
-                                // implementes edición real de campos
-                                showSaveAnimation = true
-                                delay(1500)
-                                showSaveAnimation = false
+                            if (isEditing) {
+                                scope.launch {
+                                    val uid = user?.uid
+                                    if (uid != null) {
+                                        val updatedData = UserData(
+                                            names = editedNames.trim(),
+                                            lastNames = editedLastNames.trim(),
+                                            email = userData?.email ?: "",
+                                            phone = editedPhone.trim(),
+                                            imageUrl = userData?.imageUrl ?: "",
+                                            createdAt = userData?.createdAt ?: System.currentTimeMillis()
+                                        )
+
+                                        authViewModel.updateUserDataInFirestore(
+                                            uid = uid,
+                                            userData = updatedData,
+                                            onComplete = { success ->
+                                                if (success) {
+                                                    scope.launch {
+                                                        showSaveAnimation = true
+                                                        delay(1500)
+                                                        showSaveAnimation = false
+                                                        isEditing = false
+                                                        authViewModel.getUserDataFromFirestore(uid)
+                                                    }
+                                                }
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     )
@@ -221,20 +338,65 @@ fun ProfileScreen(
         }
 
         // ── Loading overlay ───────────────────────────────────────
-        if (isLoading) {
+        if (isLoading || isUploadingImage) {
             Box(
                 modifier         = Modifier
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.35f)),
                 contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(
-                    color       = YellowAccent,
-                    strokeWidth = 3.dp,
-                    modifier    = Modifier.size(48.dp)
-                )
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    CircularProgressIndicator(
+                        color       = YellowAccent,
+                        strokeWidth = 3.dp,
+                        modifier    = Modifier.size(48.dp)
+                    )
+                    if (isUploadingImage) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            "Subiendo imagen...",
+                            color = Color.White,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
             }
         }
+    }
+
+    // ── Diálogo para opciones de foto ─────────────────────────────
+    if (showImageDialog) {
+        AlertDialog(
+            onDismissRequest = { showImageDialog = false },
+            title = { Text("Foto de perfil") },
+            text = { Text("¿Qué deseas hacer con tu foto de perfil?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showImageDialog = false
+                        imagePickerLauncher.launch("image/*")
+                    }
+                ) {
+                    Text("Cambiar foto")
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        scope.launch {
+                            showImageDialog = false
+                            val uid = user?.uid
+                            if (uid != null) {
+                                authViewModel.deleteProfileImage(uid)
+                                authViewModel.getUserDataFromFirestore(uid)
+                            }
+                        }
+                    }
+                ) {
+                    Text("Eliminar foto", color = Color.Red)
+                }
+            }
+        )
     }
 }
 
@@ -261,26 +423,76 @@ fun ProfileHeader(
     names     : String,
     lastNames : String,
     email     : String,
-    isLoading : Boolean
+    imageUrl  : String,
+    isLoading : Boolean,
+    onImageClick: () -> Unit
 ) {
     Column(
         modifier            = modifier.fillMaxWidth().padding(top = 56.dp, bottom = 32.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Box(contentAlignment = Alignment.Center) {
-            Box(modifier = Modifier.size(100.dp).clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.12f)))
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .size(100.dp)
+                .clickable { onImageClick() }
+        ) {
             Box(
-                modifier         = Modifier.size(80.dp).clip(CircleShape)
-                    .background(Color(0xFFFF8A80)),
-                contentAlignment = Alignment.Center
+                modifier = Modifier
+                    .size(100.dp)
+                    .clip(CircleShape)
+                    .background(Color.White.copy(alpha = 0.12f))
+            )
+
+            if (imageUrl.isNotEmpty()) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Foto de perfil",
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(R.drawable.ic_launcher_foreground)
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFF8A80)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (isLoading) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(30.dp)
+                        )
+                    } else {
+                        Text(
+                            initial,
+                            color = Color.White,
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Surface(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .size(28.dp),
+                shape = CircleShape,
+                color = RedPrimary,
+                contentColor = Color.White
             ) {
-                if (isLoading) {
-                    CircularProgressIndicator(color = Color.White,
-                        strokeWidth = 2.dp, modifier = Modifier.size(30.dp))
-                } else {
-                    Text(initial, color = Color.White,
-                        fontSize = 36.sp, fontWeight = FontWeight.Bold)
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        if (imageUrl.isNotEmpty()) Icons.Default.Edit else Icons.Default.Add,
+                        contentDescription = if (imageUrl.isNotEmpty()) "Cambiar foto" else "Agregar foto",
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
         }
@@ -307,9 +519,20 @@ fun ProfileHeader(
     }
 }
 
-// ── Tarjeta de información ────────────────────────────────────────
+
+// ── Tarjeta de información EDITABLE ──────────────────────────────
 @Composable
-fun ProfileInfoCard(userData: UserData?, isLoading: Boolean) {
+fun ProfileInfoCardEditable(
+    userData: UserData?,
+    isLoading: Boolean,
+    isEditing: Boolean,
+    editedNames: String,
+    editedLastNames: String,
+    editedPhone: String,
+    onNamesChange: (String) -> Unit,
+    onLastNamesChange: (String) -> Unit,
+    onPhoneChange: (String) -> Unit
+) {
     Card(
         modifier  = Modifier.fillMaxWidth(),
         shape     = RoundedCornerShape(16.dp),
@@ -333,19 +556,113 @@ fun ProfileInfoCard(userData: UserData?, isLoading: Boolean) {
                     if (i < 3) HorizontalDivider(color = Color.White, thickness = 1.dp)
                 }
             } else {
-                ProfileInfoRow("NOMBRE(S)",           userData?.names     ?: "No registrado")
-                ProfileInfoRow("APELLIDO(S)",         userData?.lastNames  ?: "No registrado")
-                ProfileInfoRow("CORREO ELECTRÓNICO",  userData?.email     ?: "No registrado")
-                ProfileInfoRow("TELÉFONO",            userData?.phone     ?: "No registrado",
-                    isLast = true)
+                ProfileInfoRowEditable(
+                    label = "NOMBRE(S)",
+                    value = userData?.names ?: "No registrado",
+                    isEditing = isEditing,
+                    editedValue = editedNames,
+                    onValueChange = onNamesChange
+                )
+
+                ProfileInfoRowEditable(
+                    label = "APELLIDO(S)",
+                    value = userData?.lastNames ?: "No registrado",
+                    isEditing = isEditing,
+                    editedValue = editedLastNames,
+                    onValueChange = onLastNamesChange
+                )
+
+                ProfileInfoRow(
+                    label = "CORREO ELECTRÓNICO",
+                    value = userData?.email ?: "No registrado",
+                    isLast = false
+                )
+
+                ProfileInfoRowEditable(
+                    label = "TELÉFONO",
+                    value = userData?.phone ?: "No registrado",
+                    isEditing = isEditing,
+                    editedValue = editedPhone,
+                    onValueChange = onPhoneChange,
+                    isLast = true
+                )
             }
         }
     }
 }
 
-// ── Fila de información ───────────────────────────────────────────
+// ── Fila de información EDITABLE ──────────────────────────────────
 @Composable
-fun ProfileInfoRow(label: String, value: String, isLast: Boolean = false) {
+fun ProfileInfoRowEditable(
+    label: String,
+    value: String,
+    isEditing: Boolean,
+    editedValue: String,
+    onValueChange: (String) -> Unit,
+    isLast: Boolean = false
+) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                label,
+                color = TextMuted,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Medium,
+                modifier = Modifier.weight(0.4f)
+            )
+
+            if (isEditing) {
+                TextField(
+                    value = editedValue,
+                    onValueChange = onValueChange,
+                    modifier = Modifier
+                        .weight(0.6f)
+                        .height(48.dp),
+                    textStyle = androidx.compose.ui.text.TextStyle(
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
+                    ),
+                    colors = TextFieldDefaults.colors(
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        focusedIndicatorColor = RedPrimary,
+                        unfocusedIndicatorColor = Color.Transparent,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedPlaceholderColor = TextMuted,
+                        unfocusedPlaceholderColor = TextMuted
+                    ),
+                    singleLine = true,
+                    shape = RoundedCornerShape(8.dp)
+                )
+            } else {
+                Text(
+                    value.ifEmpty { "No registrado" },
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(0.6f)
+                )
+            }
+        }
+        if (!isLast) HorizontalDivider(color = Color(0xFFE8E8E8), thickness = 1.dp)
+    }
+}
+
+// ── Fila de información (NO editable) ────────────────────────────
+@Composable
+fun ProfileInfoRow(
+    label: String,
+    value: String,
+    isLast: Boolean = false
+) {
     Column {
         Row(
             modifier              = Modifier.fillMaxWidth().padding(vertical = 10.dp),
@@ -355,7 +672,7 @@ fun ProfileInfoRow(label: String, value: String, isLast: Boolean = false) {
             Text(value.ifEmpty { "No registrado" }, fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp, color = TextPrimary)
         }
-        if (!isLast) HorizontalDivider(color = Color.White, thickness = 1.dp)
+        if (!isLast) HorizontalDivider(color = Color(0xFFE8E8E8), thickness = 1.dp)
     }
 }
 
@@ -402,24 +719,33 @@ fun ProfileMenuRow(
             Icon(Icons.Default.ChevronRight, null, tint = TextMuted,
                 modifier = Modifier.size(20.dp))
         }
-        if (!isLast) HorizontalDivider(color = Color.White, thickness = 1.dp)
+        if (!isLast) HorizontalDivider(color = Color(0xFFE8E8E8), thickness = 1.dp)
     }
 }
 
 // ── Botón Guardar Cambios ─────────────────────────────────────────
 @Composable
-fun ProfileSaveButton(onClick: () -> Unit) {
+fun ProfileSaveButton(
+    isEditing: Boolean,
+    onClick: () -> Unit
+) {
     Button(
         onClick   = onClick,
+        enabled   = isEditing,
         modifier  = Modifier.fillMaxWidth().height(54.dp),
         shape     = RoundedCornerShape(16.dp),
         colors    = ButtonDefaults.buttonColors(
-            containerColor = RedPrimary, contentColor = Color.White),
+            containerColor = RedPrimary,
+            contentColor = Color.White,
+            disabledContainerColor = RedPrimary.copy(alpha = 0.4f),
+            disabledContentColor = Color.White.copy(alpha = 0.6f)
+        ),
         elevation = ButtonDefaults.buttonElevation(0.dp)
     ) {
         Icon(Icons.Default.Save, null, modifier = Modifier.size(20.dp))
         Spacer(modifier = Modifier.width(10.dp))
-        Text("Guardar Cambios", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text(if (isEditing) "Guardar Cambios" else "Edita para guardar",
+            fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
 }
 

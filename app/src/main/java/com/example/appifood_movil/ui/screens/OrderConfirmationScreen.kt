@@ -4,6 +4,9 @@ package com.example.appifood_movil.ui.screens
 import android.graphics.Bitmap
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import com.example.appifood_movil.service.LocalNotificationService
+import android.content.Context
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -59,6 +62,23 @@ fun OrderConfirmationScreen(
     LaunchedEffect(orderId) {
         if (orderId.isNotBlank()) {
             orderViewModel.loadOrderById(orderId)
+        }
+    }
+
+    // ── Notificación de pedido despachado ────────────────────────────
+    val context = LocalContext.current
+    val notificationService = remember { LocalNotificationService(context) }
+
+// Programar notificación después de 1 minuto (simulando despacho)
+    LaunchedEffect(orderId) {
+        if (savedOrder != null) {
+            notificationService.scheduleOrderNotification(
+                orderId = orderId,
+                restaurantName = savedOrder?.restaurant?.name ?: "Restaurante",
+                status = "dispatched",
+                address = savedOrder?.deliveryAddress ?: "tu dirección",
+                delayMillis = 60000 // 1 minuto
+            )
         }
     }
 
