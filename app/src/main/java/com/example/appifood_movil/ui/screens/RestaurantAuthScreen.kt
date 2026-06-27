@@ -51,11 +51,13 @@ fun RestaurantAuthScreen(
     val error       by viewModel.error.collectAsState()
     val isSuccess   by viewModel.isSuccess.collectAsState()
 
-    // Navegación al dashboard cuando el login/registro sea exitoso
+    // Busca el LaunchedEffect(isSuccess) y reemplázalo:
     LaunchedEffect(isSuccess) {
         if (isSuccess) {
+            // ✅ popUpTo(0) limpia TODO el backstack
+            // RestaurantDashboard queda como única pantalla en el stack
             navController.navigate(Screen.RestaurantDashboard.route) {
-                popUpTo(Screen.RestaurantAuth.route) { inclusive = true }
+                popUpTo(0) { inclusive = true }
             }
         }
     }

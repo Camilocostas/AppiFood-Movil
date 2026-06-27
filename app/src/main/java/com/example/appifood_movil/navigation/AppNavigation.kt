@@ -100,16 +100,19 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         composable(Screen.Onboarding.route) {
             OnboardingScreen(onFinished = {
                 navController.navigate(Screen.RoleSelection.route) {
-                    popUpTo(Screen.Onboarding.route) { inclusive = true }
+                    // ✅ Elimina Splash y Onboarding — RoleSelection es la nueva raíz
+                    popUpTo(Screen.Splash.route) { inclusive = true }
                 }
             })
         }
 
+        // Busca esta línea y reemplázala:
         composable(Screen.Auth.route) {
             AuthScreen(onLoginNavigation = {
-                // Cuando el cliente inicia sesión, ir a Home
+                // ✅ popUpTo(0) limpia TODO el backstack — Splash, Onboarding,
+                // RoleSelection y Auth quedan eliminados. Home es la nueva raíz.
                 navController.navigate(Screen.Home.route) {
-                    popUpTo(Screen.Auth.route) { inclusive = true }
+                    popUpTo(0) { inclusive = true }
                 }
             })
         }

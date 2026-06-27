@@ -245,14 +245,15 @@ fun HomeScreen(
                 ) {
                     items(filteredRestaurants) { restaurant ->
                         AnimatedRestaurantCard(
-                            name = restaurant.name,
-                            rating = restaurant.rating,
-                            time = stringResource(id = R.string.delivery_time_range),
-                            imageUrl = restaurant.imageUrl,
-                            imageRes = restaurant.imageRes,
-                            onClick = { navController.navigate(Screen.RestaurantDetail.passId(restaurant.id)) },
-                            surface = surface,
-                            onSurface = onSurface,
+                            name             = restaurant.name,
+                            rating           = restaurant.rating,
+                            time             = stringResource(id = R.string.delivery_time_range),
+                            imageUrl         = restaurant.imageUrl,
+                            imageRes         = restaurant.imageRes,
+                            category         = restaurant.category,   // ← agrega esto
+                            onClick          = { navController.navigate(Screen.RestaurantDetail.passId(restaurant.id)) },
+                            surface          = surface,
+                            onSurface        = onSurface,
                             onSurfaceVariant = onSurfaceVariant
                         )
                     }
@@ -475,6 +476,7 @@ fun AnimatedPromoFoodCard(
     primary: Color
 ) {
     var isPressed by remember { mutableStateOf(false) }
+    var quantity by remember { mutableStateOf(0) }
 
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.95f else 1f,
@@ -496,211 +498,398 @@ fun AnimatedPromoFoodCard(
                 isPressed = true
                 onNavigate()
             },
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 2.dp,
-            pressedElevation = 8.dp
+            pressedElevation = 6.dp
         ),
         colors = CardDefaults.cardColors(
-            containerColor = surface  // ✅ Usa color del tema
+            containerColor = surface
         )
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
         ) {
+            // ── Imagen con badge de descuento ──────────────────
             Box {
                 Image(
                     painter = painterResource(id = imageRes),
                     contentDescription = null,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(140.dp)
-                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
+                        .height(120.dp)
+                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
                     contentScale = ContentScale.Crop
                 )
+
+                // Badge "-20%" como en la web
                 Surface(
-                    color = primary,  // ✅ Usa color del tema
-                    shape = RoundedCornerShape(topStart = 20.dp, bottomEnd = 12.dp),
+                    color = Color(0xFFE53935),  // Rojo como en la web
+                    shape = RoundedCornerShape(
+                        topStart = 16.dp,
+                        bottomEnd = 16.dp
+                    ),
                     modifier = Modifier.align(Alignment.TopStart)
                 ) {
                     Text(
-                        text = stringResource(id = R.string.label_offer),
+                        text = "-20%",
                         color = Color.White,
-                        fontSize = 10.sp,
+                        fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                     )
                 }
-                Surface(
-                    color = Color(0xFFFFD600),
-                    shape = CircleShape,
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(8.dp)
-                        .size(32.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "%",
-                            color = primary,  // ✅ Usa color del tema
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
             }
+
+            // ── Info del producto ──────────────────────────────
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
+                // Nombre del restaurante
                 Text(
                     text = name,
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
-                    maxLines = 1,
-                    color = onSurface  // ✅ Usa color del tema
+                    color = onSurface,
+                    maxLines = 1
                 )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Nombre del producto (ej: "Alitas BBQ")
+                Text(
+                    text = "Alitas BBQ",  // O puedes pasar este parámetro
+                    fontSize = 12.sp,
+                    color = onSurface.copy(alpha = 0.7f),
+                    maxLines = 1
+                )
+
+                Spacer(modifier = Modifier.height(6.dp))
+
+                // ── Precios: precio actual + tachado ──────────
                 Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(top = 4.dp)
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text(
-                        text = price,
-                        color = primary,  // ✅ Usa color del tema
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 16.sp
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = oldPrice,
-                        color = onSurface.copy(alpha = 0.5f),  // ✅ Usa color del tema
-                        fontSize = 11.sp,
-                        style = androidx.compose.ui.text.TextStyle(
-                            textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                    Column {
+                        Text(
+                            text = price,
+                            color = Color(0xFFE53935),  // Rojo como en la web
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 16.sp
                         )
-                    )
+                        Text(
+                            text = oldPrice,
+                            color = onSurface.copy(alpha = 0.4f),
+                            fontSize = 11.sp,
+                            style = androidx.compose.ui.text.TextStyle(
+                                textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                            )
+                        )
+                    }
+
+                    // ── Botones + y - (estilo web) ──────────────
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        if (quantity > 0) {
+                            // Botón "-"
+                            Surface(
+                                shape = CircleShape,
+                                color = Color(0xFFEEEEEE),
+                                modifier = Modifier.size(28.dp),
+                                onClick = { quantity-- }
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = "−",
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF666666)
+                                    )
+                                }
+                            }
+                        }
+
+                        // Cantidad (solo si > 0)
+                        if (quantity > 0) {
+                            Text(
+                                text = quantity.toString(),
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = onSurface,
+                                modifier = Modifier.width(16.dp),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
+
+                        // Botón "+"
+                        Surface(
+                            shape = CircleShape,
+                            color = primary,
+                            modifier = Modifier.size(28.dp),
+                            onClick = { quantity++ }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "+",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
-
-// ── RESTAURANT CARD CON ANIMACIÓN ───────────────────────────────
 @Composable
 fun AnimatedRestaurantCard(
-    name: String,
-    rating: String,
-    time: String,
-    imageUrl: String? = null,
-    imageRes: Int,
-    onClick: () -> Unit,
-    surface: Color,
-    onSurface: Color,
-    onSurfaceVariant: Color
+    name             : String,
+    rating           : String,
+    time             : String,
+    imageUrl         : String? = null,
+    imageRes         : Int,
+    category: String = "",
+    onClick          : () -> Unit,
+    surface          : Color,
+    onSurface        : Color,
+    onSurfaceVariant : Color
 ) {
-    var isPressed by remember { mutableStateOf(false) }
+    var isPressed   by remember { mutableStateOf(false) }
+    var isFavorite  by remember { mutableStateOf(false) }
 
     val scale by animateFloatAsState(
-        targetValue = if (isPressed) 0.95f else 1f,
+        targetValue   = if (isPressed) 0.97f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
+            stiffness    = Spring.StiffnessLow
         ),
         label = "restCardScale"
     )
 
+    // Animación del corazón
+    val heartScale by animateFloatAsState(
+        targetValue   = if (isFavorite) 1.3f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label         = "heartScale"
+    )
+
     Card(
-        modifier = Modifier
-            .width(140.dp)
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .clickable {
-                isPressed = true
-                onClick()
-            },
-        shape = RoundedCornerShape(20.dp),
+        modifier  = Modifier
+            .width(220.dp)                          // más ancha — como la web
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clickable { isPressed = true; onClick() },
+        shape     = RoundedCornerShape(20.dp),
+        colors    = CardDefaults.cardColors(containerColor = surface),
         elevation = CardDefaults.cardElevation(
-            defaultElevation = 2.dp,
+            defaultElevation = 3.dp,
             pressedElevation = 8.dp
-        ),
-        colors = CardDefaults.cardColors(
-            containerColor = surface  // ✅ Usa color del tema
         )
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+
+            // ── Imagen con badges ─────────────────────────────────
             Box(
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                onSurface.copy(alpha = 0.05f),
-                                onSurface.copy(alpha = 0.02f)
-                            )
-                        )
-                    )
-                    .padding(3.dp),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .height(140.dp)
             ) {
+                // Imagen del restaurante
                 AsyncImage(
-                    model = imageUrl ?: imageRes,
-                    contentDescription = null,
-                    modifier = Modifier
-                        .size(70.dp)
-                        .clip(CircleShape),
-                    contentScale = ContentScale.Crop,
-                    error = painterResource(R.drawable.restaurantechino)
+                    model              = imageUrl ?: imageRes,
+                    contentDescription = name,
+                    modifier           = Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
+                    contentScale       = ContentScale.Crop,
+                    error              = painterResource(R.drawable.restaurantechino)
                 )
-            }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Text(
-                text = name,
-                fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                maxLines = 1,
-                color = onSurface  // ✅ Usa color del tema
-            )
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.padding(top = 4.dp)
-            ) {
+                // ── Badge "Abierto" — esquina superior izquierda ──
                 Surface(
-                    shape = CircleShape,
-                    color = FoodRating.copy(alpha = 0.15f),
-                    modifier = Modifier.size(18.dp)
+                    modifier  = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(10.dp),
+                    shape     = RoundedCornerShape(50),
+                    color     = Color(0xFF1D9E75)           // verde como la web
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.Star,
-                            contentDescription = null,
-                            tint = FoodRating,
-                            modifier = Modifier.size(12.dp)
+                    Row(
+                        modifier          = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(Color.White)
+                        )
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            "Abierto",
+                            color      = Color.White,
+                            fontSize   = 10.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
-                Spacer(modifier = Modifier.width(4.dp))
+
+                // ── Botón favorito — esquina superior derecha ─────
+                Box(
+                    modifier         = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(10.dp)
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.9f))
+                        .clickable { isFavorite = !isFavorite },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector        = if (isFavorite)
+                            Icons.Default.Favorite else Icons.Default.FavoriteBorder,
+                        contentDescription = "Favorito",
+                        tint               = if (isFavorite) Color(0xFFD32F2F)
+                        else Color(0xFF888888),
+                        modifier           = Modifier
+                            .size(16.dp)
+                            .graphicsLayer { scaleX = heartScale; scaleY = heartScale }
+                    )
+                }
+            }
+
+            // ── Contenido inferior ────────────────────────────────
+            Column(
+                modifier = Modifier.padding(12.dp)
+            ) {
+                // Nombre del restaurante
                 Text(
-                    text = rating,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = onSurface  // ✅ Usa color del tema
+                    text       = name,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize   = 15.sp,
+                    color      = onSurface,
+                    maxLines   = 1
                 )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Subtítulo — "Seleccionado por clientes"
                 Text(
-                    text = " • $time",
+                    text     = "Seleccionado por clientes",
                     fontSize = 11.sp,
-                    color = onSurfaceVariant  // ✅ Usa color del tema
+                    color    = onSurfaceVariant
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // ── Tag de categoría (pill) ────────────────────────
+                // Extraemos la categoría del nombre como aproximación
+                // hasta que el modelo exponga el campo category directamente
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = Color(0xFFFFF3E0)
+                ) {
+                    Text(
+                        text     = "popular",
+                        fontSize = 11.sp,
+                        color    = Color(0xFFE65100),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // ── Fila de métricas: rating | tiempo | precio ─────
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment     = Alignment.CenterVertically
+                ) {
+                    // Rating
+                    MetricChip(
+                        modifier = Modifier.weight(1f),
+                        icon     = {
+                            Icon(
+                                Icons.Default.Star, null,
+                                tint     = Color(0xFFFFB300),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        },
+                        text     = rating,
+                        bgColor  = Color(0xFFFFF8E1)
+                    )
+
+                    // Tiempo
+                    MetricChip(
+                        modifier = Modifier.weight(1.4f),
+                        icon     = {
+                            Icon(
+                                Icons.Default.Schedule, null,
+                                tint     = Color(0xFF555555),
+                                modifier = Modifier.size(12.dp)
+                            )
+                        },
+                        text     = time,
+                        bgColor  = Color(0xFFF5F5F5)
+                    )
+
+                    // Precio de envío
+                    MetricChip(
+                        modifier = Modifier.weight(1.4f),
+                        icon     = {
+                            Text("🛵", fontSize = 10.sp)
+                        },
+                        text     = "\$3.500",
+                        bgColor  = Color(0xFFF5F5F5)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                // ── "Ver horario completo" ─────────────────────────
+                Text(
+                    text       = "Ver horario completo",
+                    color      = Color(0xFFD32F2F),
+                    fontSize   = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier   = Modifier.clickable { /* TODO: mostrar horario */ }
                 )
             }
+        }
+    }
+}
+
+// ── MetricChip — pill de métrica (rating/tiempo/precio) ──────────
+@Composable
+private fun MetricChip(
+    modifier : Modifier = Modifier,
+    icon     : @Composable () -> Unit,
+    text     : String,
+    bgColor  : Color
+) {
+    Surface(
+        modifier = modifier,
+        shape    = RoundedCornerShape(8.dp),
+        color    = bgColor
+    ) {
+        Row(
+            modifier          = Modifier.padding(horizontal = 6.dp, vertical = 5.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
+        ) {
+            icon()
+            Spacer(modifier = Modifier.width(3.dp))
+            Text(
+                text       = text,
+                fontSize   = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                color      = Color(0xFF333333),
+                maxLines   = 1
+            )
         }
     }
 }
