@@ -6,7 +6,12 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.items
+import android.R.attr.onClick
 import androidx.compose.foundation.shape.CircleShape
 import com.example.appifood_movil.ui.map.MapStyles
 import com.example.appifood_movil.ui.map.rememberMapViewWithLifecycle
@@ -23,6 +28,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -310,7 +316,11 @@ fun RestaurantDetailScreen(
             when (selectedTabIndex) {
                 0 -> { // ── FOTOS ──────────────────────────────────────
                     item {
-                        AnimatedPhotosTab(photos = restaurantData.fotosGaleria)
+                        AnimatedPhotosTab(
+                            photos = restaurantData.fotosGaleria,
+                            navController = navController,
+                            restaurantId = restaurantData.id
+                        )
                     }
                 }
 
@@ -627,8 +637,19 @@ fun AnimatedTabs(
 }
 
 // ── TABS DE FOTOS ──────────────────────────────────────────────────
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AnimatedPhotosTab(photos: List<String>) {
+fun AnimatedPhotosTab(
+    photos: List<String>,
+    navController: NavController,
+    restaurantId: Int
+) {
+    // Estado para el diálogo de imagen completa
+    var fullScreenImage by remember { mutableStateOf<String?>(null) }
+
+    // Estado para mostrar todas las fotos en grid
+    var showAllPhotos by remember { mutableStateOf(false) }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -642,55 +663,183 @@ fun AnimatedPhotosTab(photos: List<String>) {
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
+            // ── HEADER ──────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Galería de imágenes",
+                    text = "📸 Fotos",
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
                     color = TextPrimary
                 )
-                Text(
-                    text = "Ver todas →",
-                    color = RedPrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                if (photos.isNotEmpty()) {
+                    TextButton(onClick = { showAllPhotos = true }) {
+                        Text("Ver todas", color = RedPrimary, fontWeight = FontWeight.Medium)
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
+            // ── GALERÍA DE FOTOS ──────────────────────────────
             if (photos.isEmpty()) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(80.dp)
-                        .background(Color(0xFFF5F5F5), RoundedCornerShape(12.dp)),
+                        .height(100.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFF5F5F5)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "No hay fotos en la galería",
-                        color = Color.Gray,
-                        fontSize = 14.sp
-                    )
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.Photo,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(40.dp)
+                        )
+                        Text(
+                            text = "No hay fotos en la galería",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
                 }
             } else {
+                // Mostrar hasta 5 fotos en horizontal
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(photos) { photoUrl ->
-                        AsyncImage(
-                            model = photoUrl,
-                            contentDescription = "Foto galería",
+                    items(photos.take(5)) { imageUrl ->
+                        Card(
+                            shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
-                                .size(120.dp, 80.dp)
-                                .clip(RoundedCornerShape(12.dp)),
-                            contentScale = ContentScale.Crop,
-                            error = painterResource(R.drawable.restaurantechino)
+                                .size(120.dp, 100.dp)
+                                .clickable {
+                                    // Abrir imagen en pantalla completa
+                                    fullScreenImage = imageUrl
+                                }
+                        ) {
+                            AsyncImage(
+                                model = imageUrl,
+                                contentDescription = "Foto del restaurante",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                error = painterResource(R.drawable.restaurantechino)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── DIÁLOGO PARA IMAGEN COMPLETA ──────────────────────────
+    fullScreenImage?.let { imageUrl ->
+        Dialog(
+            onDismissRequest = { fullScreenImage = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .clickable { fullScreenImage = null }
+            ) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Imagen completa",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentScale = ContentScale.Fit
+                )
+                // Botón cerrar
+                IconButton(
+                    onClick = { fullScreenImage = null },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Cerrar",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
+                    )
+                }
+            }
+        }
+    }
+
+    // ── DIÁLOGO PARA VER TODAS LAS FOTOS ──────────────────────
+    if (showAllPhotos) {
+        Dialog(
+            onDismissRequest = { showAllPhotos = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = Color.White
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Todas las fotos",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
                         )
+                        IconButton(onClick = { showAllPhotos = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Cerrar")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Grid de fotos
+                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(photos) { imageUrl ->
+                            Card(
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .clickable {
+                                        // Cerrar grid y abrir imagen completa
+                                        showAllPhotos = false
+                                        fullScreenImage = imageUrl
+                                    }
+                            ) {
+                                AsyncImage(
+                                    model = imageUrl,
+                                    contentDescription = "Foto",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
+                                    error = painterResource(R.drawable.restaurantechino)
+                                )
+                            }
+                        }
                     }
                 }
             }

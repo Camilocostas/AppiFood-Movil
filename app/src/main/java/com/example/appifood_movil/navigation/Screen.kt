@@ -25,6 +25,7 @@ sealed class Screen(val route: String) {
             "writeReview/$restaurantUid/${Uri.encode(restaurantName)}"
     }
 
+
     object RestaurantOrders : Screen("restaurant_orders")
     object RestaurantOrderDetail : Screen("restaurant_order_detail/{orderId}") {
         fun passOrderId(orderId: String) = "restaurant_order_detail/$orderId"

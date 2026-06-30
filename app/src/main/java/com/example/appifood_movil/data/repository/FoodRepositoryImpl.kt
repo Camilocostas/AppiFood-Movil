@@ -10,6 +10,7 @@ import com.example.appifood_movil.domain.model.FoodProduct
 import com.example.appifood_movil.domain.model.Restaurant
 import com.example.appifood_movil.domain.model.Review
 import com.example.appifood_movil.domain.repository.FoodRepository
+import com.example.appifood_movil.R  // ✅ Este es el R de tu app, no android.R
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
@@ -120,8 +121,8 @@ class FoodRepositoryImpl @Inject constructor(
                             id = restaurant.id * 100 + index,
                             name = platoData.nombre,
                             price = platoData.precio,
-                            imageRes = com.example.appifood_movil.R.drawable.burguer,
-                            imagenUrl = restaurant.imageUrl,
+                            imageRes = R.drawable.burguer,
+                            imagenUrl = platoData.imagenUrl,  // ✅ IMAGEN INDIVIDUAL DEL PLATO
                             description = platoData.descripcion,
                             restaurantId = restaurant.id,
                             disponible = platoData.disponible,
@@ -164,7 +165,8 @@ class FoodRepositoryImpl @Inject constructor(
                             precio = (it["precio"] as? Number)?.toDouble() ?: 0.0
                         )
 
-                    } ?: emptyList()
+                    } ?: emptyList(),
+                    imagenUrl = dish["imagenUrl"] as? String ?: ""
                 )
             }
         } catch (e: Exception) {
@@ -181,7 +183,8 @@ class FoodRepositoryImpl @Inject constructor(
         val descuento: Int = 0,
         val disponible: Boolean = true,
         val adiciones: List<Adicion> = emptyList(),
-        val categoria: String = ""
+        val categoria: String = "",
+        val imagenUrl: String = ""  // ✅ NUEVO
     )
 
     override suspend fun getProductById(id: Int): FoodProduct? {

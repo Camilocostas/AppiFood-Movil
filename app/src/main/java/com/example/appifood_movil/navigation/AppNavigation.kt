@@ -94,6 +94,7 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
             )
         }
 
+
         composable(Screen.Onboarding.route) {
             OnboardingScreen(onFinished = {
                 navController.navigate(Screen.RoleSelection.route) {
