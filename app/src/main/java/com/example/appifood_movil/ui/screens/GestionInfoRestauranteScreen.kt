@@ -76,6 +76,14 @@ fun GestionInfoRestauranteScreen(
             viewModel.uploadGaleriaImage(restauranteId, uri)
         }
     }
+    // Después de llamar a uploadPortadaImage o uploadGaleriaImage
+    val uploadProgress by viewModel.uploadProgress.collectAsState()
+    LaunchedEffect(uploadProgress) {
+        when (uploadProgress) {
+            100 -> Toast.makeText(context, "✅ Imagen subida", Toast.LENGTH_SHORT).show()
+            -1 -> Toast.makeText(context, "❌ Error al subir imagen", Toast.LENGTH_SHORT).show()
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -271,6 +279,7 @@ fun GestionInfoRestauranteScreen(
                     direccion = direccion,
                     telefono = telefono,
                     horario = horario
+                    // ✅ latitude y longitude se calculan automáticamente
                 )
                 showEditDialog = false
                 Toast.makeText(context, "Información actualizada", Toast.LENGTH_SHORT).show()

@@ -9,6 +9,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import com.example.appifood_movil.navigation.Screen
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.appifood_movil.data.model.Review
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -18,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -52,11 +56,24 @@ fun RestaurantDashboardScreen(
 ) {
     val user           = FirebaseAuth.getInstance().currentUser
     val restauranteId  = user?.uid ?: ""
-    val platosActivos  by dashboardViewModel.platosActivos.collectAsState()
+    val platosActivos by dashboardViewModel.platosActivos.collectAsState()
+    val pedidosHoy by dashboardViewModel.pedidosHoy.collectAsState()
+    val ingresosHoy by dashboardViewModel.ingresosHoy.collectAsState()
+    val isLoading by dashboardViewModel.isLoading.collectAsState()
+    val averageRating by dashboardViewModel.averageRating.collectAsState()
+    val reviews by dashboardViewModel.reviews.collectAsState()
+
+    // ✅ Calculamos el valor de la calificación aquí
+    val ratingDisplay = remember(averageRating) {
+        if (averageRating > 0.0) String.format("%.1f", averageRating) else "N/A"
+    }
 
     LaunchedEffect(restauranteId) {
-        if (restauranteId.isNotEmpty()) dashboardViewModel.loadPlatosActivos(restauranteId)
+        if (restauranteId.isNotEmpty()) {
+            dashboardViewModel.loadDashboardData(restauranteId)
+        }
     }
+
 
     // ── Animación de entrada ──────────────────────────────────────
     var visible by remember { mutableStateOf(false) }
@@ -211,19 +228,19 @@ fun RestaurantDashboardScreen(
                     ) {
                         AnimatedStatCard(
                             modifier = Modifier.weight(1f),
-                            emoji    = "📦",
-                            value    = "0",
-                            label    = "Pedidos hoy",
-                            color    = BluePrimary,
-                            index    = 0
+                            emoji = "📦",
+                            value = pedidosHoy.toString(),  // ✅ Ahora es dinámico
+                            label = "Pedidos hoy",
+                            color = BluePrimary,
+                            index = 0
                         )
                         AnimatedStatCard(
                             modifier = Modifier.weight(1f),
-                            emoji    = "💰",
-                            value    = "\$0",
-                            label    = "Ingresos",
-                            color    = GreenSuccess,
-                            index    = 1
+                            emoji = "💰",
+                            value = "$${String.format("%,.0f", ingresosHoy)}",
+                            label = "Ingresos",
+                            color = GreenSuccess,
+                            index = 1
                         )
                     }
 
@@ -236,11 +253,11 @@ fun RestaurantDashboardScreen(
                     ) {
                         AnimatedStatCard(
                             modifier = Modifier.weight(1f),
-                            emoji    = "⭐",
-                            value    = "N/A",
-                            label    = "Calificación",
-                            color    = OrangeWarn,
-                            index    = 2
+                            emoji = "⭐",
+                            value = ratingDisplay,   // ✅ Usamos la variable
+                            label = "Calificación",
+                            color = OrangeWarn,
+                            index = 2
                         )
                         AnimatedStatCard(
                             modifier = Modifier.weight(1f),
@@ -294,12 +311,12 @@ fun RestaurantDashboardScreen(
                     route       = "gestionPlatos"
                 ),
                 GestionItem(
-                    icon        = Icons.Default.Star,
-                    emoji       = "⭐",
-                    title       = "Reseñas",
-                    description = "Lee y responde las reseñas de tus clientes",
-                    color       = OrangeWarn,
-                    route       = "gestionResenas"
+                    icon        = Icons.Default.Receipt,   // Puedes usar Icons.Default.Receipt o Icons.Default.ShoppingCart
+                    emoji       = "📋",
+                    title       = "Pedidos",
+                    description = "Visualiza y gestiona los pedidos entrantes",
+                    color       = BlueAccent,  // o un color que contraste
+                    route       = "restaurant_orders"  // "restaurant_orders"
                 )
             )
 
@@ -309,6 +326,37 @@ fun RestaurantDashboardScreen(
                     index         = index,
                     onNavigate    = { navController.navigate(gestionItems[index].route) }
                 )
+            }
+
+            item {
+                Text(
+                    text = "⭐ Reseñas de clientes",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    color = TextPrimary,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                )
+            }
+
+            // Mostrar hasta 3 reseñas
+
+            items(reviews.take(3)) { review ->
+                ReviewCard(review = review)
+            }
+
+            // Botón "Ver todas" si hay más de 3
+            if (reviews.size > 3) {
+                item {
+                    TextButton(
+                        onClick = {
+                            // Navegar a la pantalla de todas las reseñas (aún por implementar)
+                            navController.navigate("gestionResenas")
+                        },
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    ) {
+                        Text("Ver todas las reseñas (${reviews.size})")
+                    }
+                }
             }
 
             item { Spacer(modifier = Modifier.height(32.dp)) }
@@ -395,7 +443,65 @@ private fun AnimatedStatCard(
         }
     }
 }
+@Composable
+fun ReviewCard(review: com.example.appifood_movil.data.model.Review) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(1.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = review.userName.ifBlank { "Usuario" },
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+                Row {
+                    repeat(5) { index ->
+                        Icon(
+                            imageVector = if (index < review.rating) Icons.Filled.Star else Icons.Filled.StarBorder,
+                            contentDescription = null,
+                            tint = if (index < review.rating) Color(0xFFFFD600) else Color.Gray,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+            if (review.comment.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = review.comment,
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+            }
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = formatDate(review.createdAt),
+                fontSize = 11.sp,
+                color = Color.LightGray
+            )
+        }
+    }
+}
 
+private fun formatDate(timestamp: Long): String {
+    val date = java.util.Date(timestamp)
+    val format = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault())
+    return format.format(date)
+}
 // ── Gestión card animada ──────────────────────────────────────────
 @Composable
 private fun AnimatedGestionCard(

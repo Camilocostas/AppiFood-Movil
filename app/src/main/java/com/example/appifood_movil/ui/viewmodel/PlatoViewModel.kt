@@ -47,6 +47,7 @@ class PlatoViewModel @Inject constructor(
         nombre: String,
         descripcion: String,
         precio: Double,
+        categoria: String,  // ✅ Nuevo parámetro
         adiciones: List<Adicion>,
         imagenUri: Uri?
     ) {
@@ -57,12 +58,11 @@ class PlatoViewModel @Inject constructor(
                     nombre = nombre,
                     descripcion = descripcion,
                     precio = precio,
-                    categoria = "General",
+                    categoria = categoria,  // ✅ Usar categoría
                     adiciones = adiciones,
                     disponible = true,
                     createdAt = System.currentTimeMillis()
                 )
-                // ✅ Usar savePlato para actualizar (sobrescribe el existente)
                 platoRepository.savePlato(restauranteId, plato, imagenUri)
                 loadPlatos(restauranteId)
             } catch (e: Exception) {
@@ -75,8 +75,8 @@ class PlatoViewModel @Inject constructor(
         nombre: String,
         descripcion: String,
         precio: Double,
-        categoria: String,
-        adiciones: List<Adicion>,  // ✅ Recibir adiciones
+        categoria: String,  // ✅ Nuevo parámetro
+        adiciones: List<Adicion>,
         imagenUri: Uri?
     ) {
         viewModelScope.launch {
@@ -85,15 +85,13 @@ class PlatoViewModel @Inject constructor(
                     nombre = nombre,
                     descripcion = descripcion,
                     precio = precio,
-                    categoria = categoria,
-                    adiciones = adiciones,  // ✅ Guardar adiciones
+                    categoria = categoria,  // ✅ Usar categoría
+                    adiciones = adiciones,
                     disponible = true,
                     createdAt = System.currentTimeMillis()
                 )
-
                 platoRepository.savePlato(restauranteId, plato, imagenUri)
                 loadPlatos(restauranteId)
-
             } catch (e: Exception) {
                 Log.e("PlatoViewModel", "Error guardando plato: ${e.message}")
             }

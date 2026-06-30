@@ -9,6 +9,7 @@ data class Order(
     val restaurant      : RestaurantInfo = RestaurantInfo(),
     val items           : List<OrderItem> = emptyList(),
     val payment         : PaymentInfo    = PaymentInfo(),
+    val restaurantUid: String = "",
     val deliveryAddress : String         = "",
     val subtotal        : Int            = 0,
     val shipping        : Int            = 0,

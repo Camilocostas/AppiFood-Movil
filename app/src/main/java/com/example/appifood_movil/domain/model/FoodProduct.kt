@@ -8,7 +8,7 @@ data class FoodProduct(
     val name        : String,
     val price       : Double,
     val imageRes    : Int,
-    val category    : String    = "",
+    val categoria       : String    = "",
     val description : String    = "",
     // ── Campos de Firestore ───────────────────────────────────────
     val imagenUrl        : String       = "",   // URL de imagen en Storage

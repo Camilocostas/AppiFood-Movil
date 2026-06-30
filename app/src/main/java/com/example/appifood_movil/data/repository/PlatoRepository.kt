@@ -10,6 +10,10 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 import com.example.appifood_movil.data.model.Adicion
+import android.app.Application
+import com.example.appifood_movil.service.CloudinaryService
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.tasks.await
 
 data class Plato(
     val id: String = "",
@@ -18,18 +22,22 @@ data class Plato(
     val precio: Double = 0.0,
     val precioPromocion: Double = 0.0,
     val descuento: Int = 0,
-    val categoria: String = "",
+    val categoria: String = "General",  // ✅ Este campo debe existir
     val imagenUrl: String = "",
     val disponible: Boolean = true,
-    val adiciones: List<Adicion> = emptyList(),  // ✅ AGREGAR
+    val adiciones: List<Adicion> = emptyList(),
     val createdAt: Long = System.currentTimeMillis()
 )
+
 
 @Singleton
 class PlatoRepository @Inject constructor(
     private val firestore: FirebaseFirestore,
-    private val storage: FirebaseStorage
+    private val storage: FirebaseStorage,
+    private val application: Application
 ) {
+
+    private val TAG = "PlatoRepository"
 
     fun getPlatos(restauranteId: String): Flow<List<Plato>> = flow {
         try {
@@ -38,71 +46,105 @@ class PlatoRepository @Inject constructor(
                 .get()
                 .await()
 
-            if (doc.exists()) {
-                val dishesList = doc.get("dishes") as? List<Map<String, Any>> ?: emptyList()
-
-                val platos = dishesList.mapIndexed { index, dish ->
-                    Plato(
-                        id = "dish_$index",
-                        nombre = dish["nombre"] as? String ?: "",
-                        descripcion = dish["descripcion"] as? String ?: "",
-                        precio = (dish["precio"] as? Number)?.toDouble() ?: 0.0,
-                        precioPromocion = (dish["precioPromocion"] as? Number)?.toDouble() ?: 0.0,
-                        descuento = (dish["descuento"] as? Number)?.toInt() ?: 0,
-                        categoria = dish["categoria"] as? String ?: "",
-                        imagenUrl = dish["imagenUrl"] as? String ?: "",
-                        disponible = dish["disponible"] as? Boolean ?: true,
-                        // ✅ Leer adiciones
-                        adiciones = (dish["adiciones"] as? List<Map<String, Any>>)?.map {
-                            Adicion(
-                                nombre = it["nombre"] as? String ?: "",
-                                precio = (it["precio"] as? Number)?.toDouble() ?: 0.0
-                            )
-                        } ?: emptyList(),
-                        createdAt = (dish["createdAt"] as? Number)?.toLong() ?: System.currentTimeMillis()
-                    )
-                }
-                emit(platos)
-            } else {
-                emit(emptyList())
+            val dishes = doc.get("dishes") as? List<Map<String, Any>> ?: emptyList()
+            val platos = dishes.map { dish ->
+                Plato(
+                    id = dish["id"] as? String ?: "",
+                    nombre = dish["nombre"] as? String ?: "",
+                    descripcion = dish["descripcion"] as? String ?: "",
+                    precio = (dish["precio"] as? Number)?.toDouble() ?: 0.0,
+                    precioPromocion = (dish["precioPromocion"] as? Number)?.toDouble() ?: 0.0,
+                    descuento = (dish["descuento"] as? Number)?.toInt() ?: 0,
+                    categoria = dish["categoria"] as? String ?: "General",
+                    imagenUrl = dish["imagenUrl"] as? String ?: "",
+                    disponible = dish["disponible"] as? Boolean ?: true,
+                    adiciones = (dish["adiciones"] as? List<Map<String, Any>>)?.map {
+                        Adicion(
+                            nombre = it["nombre"] as? String ?: "",
+                            precio = (it["precio"] as? Number)?.toDouble() ?: 0.0
+                        )
+                    } ?: emptyList(),
+                    createdAt = (dish["createdAt"] as? Number)?.toLong() ?: System.currentTimeMillis()
+                )
             }
+            emit(platos)
         } catch (e: Exception) {
-            Log.e("PlatoRepository", "Error: ${e.message}")
+            Log.e(TAG, "Error cargando platos: ${e.message}")
             emit(emptyList())
         }
     }
 
-    suspend fun savePlato(restauranteId: String, plato: Plato, imagenUri: Uri?) {
+    // ✅ Guardar plato (con imagen)
+    suspend fun savePlato(
+        restauranteId: String,
+        plato: Plato,
+        imagenUri: Uri?
+    ) {
         try {
-            val docRef = firestore.collection("restaurants").document(restauranteId)
-            val doc = docRef.get().await()
+            var imagenUrl = plato.imagenUrl
 
-            val currentDishes = doc.get("dishes") as? List<Map<String, Any>> ?: emptyList()
+            // Si hay imagen nueva, subir a Cloudinary
+            if (imagenUri != null) {
+                val uploadedUrl = CloudinaryService.uploadImage(
+                    context = application,
+                    imageUri = imagenUri,
+                    folder = "restaurantes/$restauranteId/platos",
+                    publicId = plato.id.ifEmpty { System.currentTimeMillis().toString() }
+                )
+                if (uploadedUrl != null) {
+                    imagenUrl = uploadedUrl
+                    Log.d(TAG, "✅ Imagen subida a Cloudinary: $imagenUrl")
+                } else {
+                    Log.e(TAG, "❌ Falló la subida de imagen a Cloudinary")
+                }
+            }
 
-            val newDish = mutableMapOf<String, Any>(
+            // Preparar el mapa del plato (CON ID INCLUIDO)
+            val platoId = if (plato.id.isNotEmpty()) plato.id else System.currentTimeMillis().toString()
+            val platoMap = mapOf(
+                "id" to platoId,  // ✅ ID incluido siempre
                 "nombre" to plato.nombre,
                 "descripcion" to plato.descripcion,
                 "precio" to plato.precio,
                 "precioPromocion" to plato.precioPromocion,
                 "descuento" to plato.descuento,
                 "categoria" to plato.categoria,
+                "imagenUrl" to imagenUrl,
                 "disponible" to plato.disponible,
-                // ✅ Guardar adiciones
-                "adiciones" to plato.adiciones.map { mapOf("nombre" to it.nombre, "precio" to it.precio) },
-                "createdAt" to System.currentTimeMillis()
+                "adiciones" to plato.adiciones.map { a ->
+                    mapOf("nombre" to a.nombre, "precio" to a.precio)
+                },
+                "createdAt" to plato.createdAt
             )
 
-            imagenUri?.let { uri ->
-                val imageUrl = uploadPlatoImage(restauranteId, uri)
-                newDish["imagenUrl"] = imageUrl
+            // Actualizar Firestore
+            val docRef = firestore.collection("restaurants")
+                .document(restauranteId)
+
+            val doc = docRef.get().await()
+            val dishes = doc.get("dishes") as? List<Map<String, Any>> ?: emptyList()
+
+            // ✅ Lógica de actualización corregida
+            val updatedDishes = if (plato.id.isNotEmpty()) {
+                // ACTUALIZAR: buscar por ID y reemplazar
+                val index = dishes.indexOfFirst { it["id"] == plato.id }
+                if (index != -1) {
+                    dishes.toMutableList().apply {
+                        this[index] = platoMap
+                    }
+                } else {
+                    // Si no se encuentra, agregar como nuevo (por seguridad)
+                    dishes + platoMap
+                }
+            } else {
+                // AGREGAR NUEVO
+                dishes + platoMap
             }
 
-            val updatedDishes = currentDishes + newDish
             docRef.update("dishes", updatedDishes).await()
-
+            Log.d(TAG, "✅ Plato guardado correctamente. ID: $platoId")
         } catch (e: Exception) {
-            Log.e("PlatoRepository", "Error guardando: ${e.message}")
-            throw e
+            Log.e(TAG, "❌ Error guardando plato: ${e.message}")
         }
     }
 
@@ -129,34 +171,49 @@ class PlatoRepository @Inject constructor(
         precioPromocion: Double,
         descuento: Int
     ) {
-        val index = platoId.replace("dish_", "").toIntOrNull() ?: return
-        val docRef = firestore.collection("restaurants").document(restauranteId)
-        val doc = docRef.get().await()
+        try {
+            val docRef = firestore.collection("restaurants").document(restauranteId)
+            val doc = docRef.get().await()
+            val dishes = doc.get("dishes") as? List<Map<String, Any>> ?: emptyList()
 
-        val currentDishes = doc.get("dishes") as? List<Map<String, Any>> ?: emptyList()
-        if (index >= currentDishes.size) return
+            val updatedDishes = dishes.map { dish ->
+                if (dish["id"] == platoId) {
+                    dish + mapOf(
+                        "precioPromocion" to precioPromocion,
+                        "descuento" to descuento
+                    )
+                } else {
+                    dish
+                }
+            }
 
-        val updatedDishes = currentDishes.toMutableList()
-        val dish = updatedDishes[index].toMutableMap()
-        dish["precioPromocion"] = precioPromocion
-        dish["descuento"] = descuento
-        updatedDishes[index] = dish
-
-        docRef.update("dishes", updatedDishes).await()
+            docRef.update("dishes", updatedDishes).await()
+            Log.d("PlatoRepository", "✅ Promoción aplicada: $platoId")
+        } catch (e: Exception) {
+            Log.e("PlatoRepository", "❌ Error set promocion: ${e.message}")
+        }
     }
 
     suspend fun deletePlato(restauranteId: String, platoId: String) {
-        val index = platoId.replace("dish_", "").toIntOrNull() ?: return
-        val docRef = firestore.collection("restaurants").document(restauranteId)
-        val doc = docRef.get().await()
+        try {
+            val docRef = firestore.collection("restaurants")
+                .document(restauranteId)
 
-        val currentDishes = doc.get("dishes") as? List<Map<String, Any>> ?: emptyList()
-        if (index >= currentDishes.size) return
+            val doc = docRef.get().await()
+            val dishes = doc.get("dishes") as? List<Map<String, Any>> ?: emptyList()
 
-        val updatedDishes = currentDishes.toMutableList()
-        updatedDishes.removeAt(index)
+            // Filtrar el plato a eliminar por ID
+            val updatedDishes = dishes.filter { it["id"] != platoId }
 
-        docRef.update("dishes", updatedDishes).await()
+            if (updatedDishes.size == dishes.size) {
+                Log.w(TAG, "⚠️ Plato no encontrado para eliminar: $platoId")
+            } else {
+                docRef.update("dishes", updatedDishes).await()
+                Log.d(TAG, "✅ Plato eliminado: $platoId")
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error eliminando plato: ${e.message}")
+        }
     }
 
     suspend fun uploadPlatoImage(restauranteId: String, imageUri: Uri): String {

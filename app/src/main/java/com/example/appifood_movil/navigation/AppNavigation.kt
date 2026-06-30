@@ -122,6 +122,17 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
             RestaurantDashboardScreen(navController = navController)
         }
 
+        composable(Screen.RestaurantOrders.route) {
+            RestaurantOrdersScreen(navController = navController)
+        }
+        composable(Screen.RestaurantOrderDetail.route) { backStackEntry ->
+            val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
+            RestaurantOrderDetailScreen(
+                navController = navController,
+                orderId = orderId
+            )
+        }
+
         composable("gestionPlatos") { GestionPlatosScreen(navController = navController) }
         composable("gestionInfoRestaurante") { GestionInfoRestauranteScreen(navController = navController) }
         composable("gestionResenas") { GestionResenasScreen(navController = navController) }
@@ -169,6 +180,22 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
             CartScreen(
                 navController = navController,
                 cartViewModel = sharedCartViewModel
+            )
+        }
+
+        composable(
+            route = Screen.WriteReview.route,
+            arguments = listOf(
+                navArgument("restaurantUid") { type = NavType.StringType },
+                navArgument("restaurantName") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val uid = backStackEntry.arguments?.getString("restaurantUid") ?: ""
+            val name = backStackEntry.arguments?.getString("restaurantName") ?: ""
+            WriteReviewScreen(
+                navController = navController,
+                restaurantUid = uid,
+                restaurantName = name
             )
         }
 

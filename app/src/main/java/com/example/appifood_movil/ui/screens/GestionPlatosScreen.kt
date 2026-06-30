@@ -9,6 +9,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.animation.core.*
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -46,6 +48,7 @@ import java.util.Locale
 fun GestionPlatosScreen(
     navController: NavController,
     viewModel: PlatoViewModel = hiltViewModel()
+
 ) {
     val user = FirebaseAuth.getInstance().currentUser
     val restauranteId = user?.uid ?: ""
@@ -53,15 +56,19 @@ fun GestionPlatosScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val context = LocalContext.current
 
+
     var showAddDialog by remember { mutableStateOf(false) }
     var showPromocionDialog by remember { mutableStateOf<Plato?>(null) }
     var showEditDialog by remember { mutableStateOf<Plato?>(null) }
+
+
 
     LaunchedEffect(restauranteId) {
         if (restauranteId.isNotEmpty()) {
             viewModel.loadPlatos(restauranteId)
         }
     }
+
 
     Scaffold(
         topBar = {
@@ -134,18 +141,41 @@ fun GestionPlatosScreen(
                         },
                         onPromocion = { showPromocionDialog = plato }
                     )
-                    showEditDialog?.let { plato ->
+                    // Para agregar nuevo plato
+                    if (showAddDialog) {
                         AddPlatoDialog(
-                            plato = plato,  // ✅ Pasar el plato a editar
                             restauranteId = restauranteId,
-                            onDismiss = { showEditDialog = null },
-                            onSave = { nombre, descripcion, precio, adiciones, imagenUri ->
-                                viewModel.updatePlato(
+                            onDismiss = { showAddDialog = false },
+                            onSave = { nombre, descripcion, precio, categoria, adiciones, imagenUri ->  // ✅ Recibir categoría
+                                viewModel.savePlato(
                                     restauranteId = restauranteId,
-                                    platoId = plato.id,
                                     nombre = nombre,
                                     descripcion = descripcion,
                                     precio = precio,
+                                    categoria = categoria,  // ✅ Usar la categoría seleccionada
+                                    adiciones = adiciones,
+                                    imagenUri = imagenUri
+                                )
+                                showAddDialog = false
+                                Toast.makeText(context, "Plato agregado", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
+
+// Para editar plato
+                    if (showEditDialog != null) {
+                        AddPlatoDialog(
+                            plato = showEditDialog,
+                            restauranteId = restauranteId,
+                            onDismiss = { showEditDialog = null },
+                            onSave = { nombre, descripcion, precio, categoria, adiciones, imagenUri ->  // ✅ Recibir categoría
+                                viewModel.updatePlato(
+                                    restauranteId = restauranteId,
+                                    platoId = showEditDialog!!.id,
+                                    nombre = nombre,
+                                    descripcion = descripcion,
+                                    precio = precio,
+                                    categoria = categoria,  // ✅ Usar la categoría seleccionada
                                     adiciones = adiciones,
                                     imagenUri = imagenUri
                                 )
@@ -153,31 +183,7 @@ fun GestionPlatosScreen(
                                 Toast.makeText(context, "Plato actualizado", Toast.LENGTH_SHORT).show()
                             }
                         )
-                    }
-                }
-            }
-        }
-    }
-
-    if (showAddDialog) {
-        AddPlatoDialog(
-            restauranteId = restauranteId,
-            onDismiss = { showAddDialog = false },
-            onSave = { nombre, descripcion, precio, adiciones, imagenUri ->
-                viewModel.savePlato(
-                    restauranteId = restauranteId,
-                    nombre = nombre,
-                    descripcion = descripcion,
-                    precio = precio,
-                    categoria = "General",
-                    adiciones = adiciones,
-                    imagenUri = imagenUri
-                )
-                showAddDialog = false
-                Toast.makeText(context, "Plato agregado", Toast.LENGTH_SHORT).show()
-            }
-        )
-    }
+                    }}}}}
 
     showPromocionDialog?.let { plato ->
         PromocionDialog(
@@ -436,17 +442,29 @@ fun PlatoCardCompleto(
         }
     }
 }
-
+// ── CATEGORÍAS PREDEFINIDAS ──────────────────────────────────────
+private val CATEGORIAS_PREDEFINIDAS = listOf(
+    "Todos",
+    "Bebidas",
+    "Postres",
+    "Rapida",
+    "Oriental",
+    "Mexicana",
+    "Vegetariana"
+)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPlatoDialog(
-    plato: Plato? = null,  // ✅ NUEVO: Para edición
+    plato: Plato? = null,
     restauranteId: String,
     onDismiss: () -> Unit,
-    onSave: (nombre: String, descripcion: String, precio: Double, adiciones: List<Adicion>, imagenUri: Uri?) -> Unit
+    onSave: (nombre: String, descripcion: String, precio: Double, categoria: String, adiciones: List<Adicion>, imagenUri: Uri?) -> Unit  // ✅ Agregar categoria
 ) {
     val context = LocalContext.current
     val formatter = remember { NumberFormat.getCurrencyInstance(Locale("es", "CO")) }
 
+    // ✅ Estado para categoría
+    var categoria by remember { mutableStateOf(plato?.categoria ?: "General") }
     // ✅ Si es edición, cargar los datos del plato
     var nombre by remember { mutableStateOf(plato?.nombre ?: "") }
     var descripcion by remember { mutableStateOf(plato?.descripcion ?: "") }
@@ -535,22 +553,53 @@ fun AddPlatoDialog(
                 Spacer(modifier = Modifier.height(8.dp))
 
                 OutlinedTextField(
-                    value = descripcion,
-                    onValueChange = { descripcion = it },
-                    label = { Text("Descripción") },
-                    modifier = Modifier.fillMaxWidth(),
-                    maxLines = 3
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                OutlinedTextField(
                     value = precio,
                     onValueChange = { precio = it },
                     label = { Text("Precio") },
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                var expanded by remember { mutableStateOf(false) }
+
+                ExposedDropdownMenuBox(
+                    expanded = expanded,
+                    onExpandedChange = { expanded = !expanded }
+                ) {
+                    OutlinedTextField(
+                        value = categoria,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Categoría") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        trailingIcon = {
+                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                        },
+                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    )
+
+                    ExposedDropdownMenu(
+                        expanded = expanded,
+                        onDismissRequest = { expanded = false },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.White)
+                    ) {
+                        CATEGORIAS_PREDEFINIDAS.forEach { cat ->
+                            DropdownMenuItem(
+                                text = { Text(cat) },
+                                onClick = {
+                                    categoria = cat
+                                    expanded = false
+                                }
+                            )
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -637,7 +686,7 @@ fun AddPlatoDialog(
                         onClick = {
                             val precioDouble = precio.toDoubleOrNull()
                             if (nombre.isNotBlank() && precioDouble != null && precioDouble > 0) {
-                                onSave(nombre, descripcion, precioDouble, adiciones, imagenUri)
+                                onSave(nombre, descripcion, precioDouble, categoria, adiciones, imagenUri)  // ✅ Pasar categoría
                             } else {
                                 Toast.makeText(
                                     context,

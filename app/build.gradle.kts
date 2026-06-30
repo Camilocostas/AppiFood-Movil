@@ -1,4 +1,5 @@
     import org.gradle.kotlin.dsl.implementation
+    import java.util.Properties
 
     plugins {
         alias(libs.plugins.android.application)
@@ -45,10 +46,28 @@
         buildFeatures {
             compose = true
         }
+        buildFeatures {
+            compose = true
+            buildConfig = true
+        }
+    }
+    // Leer variables desde local.properties
+    val localProperties = Properties()
+    val localPropertiesFile = rootProject.file("local.properties")
+    if (localPropertiesFile.exists()) {
+        localProperties.load(localPropertiesFile.inputStream())
+    }
+
+    android.defaultConfig {
+        // ... (esto ya existe, solo agrega las líneas de buildConfigField)
+        buildConfigField("String", "CLOUDINARY_CLOUD_NAME", "\"${localProperties.getProperty("CLOUDINARY_CLOUD_NAME")}\"")
+        buildConfigField("String", "CLOUDINARY_API_KEY", "\"${localProperties.getProperty("CLOUDINARY_API_KEY")}\"")
+        buildConfigField("String", "CLOUDINARY_API_SECRET", "\"${localProperties.getProperty("CLOUDINARY_API_SECRET")}\"")
     }
 
     dependencies {
         // Google Maps & Location
+        implementation("com.cloudinary:cloudinary-android:3.0.2")
         implementation(platform("com.google.firebase:firebase-bom:33.5.0"))
         implementation("com.google.firebase:firebase-auth")
         implementation("com.google.android.gms:play-services-auth:21.2.0")
@@ -63,9 +82,12 @@
 
         // Compose & UI (usando libs del TOML)
         // Logging interceptor para OkHttp — necesario para HttpLoggingInterceptor
+        implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.1")
+        implementation("com.jakewharton.timber:timber:5.0.1")
         implementation("com.google.firebase:firebase-messaging-ktx")
 
         // ✅ Para notificaciones locales
+        implementation("org.maplibre.gl:android-sdk:11.0.0")
         implementation("androidx.core:core-ktx:1.12.0")
         implementation("com.google.firebase:firebase-storage-ktx")
         implementation("com.squareup.okhttp3:logging-interceptor:4.12.0")

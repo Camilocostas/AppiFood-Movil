@@ -79,6 +79,7 @@ class FoodRepositoryImpl @Inject constructor(
                     )
                 }
 
+                // Dentro de getRestaurantsFromFirestore()
                 Restaurant(
                     id = uid.hashCode(),
                     name = restaurantName,
@@ -91,12 +92,13 @@ class FoodRepositoryImpl @Inject constructor(
                     rating = "4.5",
                     category = doc.getString("categoria") ?: "General",
                     deliveryTime = "30-45 min",
-                    latitude = 0.0,
-                    longitude = 0.0,
+                    latitude = (doc.get("latitude") as? Number)?.toDouble() ?: 0.0,
+                    longitude = (doc.get("longitude") as? Number)?.toDouble() ?: 0.0,
                     uid = uid,
                     estado = if (estado.isNotEmpty()) estado else "activo",
                     dishes = dishes,
-                    reviews = emptyList()
+                    reviews = emptyList(),
+                    fotosGaleria = (doc.get("fotosGaleria") as? List<String>) ?: emptyList()  // ✅ NUEVO
                 )
             }
         } catch (e: Exception) {
@@ -120,13 +122,13 @@ class FoodRepositoryImpl @Inject constructor(
                             price = platoData.precio,
                             imageRes = com.example.appifood_movil.R.drawable.burguer,
                             imagenUrl = restaurant.imageUrl,
-                            category = restaurant.category,
                             description = platoData.descripcion,
                             restaurantId = restaurant.id,
                             disponible = platoData.disponible,
                             precioPromocion = platoData.precioPromocion,
                             descuento = platoData.descuento,
-                            adiciones = platoData.adiciones
+                            adiciones = platoData.adiciones,
+                            categoria = platoData.categoria
                         )
                     )
                 }
@@ -154,12 +156,14 @@ class FoodRepositoryImpl @Inject constructor(
                     precio = (dish["precio"] as? Number)?.toDouble() ?: 0.0,
                     precioPromocion = (dish["precioPromocion"] as? Number)?.toDouble() ?: 0.0,
                     descuento = (dish["descuento"] as? Number)?.toInt() ?: 0,
+                    categoria = dish["categoria"] as? String ?: "",
                     disponible = dish["disponible"] as? Boolean ?: true,
                     adiciones = (dish["adiciones"] as? List<Map<String, Any>>)?.map {
                         Adicion(
                             nombre = it["nombre"] as? String ?: "",
                             precio = (it["precio"] as? Number)?.toDouble() ?: 0.0
                         )
+
                     } ?: emptyList()
                 )
             }
@@ -176,7 +180,8 @@ class FoodRepositoryImpl @Inject constructor(
         val precioPromocion: Double = 0.0,
         val descuento: Int = 0,
         val disponible: Boolean = true,
-        val adiciones: List<Adicion> = emptyList()
+        val adiciones: List<Adicion> = emptyList(),
+        val categoria: String = ""
     )
 
     override suspend fun getProductById(id: Int): FoodProduct? {
@@ -256,7 +261,7 @@ class FoodRepositoryImpl @Inject constructor(
                 name             = dish["nombre"] as? String ?: "",
                 price            = (dish["precio"] as? Number)?.toDouble() ?: 0.0,
                 imageRes         = com.example.appifood_movil.R.drawable.burguer,
-                category         = dish["categoria"] as? String ?: "",
+                categoria        = dish["categoria"] as? String ?: "",
                 description      = dish["descripcion"] as? String ?: "",
                 imagenUrl        = dish["imagenUrl"] as? String ?: "",
                 precioPromocion  = (dish["precioPromocion"] as? Number)?.toDouble() ?: 0.0,
@@ -276,7 +281,8 @@ class FoodRepositoryImpl @Inject constructor(
     override suspend fun getRestaurantById(id: Int): Restaurant? {
         return try {
             val restaurants = getRestaurantsFromFirestore()
-            restaurants.find { it.id == id }
+            // 🔍 Buscar por id (hash) o por uid (convertido a Int para comparar)
+            restaurants.find { it.id == id || it.uid == id.toString() }
         } catch (e: Exception) {
             null
         }
@@ -287,6 +293,7 @@ class FoodRepositoryImpl @Inject constructor(
         name = this.name,
         phone = this.phone ?: "",
         address = this.address ?: "",
+        description = "",
         imageUrl = this.image ?: this.logo ?: "",
         imageRes = com.example.appifood_movil.R.drawable.restaurantechino,
         schedule = this.time ?: "Horario no disponible",

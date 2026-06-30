@@ -8,6 +8,7 @@ import com.example.appifood_movil.domain.model.Restaurant
 import com.example.appifood_movil.domain.repository.FoodRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.*
+import java.text.Normalizer
 import javax.inject.Inject
 
 data class SearchCriteria(
@@ -27,24 +28,27 @@ class SearchViewModel @Inject constructor(
     private val _criteria = MutableStateFlow(SearchCriteria())
     val criteria = _criteria.asStateFlow()
 
-    // Combinamos el flujo de restaurantes del repo con los criterios de búsqueda
     val filteredRestaurants: StateFlow<List<Restaurant>> = combine(
         foodRepository.getRestaurants(),
         _criteria
     ) { restaurants, c ->
-        restaurants.filter { rest ->
-            // 1. Filtro por búsqueda de texto
-            val matchesQuery = c.query.isBlank() ||
-                    rest.name.contains(c.query, true) ||
-                    rest.category.contains(c.query, true) ||
-                    rest.dishes.any { it.name.contains(c.query, true) }
+        val queryTokens = normalize(c.query)
+            .split(" ")
+            .filter { it.isNotBlank() }
 
-            // 2. Filtro por precio máximo
-            val matchesPrice = rest.dishes.isEmpty() || rest.dishes.any { dish ->
-                dish.price <= c.maxPrice
+        restaurants.filter { rest ->
+            val matchesQuery = queryTokens.isEmpty() || queryTokens.any { token ->
+                normalize(rest.name).contains(token) ||
+                        normalize(rest.category).contains(token) ||
+                        normalize(rest.description).contains(token) ||
+                        rest.dishes.any { dish -> normalize(dish.name).contains(token) }
             }
 
-            // 3. Filtro por distancia
+            // Precio regular del plato (no promoción) — al menos un plato
+            // dentro del presupuesto, o restaurante sin platos cargados aún
+            val matchesPrice = rest.dishes.isEmpty() ||
+                    rest.dishes.any { dish -> dish.price <= c.maxPrice }
+
             val matchesDistance = if (c.userLocation != null && c.radiusKm < 500) {
                 val results = FloatArray(1)
                 Location.distanceBetween(
@@ -63,6 +67,16 @@ class SearchViewModel @Inject constructor(
             matchesQuery && matchesPrice && matchesDistance
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /**
+     * Normaliza texto para búsqueda: minúsculas y sin tildes/diacríticos.
+     * Permite que "café" encuentre "cafe" y viceversa.
+     */
+    private fun normalize(text: String): String {
+        val lower = text.lowercase()
+        val normalized = Normalizer.normalize(lower, Normalizer.Form.NFD)
+        return normalized.replace(Regex("\\p{Mn}+"), "")
+    }
 
     fun fetchUserLocation() {
         locationManager.getCurrentLocation { loc ->

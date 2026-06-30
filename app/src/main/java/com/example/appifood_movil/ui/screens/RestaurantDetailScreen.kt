@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
+import com.example.appifood_movil.ui.map.MapStyles
+import com.example.appifood_movil.ui.map.rememberMapViewWithLifecycle
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -25,19 +27,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.compose.ui.viewinterop.AndroidView
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.maps.Style
 import com.example.appifood_movil.R
 import com.example.appifood_movil.ui.components.AppiFoodFooter
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.appifood_movil.ui.viewmodel.RestaurantDetailViewModel
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MarkerState
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.rememberCameraPositionState
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.graphicsLayer
 import java.text.NumberFormat
@@ -45,6 +44,8 @@ import java.util.Locale
 import android.widget.Toast
 import androidx.compose.foundation.lazy.LazyRow
 import com.example.appifood_movil.navigation.Screen
+import org.maplibre.android.annotations.MarkerOptions
+import org.maplibre.android.geometry.LatLng
 
 // ── Paleta unificada ──────────────────────────────────────────────
 private val RedPrimary   = Color(0xFFD32F2F)
@@ -65,6 +66,7 @@ fun RestaurantDetailScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val context = LocalContext.current
     val platos by viewModel.platos.collectAsState()
+    val reviews by viewModel.reviews.collectAsState()
 
     // ── LOG PARA VERIFICAR EL ID ─────────────────────────────────
     android.util.Log.d("RestaurantDetail", "ID recibido: $id")
@@ -229,8 +231,9 @@ fun RestaurantDetailScreen(
                                 fontSize = 15.sp,
                                 color = TextPrimary
                             )
+                            val reviewCount = viewModel.reviews.collectAsState().value.size
                             Text(
-                                text = " (${restaurantData.reviews.size} reseñas)",
+                                text = " ($reviewCount reseñas)",
                                 color = TextMuted,
                                 fontSize = 13.sp
                             )
@@ -275,6 +278,25 @@ fun RestaurantDetailScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    Button(
+                        onClick = {
+                            navController.navigate("writeReview/${restaurantData.uid}/${restaurantData.name}")
+
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFFD600),
+                                    contentColor = Color.Black
+                        ),
+
+                    ) {
+                        Icon(Icons.Default.Star, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Escribir reseña")
+                    }
+
                     // ── TABS ───────────────────────────────────────────
                     AnimatedTabs(
                         selectedTabIndex = selectedTabIndex,
@@ -288,7 +310,7 @@ fun RestaurantDetailScreen(
             when (selectedTabIndex) {
                 0 -> { // ── FOTOS ──────────────────────────────────────
                     item {
-                        AnimatedPhotosTab()
+                        AnimatedPhotosTab(photos = restaurantData.fotosGaleria)
                     }
                 }
 
@@ -332,7 +354,7 @@ fun RestaurantDetailScreen(
                 }
 
                 2 -> { // ── RESEÑAS ────────────────────────────────────
-                    if (restaurantData.reviews.isEmpty()) {
+                    if (reviews.isEmpty()) {
                         item {
                             EmptyStateMessage(
                                 icon = Icons.Default.Comment,
@@ -340,7 +362,7 @@ fun RestaurantDetailScreen(
                             )
                         }
                     } else {
-                        items(restaurantData.reviews) { review ->
+                        items(reviews) { review ->   // ✅ Usar la lista actualizada
                             AnimatedReviewItem(review = review)
                         }
                     }
@@ -606,13 +628,7 @@ fun AnimatedTabs(
 
 // ── TABS DE FOTOS ──────────────────────────────────────────────────
 @Composable
-fun AnimatedPhotosTab() {
-    val photos = listOf(
-        R.drawable.restaurante,
-        R.drawable.restaurantechino,
-        R.drawable.burguer
-    )
-
+fun AnimatedPhotosTab(photos: List<String>) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -647,27 +663,40 @@ fun AnimatedPhotosTab() {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(photos) { photo ->
-                    Image(
-                        painter = painterResource(id = photo),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(120.dp, 80.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop
+            if (photos.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(80.dp)
+                        .background(Color(0xFFF5F5F5), RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "No hay fotos en la galería",
+                        color = Color.Gray,
+                        fontSize = 14.sp
                     )
+                }
+            } else {
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(photos) { photoUrl ->
+                        AsyncImage(
+                            model = photoUrl,
+                            contentDescription = "Foto galería",
+                            modifier = Modifier
+                                .size(120.dp, 80.dp)
+                                .clip(RoundedCornerShape(12.dp)),
+                            contentScale = ContentScale.Crop,
+                            error = painterResource(R.drawable.restaurantechino)
+                        )
+                    }
                 }
             }
         }
     }
 }
-
-// ── PLATO ANIMADO ─────────────────────────────────────────────────
-// ui/screens/RestaurantDetailScreen.kt
-
 // ── PLATO ANIMADO ─────────────────────────────────────────────────
 @Composable
 fun AnimatedDishItem(
@@ -885,30 +914,32 @@ fun AnimatedMapSection(
                 }
             }
 
-            // ── MAPA ──────────────────────────────────────────────────
+            // ── MAPA CON MAPLIBRE (100% GRATUITO) ──────────────────
             if (hasValidLocation) {
-                val restaurantLocation = LatLng(latitude, longitude)
-                val cameraPositionState = rememberCameraPositionState {
-                    position = CameraPosition.fromLatLngZoom(restaurantLocation, 15f)
-                }
+                val location = LatLng(latitude, longitude)
+                val cameraPosition = CameraPosition.Builder()
+                    .target(location)
+                    .zoom(15.0)
+                    .build()
 
-                GoogleMap(
+                val mapView = rememberMapViewWithLifecycle()
+
+                AndroidView(
+                    factory = { mapView },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    cameraPositionState = cameraPositionState,
-                    uiSettings = MapUiSettings(
-                        zoomControlsEnabled = true,
-                        compassEnabled = true,
-                        myLocationButtonEnabled = false
-                    )
-                ) {
-                    Marker(
-                        state = MarkerState(position = restaurantLocation),
-                        title = name,
-                        snippet = address
-                    )
+                        .clip(RoundedCornerShape(12.dp))
+                ) { view ->
+                    view.getMapAsync { mapboxMap ->
+                        mapboxMap.setStyle(MapStyles.openFreeMapStyleUrl) { style ->
+                            mapboxMap.cameraPosition = cameraPosition
+                            mapboxMap.markers.forEach { mapboxMap.removeMarker(it) } // evita duplicar markers en recomposición
+                            mapboxMap.addMarker(
+                                MarkerOptions().position(location).title(name).snippet(address)
+                            )
+                        }
+                    }
                 }
             } else {
                 // ── MENSAJE SI NO HAY UBICACIÓN ──────────────────────
@@ -943,7 +974,7 @@ fun AnimatedMapSection(
 
 // ── RESEÑA ANIMADA ────────────────────────────────────────────────
 @Composable
-fun AnimatedReviewItem(review: com.example.appifood_movil.domain.model.Review) {
+fun AnimatedReviewItem(review: com.example.appifood_movil.data.model.Review) {
     var expanded by remember { mutableStateOf(false) }
 
     Card(
@@ -975,7 +1006,7 @@ fun AnimatedReviewItem(review: com.example.appifood_movil.domain.model.Review) {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = review.user.take(1).uppercase(),
+                            text = review.userName.take(1).uppercase(),  // ✅ Cambiado
                             color = RedPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
@@ -986,7 +1017,7 @@ fun AnimatedReviewItem(review: com.example.appifood_movil.domain.model.Review) {
 
                     Column {
                         Text(
-                            text = review.user,
+                            text = review.userName,  // ✅ Cambiado
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
                             color = TextPrimary
@@ -1006,7 +1037,7 @@ fun AnimatedReviewItem(review: com.example.appifood_movil.domain.model.Review) {
                 }
 
                 Text(
-                    text = "hace 2 días",
+                    text = formatDate(review.createdAt),  // ✅ Usar función de formato
                     color = TextMuted,
                     fontSize = 11.sp
                 )
@@ -1038,6 +1069,13 @@ fun AnimatedReviewItem(review: com.example.appifood_movil.domain.model.Review) {
             }
         }
     }
+}
+
+// ✅ Agrega esta función de formato si no existe
+private fun formatDate(timestamp: Long): String {
+    val date = java.util.Date(timestamp)
+    val format = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault())
+    return format.format(date)
 }
 
 // ── ESTADO VACÍO ──────────────────────────────────────────────────

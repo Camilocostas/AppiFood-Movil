@@ -179,12 +179,17 @@ fun HomeScreen(
                     primary = primary
                 )
                 val categories = listOf("Todos", "Bebidas", "Postres", "Rapida", "Oriental", "Mexicana", "Vegetariana")
+                val selectedCategory by viewModel.selectedCategory.collectAsState()
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     items(categories) { cat ->
-                        val isSelected = (cat == "Todos" && viewModel.selectedCategory == "Todas") || viewModel.selectedCategory == cat
+                        val isSelected = if (cat == "Todos") {
+                            selectedCategory == "Todos"  // ✅ Comparar con el valor
+                        } else {
+                            selectedCategory == cat
+                        }
                         AnimatedCategoryChip(
                             text = cat,
                             isSelected = isSelected,
@@ -197,6 +202,8 @@ fun HomeScreen(
                 }
             }
 
+
+            // En HomeScreen.kt, dentro del LazyColumn
             item {
                 AnimatedSectionHeader(
                     title = stringResource(id = R.string.section_promotions),
@@ -208,8 +215,10 @@ fun HomeScreen(
             }
 
             item {
-                if (promotionProducts.isEmpty()) {
-                    // ✅ Mostrar mensaje si no hay promociones
+                // ✅ Usar filteredPromotions en lugar de promotionProducts
+                val filteredPromotions by viewModel.filteredPromotions.collectAsState()
+
+                if (filteredPromotions.isEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -217,7 +226,7 @@ fun HomeScreen(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "No hay promociones disponibles",
+                            text = "No hay promociones en esta categoría",
                             color = Color.Gray,
                             fontSize = 14.sp
                         )
@@ -227,14 +236,14 @@ fun HomeScreen(
                         contentPadding = PaddingValues(horizontal = 20.dp),
                         horizontalArrangement = Arrangement.spacedBy(15.dp)
                     ) {
-                        items(promotionProducts) { product ->  // ✅ Usar promotionProducts
+                        items(filteredPromotions) { product ->
                             AnimatedPromoFoodCard(
                                 name = product.name,
-                                price = "$ ${String.format("%,.0f", product.precioPromocion)}",  // ✅ Precio con promoción
-                                oldPrice = "$ ${String.format("%,.0f", product.price)}",        // ✅ Precio original
+                                price = "$ ${String.format("%,.0f", product.precioPromocion)}",
+                                oldPrice = "$ ${String.format("%,.0f", product.price)}",
                                 imageUrl = product.imagenUrl,
                                 imageRes = product.imageRes,
-                                discount = product.descuento,  // ✅ Nuevo parámetro
+                                discount = product.descuento,
                                 onNavigate = {
                                     navController.navigate(Screen.ProductDetail.passId(product.id))
                                 },
