@@ -4,16 +4,13 @@ import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.Spring
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -23,15 +20,19 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
@@ -40,15 +41,32 @@ import com.example.appifood_movil.data.model.Adicion
 import com.example.appifood_movil.data.repository.Plato
 import com.example.appifood_movil.ui.viewmodel.PlatoViewModel
 import com.google.firebase.auth.FirebaseAuth
+import kotlinx.coroutines.delay
 import java.text.NumberFormat
+import androidx.compose.foundation.lazy.LazyRow
 import java.util.Locale
+
+// ─── COLORES Y FORMATO ──────────────────────────────────────────────
+private val PrimaryColor = Color(0xFF1565C0)
+private val PrimaryLight = Color(0xFF42A5F5)
+private val SuccessColor = Color(0xFF1D9E75)
+private val ErrorColor = Color(0xFFE53935)
+private val WarningColor = Color(0xFFFF9800)
+private val TextPrimary = Color(0xFF1A1A1A)
+private val TextSecondary = Color(0xFF666666)
+private val SurfaceColor = Color(0xFFFFFFFF)
+private val BackgroundGray = Color(0xFFF5F7FA)
+
+private val formatter = NumberFormat.getCurrencyInstance(Locale("es", "CO"))
+
+// ─── CATEGORÍAS ──────────────────────────────────────────────────────
+private val CATEGORIAS = listOf("Todos", "Bebidas", "Postres", "Rapida", "Oriental", "Mexicana", "Vegetariana")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GestionPlatosScreen(
     navController: NavController,
     viewModel: PlatoViewModel = hiltViewModel()
-
 ) {
     val user = FirebaseAuth.getInstance().currentUser
     val restauranteId = user?.uid ?: ""
@@ -56,12 +74,9 @@ fun GestionPlatosScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val context = LocalContext.current
 
-
     var showAddDialog by remember { mutableStateOf(false) }
     var showPromocionDialog by remember { mutableStateOf<Plato?>(null) }
     var showEditDialog by remember { mutableStateOf<Plato?>(null) }
-
-
 
     LaunchedEffect(restauranteId) {
         if (restauranteId.isNotEmpty()) {
@@ -69,280 +84,316 @@ fun GestionPlatosScreen(
         }
     }
 
-
     Scaffold(
+        containerColor = BackgroundGray,
         topBar = {
             TopAppBar(
-                title = { Text("Mis Platos") },
+                title = {
+                    Text(
+                        text = "🍽️ Mis Platos",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 20.sp
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Volver")
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showAddDialog = true }) {
+                    FloatingActionButton(
+                        onClick = { showAddDialog = true },
+                        containerColor = PrimaryColor,
+                        contentColor = Color.White,
+                        shape = CircleShape,
+                        modifier = Modifier.size(48.dp)
+                    ) {
                         Icon(Icons.Default.Add, contentDescription = "Agregar plato")
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = SurfaceColor,
+                    scrolledContainerColor = SurfaceColor
+                )
             )
         }
     ) { paddingValues ->
-        if (isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                CircularProgressIndicator()
-            }
-        } else if (platos.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
+        Box(modifier = Modifier.fillMaxSize()) {
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxSize().padding(paddingValues),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = PrimaryColor)
+                }
+            } else if (platos.isEmpty()) {
+                EmptyStateView(onAddClick = { showAddDialog = true })
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(paddingValues)
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Restaurant,
-                        contentDescription = null,
-                        modifier = Modifier.size(80.dp),
-                        tint = Color.Gray
-                    )
-                    Text("No tienes platos", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                    Text("Agrega tu primer plato", color = Color.Gray)
-                    Button(onClick = { showAddDialog = true }) {
-                        Text("Agregar plato")
+                    itemsIndexed(platos) { index, plato ->
+                        AnimatedPlatoCard(
+                            plato = plato,
+                            index = index,
+                            onEdit = { showEditDialog = plato },
+                            onToggleDisponible = {
+                                viewModel.toggleDisponible(restauranteId, plato.id)
+                            },
+                            onDelete = {
+                                viewModel.deletePlato(restauranteId, plato.id)
+                                Toast.makeText(context, "Plato eliminado", Toast.LENGTH_SHORT).show()
+                            },
+                            onPromocion = { showPromocionDialog = plato }
+                        )
                     }
                 }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                items(platos) { plato ->
-                    PlatoCardCompleto(
-                        plato = plato,
-                        onEdit = { showEditDialog = plato },
-                        onToggleDisponible = {
-                            viewModel.toggleDisponible(restauranteId, plato.id)
-                        },
-                        onDelete = {
-                            viewModel.deletePlato(restauranteId, plato.id)
-                            Toast.makeText(context, "Plato eliminado", Toast.LENGTH_SHORT).show()
-                        },
-                        onPromocion = { showPromocionDialog = plato }
-                    )
-                    // Para agregar nuevo plato
-                    if (showAddDialog) {
-                        AddPlatoDialog(
-                            restauranteId = restauranteId,
-                            onDismiss = { showAddDialog = false },
-                            onSave = { nombre, descripcion, precio, categoria, adiciones, imagenUri ->  // ✅ Recibir categoría
-                                viewModel.savePlato(
-                                    restauranteId = restauranteId,
-                                    nombre = nombre,
-                                    descripcion = descripcion,
-                                    precio = precio,
-                                    categoria = categoria,  // ✅ Usar la categoría seleccionada
-                                    adiciones = adiciones,
-                                    imagenUri = imagenUri
-                                )
-                                showAddDialog = false
-                                Toast.makeText(context, "Plato agregado", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                    }
 
-// Para editar plato
-                    if (showEditDialog != null) {
-                        AddPlatoDialog(
-                            plato = showEditDialog,
-                            restauranteId = restauranteId,
-                            onDismiss = { showEditDialog = null },
-                            onSave = { nombre, descripcion, precio, categoria, adiciones, imagenUri ->  // ✅ Recibir categoría
-                                viewModel.updatePlato(
-                                    restauranteId = restauranteId,
-                                    platoId = showEditDialog!!.id,
-                                    nombre = nombre,
-                                    descripcion = descripcion,
-                                    precio = precio,
-                                    categoria = categoria,  // ✅ Usar la categoría seleccionada
-                                    adiciones = adiciones,
-                                    imagenUri = imagenUri
-                                )
-                                showEditDialog = null
-                                Toast.makeText(context, "Plato actualizado", Toast.LENGTH_SHORT).show()
-                            }
-                        )
-                    }}}}}
-
-    showPromocionDialog?.let { plato ->
-        PromocionDialog(
-            plato = plato,
-            restauranteId = restauranteId,
-            onDismiss = { showPromocionDialog = null },
-            onSave = { precioPromocion, descuento ->
-                viewModel.setPromocion(
+            // ─── DIÁLOGOS ──────────────────────────────────────────────
+            if (showAddDialog) {
+                AddEditPlatoDialog(
                     restauranteId = restauranteId,
-                    platoId = plato.id,
-                    precioPromocion = precioPromocion,
-                    descuento = descuento
+                    onDismiss = { showAddDialog = false },
+                    onSave = { nombre, descripcion, precio, categoria, adiciones, imagenUri ->
+                        viewModel.savePlato(
+                            restauranteId = restauranteId,
+                            nombre = nombre,
+                            descripcion = descripcion,
+                            precio = precio,
+                            categoria = categoria,
+                            adiciones = adiciones,
+                            imagenUri = imagenUri
+                        )
+                        showAddDialog = false
+                        Toast.makeText(context, "¡Plato agregado!", Toast.LENGTH_SHORT).show()
+                    }
                 )
-                showPromocionDialog = null
-                Toast.makeText(context, "Promoción aplicada", Toast.LENGTH_SHORT).show()
             }
-        )
+
+            if (showEditDialog != null) {
+                AddEditPlatoDialog(
+                    plato = showEditDialog,
+                    restauranteId = restauranteId,
+                    onDismiss = { showEditDialog = null },
+                    onSave = { nombre, descripcion, precio, categoria, adiciones, imagenUri ->
+                        viewModel.updatePlato(
+                            restauranteId = restauranteId,
+                            platoId = showEditDialog!!.id,
+                            nombre = nombre,
+                            descripcion = descripcion,
+                            precio = precio,
+                            categoria = categoria,
+                            adiciones = adiciones,
+                            imagenUri = imagenUri
+                        )
+                        showEditDialog = null
+                        Toast.makeText(context, "¡Plato actualizado!", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+
+            if (showPromocionDialog != null) {
+                PromocionDialog(
+                    plato = showPromocionDialog!!,
+                    restauranteId = restauranteId,
+                    onDismiss = { showPromocionDialog = null },
+                    onSave = { precioPromocion, descuento ->
+                        viewModel.setPromocion(
+                            restauranteId = restauranteId,
+                            platoId = showPromocionDialog!!.id,
+                            precioPromocion = precioPromocion,
+                            descuento = descuento
+                        )
+                        showPromocionDialog = null
+                        Toast.makeText(context, "Promoción aplicada", Toast.LENGTH_SHORT).show()
+                    }
+                )
+            }
+        }
     }
 }
 
+// ─── ANIMATED PLATO CARD ─────────────────────────────────────────────
 @Composable
-fun PlatoCardCompleto(
-    plato              : Plato,
-    onEdit             : () -> Unit,  // ✅ AGREGAR
-    onToggleDisponible : () -> Unit,
-    onDelete           : () -> Unit,
-    onPromocion        : () -> Unit
+fun AnimatedPlatoCard(
+    plato: Plato,
+    index: Int,
+    onEdit: () -> Unit,
+    onToggleDisponible: () -> Unit,
+    onDelete: () -> Unit,
+    onPromocion: () -> Unit
 ) {
-    val formatter  = remember { NumberFormat.getCurrencyInstance(Locale("es", "CO")) }
-    var isPressed  by remember { mutableStateOf(false) }
+    var isPressed by remember { mutableStateOf(false) }
+    var isVisible by remember { mutableStateOf(false) }
 
     val scale by animateFloatAsState(
-        targetValue   = if (isPressed) 0.98f else 1f,
+        targetValue = if (isPressed) 0.97f else 1f,
         animationSpec = spring(Spring.DampingRatioMediumBouncy),
-        label         = "platoScale"
+        label = "cardScale"
     )
 
+    val alpha by animateFloatAsState(
+        targetValue = if (isVisible) 1f else 0f,
+        animationSpec = tween(300, easing = EaseOutQuad),
+        label = "cardAlpha"
+    )
+
+    val offsetY by animateDpAsState(
+        targetValue = if (isVisible) 0.dp else 30.dp,
+        animationSpec = spring(Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow),
+        label = "cardOffset"
+    )
+
+    LaunchedEffect(Unit) {
+        delay(index * 50L)
+        isVisible = true
+    }
+
     Card(
-        modifier  = Modifier
+        modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clickable { isPressed = true },  // ✅ Click en la card
-        shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(3.dp)
+            .graphicsLayer {
+                scaleX = scale
+                scaleY = scale
+                this.alpha = alpha
+                translationY = offsetY.value
+            }
+            .clickable { isPressed = true },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = SurfaceColor),
+        elevation = CardDefaults.cardElevation(
+            defaultElevation = 2.dp,
+            pressedElevation = 6.dp
+        )
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-
-            // ── Banda de estado arriba ────────────────────────────
+            // Banda de estado
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(4.dp)
+                    .height(5.dp)
                     .background(
-                        if (plato.disponible) Color(0xFF1D9E75)
-                        else Color(0xFFE53935)
+                        if (plato.disponible) SuccessColor else ErrorColor
                     )
             )
 
             Row(
-                modifier          = Modifier
+                modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp),
+                    .padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // ── Imagen ────────────────────────────────────────
+                // Imagen con badge
                 Box(
                     modifier = Modifier
-                        .size(80.dp)
+                        .size(90.dp)
                         .clip(RoundedCornerShape(16.dp))
+                        .shadow(4.dp, RoundedCornerShape(16.dp))
                 ) {
                     if (plato.imagenUrl.isNotEmpty()) {
                         AsyncImage(
-                            model              = plato.imagenUrl,
+                            model = plato.imagenUrl,
                             contentDescription = plato.nombre,
-                            modifier           = Modifier.fillMaxSize(),
-                            contentScale       = ContentScale.Crop
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
                     } else {
                         Image(
-                            painter            = painterResource(id = R.drawable.burguer),
+                            painter = painterResource(id = R.drawable.burguer),
                             contentDescription = plato.nombre,
-                            modifier           = Modifier.fillMaxSize(),
-                            contentScale       = ContentScale.Crop
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
                         )
                     }
-                    // Badge disponible sobre imagen
+
+                    // Badge de estado
                     Surface(
-                        modifier  = Modifier
+                        modifier = Modifier
                             .align(Alignment.BottomStart)
-                            .padding(4.dp),
-                        shape     = RoundedCornerShape(6.dp),
-                        color     = if (plato.disponible) Color(0xFF1D9E75) else Color(0xFFE53935)
+                            .padding(5.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (plato.disponible) SuccessColor else ErrorColor,
+                        shadowElevation = 2.dp
                     ) {
-                        Text(
-                            text     = if (plato.disponible) "✓" else "✗",
-                            color    = Color.White,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                if (plato.disponible) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(modifier = Modifier.width(3.dp))
+                            Text(
+                                text = if (plato.disponible) "Disponible" else "No disponible",
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
 
-                Spacer(modifier = Modifier.width(14.dp))
+                Spacer(modifier = Modifier.width(16.dp))
 
-                // ── Info ──────────────────────────────────────────
+                // Info del plato
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text       = plato.nombre,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize   = 16.sp,
-                        color      = Color(0xFF1A1A1A),
-                        maxLines   = 1
+                        text = plato.nombre,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp,
+                        color = TextPrimary,
+                        maxLines = 1
                     )
+
                     Text(
-                        text     = plato.descripcion,
-                        fontSize = 12.sp,
-                        color    = Color(0xFF888888),
+                        text = plato.descripcion.take(40),
+                        fontSize = 13.sp,
+                        color = TextSecondary,
                         maxLines = 2
                     )
 
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     // Precios
                     Row(
-                        verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Text(
-                            text       = formatter.format(plato.precio),
+                            text = formatter.format(plato.precio),
                             fontWeight = FontWeight.Bold,
-                            fontSize   = if (plato.precioPromocion > 0) 12.sp else 16.sp,
-                            color      = if (plato.precioPromocion > 0) Color(0xFFAAAAAA)
-                            else Color(0xFF1565C0),
-                            textDecoration = if (plato.precioPromocion > 0)
-                                androidx.compose.ui.text.style.TextDecoration.LineThrough
-                            else androidx.compose.ui.text.style.TextDecoration.None
+                            fontSize = if (plato.precioPromocion > 0) 13.sp else 17.sp,
+                            color = if (plato.precioPromocion > 0) TextSecondary else PrimaryColor,
+                            textDecoration = if (plato.precioPromocion > 0) TextDecoration.LineThrough else TextDecoration.None
                         )
+
                         if (plato.precioPromocion > 0) {
                             Text(
-                                text       = formatter.format(plato.precioPromocion),
+                                text = formatter.format(plato.precioPromocion),
                                 fontWeight = FontWeight.ExtraBold,
-                                fontSize   = 16.sp,
-                                color      = Color(0xFFE53935)
+                                fontSize = 17.sp,
+                                color = ErrorColor
                             )
+
                             if (plato.descuento > 0) {
                                 Surface(
                                     shape = RoundedCornerShape(6.dp),
-                                    color = Color(0xFFFFEBEB)
+                                    color = ErrorColor.copy(alpha = 0.12f)
                                 ) {
                                     Text(
-                                        text       = "-${plato.descuento}%",
-                                        color      = Color(0xFFE53935),
-                                        fontSize   = 10.sp,
+                                        text = "-${plato.descuento}% OFF",
+                                        color = ErrorColor,
+                                        fontSize = 10.sp,
                                         fontWeight = FontWeight.ExtraBold,
-                                        modifier   = Modifier.padding(
-                                            horizontal = 6.dp, vertical = 2.dp
-                                        )
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
                                     )
                                 }
                             }
@@ -350,163 +401,211 @@ fun PlatoCardCompleto(
                     }
 
                     if (plato.adiciones.isNotEmpty()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Surface(
-                            shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFF1565C0).copy(alpha = 0.08f)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(top = 4.dp)
                         ) {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = null,
+                                tint = PrimaryColor,
+                                modifier = Modifier.size(14.dp)
+                            )
                             Text(
-                                text     = "➕ ${plato.adiciones.size} adiciones",
-                                fontSize = 10.sp,
-                                color    = Color(0xFF1565C0),
-                                fontWeight = FontWeight.SemiBold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                text = "${plato.adiciones.size} adiciones",
+                                fontSize = 11.sp,
+                                color = PrimaryColor,
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
                 }
 
-                // ── Acciones verticales ───────────────────────────
+                // Acciones
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // ✅ Botón EDITAR
-                    Box(
-                        modifier         = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF1565C0).copy(alpha = 0.1f))
-                            .clickable { onEdit() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Edit, null,
-                            tint     = Color(0xFF1565C0),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    // Toggle disponible
-                    Box(
-                        modifier         = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(
-                                if (plato.disponible) Color(0xFF1D9E75).copy(alpha = 0.1f)
-                                else Color(0xFFE53935).copy(alpha = 0.1f)
-                            )
-                            .clickable { onToggleDisponible() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            if (plato.disponible) Icons.Default.CheckCircle
-                            else Icons.Default.Cancel,
-                            null,
-                            tint     = if (plato.disponible) Color(0xFF1D9E75)
-                            else Color(0xFFE53935),
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                    // Promoción
-                    Box(
-                        modifier         = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFF57F17).copy(alpha = 0.1f))
-                            .clickable { onPromocion() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.LocalOffer, null,
-                            tint     = Color(0xFFF57F17),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                    // Eliminar
-                    Box(
-                        modifier         = Modifier
-                            .size(34.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFFE53935).copy(alpha = 0.1f))
-                            .clickable { onDelete() },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Delete, null,
-                            tint     = Color(0xFFE53935),
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    ActionButton(
+                        icon = Icons.Default.Edit,
+                        tint = PrimaryColor,
+                        onClick = onEdit
+                    )
+                    ActionButton(
+                        icon = if (plato.disponible) Icons.Default.CheckCircle else Icons.Default.Cancel,
+                        tint = if (plato.disponible) SuccessColor else ErrorColor,
+                        onClick = onToggleDisponible
+                    )
+                    ActionButton(
+                        icon = Icons.Default.LocalOffer,
+                        tint = WarningColor,
+                        onClick = onPromocion
+                    )
+                    ActionButton(
+                        icon = Icons.Default.Delete,
+                        tint = ErrorColor,
+                        onClick = onDelete
+                    )
                 }
             }
         }
     }
 }
-// ── CATEGORÍAS PREDEFINIDAS ──────────────────────────────────────
-private val CATEGORIAS_PREDEFINIDAS = listOf(
-    "Todos",
-    "Bebidas",
-    "Postres",
-    "Rapida",
-    "Oriental",
-    "Mexicana",
-    "Vegetariana"
-)
+
+@Composable
+fun ActionButton(icon: androidx.compose.ui.graphics.vector.ImageVector, tint: Color, onClick: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(tint.copy(alpha = 0.1f))
+            .clickable { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+    }
+}
+
+// ─── ESTADO VACÍO ──────────────────────────────────────────────────
+@Composable
+fun EmptyStateView(onAddClick: () -> Unit) {
+    var isVisible by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        delay(200)
+        isVisible = true
+    }
+
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = fadeIn() + scaleIn(initialScale = 0.8f, animationSpec = spring(Spring.DampingRatioMediumBouncy))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = PrimaryColor.copy(alpha = 0.1f),
+                modifier = Modifier.size(120.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Restaurant,
+                        contentDescription = null,
+                        modifier = Modifier.size(64.dp),
+                        tint = PrimaryColor
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "No tienes platos",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "Agrega tu primer plato y comienza a vender",
+                fontSize = 14.sp,
+                color = TextSecondary
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            Button(
+                onClick = onAddClick,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PrimaryColor,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(50),
+                modifier = Modifier.fillMaxWidth(0.6f)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Agregar plato", fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
+
+// ─── DIÁLOGO AGREGAR/EDITAR PLATO ──────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AddPlatoDialog(
+fun AddEditPlatoDialog(
     plato: Plato? = null,
     restauranteId: String,
     onDismiss: () -> Unit,
-    onSave: (nombre: String, descripcion: String, precio: Double, categoria: String, adiciones: List<Adicion>, imagenUri: Uri?) -> Unit  // ✅ Agregar categoria
+    onSave: (nombre: String, descripcion: String, precio: Double, categoria: String, adiciones: List<Adicion>, imagenUri: Uri?) -> Unit
 ) {
     val context = LocalContext.current
-    val formatter = remember { NumberFormat.getCurrencyInstance(Locale("es", "CO")) }
 
-    // ✅ Estado para categoría
     var categoria by remember { mutableStateOf(plato?.categoria ?: "General") }
-    // ✅ Si es edición, cargar los datos del plato
     var nombre by remember { mutableStateOf(plato?.nombre ?: "") }
     var descripcion by remember { mutableStateOf(plato?.descripcion ?: "") }
     var precio by remember { mutableStateOf(plato?.precio?.toString() ?: "") }
     var adiciones by remember { mutableStateOf(plato?.adiciones ?: emptyList()) }
     var imagenUri by remember { mutableStateOf<Uri?>(null) }
+
     var showAddAdicion by remember { mutableStateOf(false) }
     var editandoAdicionIndex by remember { mutableStateOf<Int?>(null) }
 
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         imagenUri = uri
     }
 
-    Dialog(onDismissRequest = onDismiss) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(24.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(horizontal = 20.dp, vertical = 30.dp)
+                .shadow(20.dp, RoundedCornerShape(24.dp)),
+            colors = CardDefaults.cardColors(containerColor = SurfaceColor)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(24.dp)
             ) {
-                Text(
-                    if (plato == null) "Agregar Plato" else "Editar Plato",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (plato == null) "✨ Agregar Plato" else "✏️ Editar Plato",
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    IconButton(onClick = onDismiss) {
+                        Icon(Icons.Default.Close, contentDescription = "Cerrar")
+                    }
+                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Divider(modifier = Modifier.padding(vertical = 12.dp))
 
-                // ── IMAGEN ──────────────────────────────────────────
+                // Imagen
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(120.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFFF5F5F5))
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFFF0F2F5))
                         .clickable { launcher.launch("image/*") }
                 ) {
                     when {
@@ -532,152 +631,197 @@ fun AddPlatoDialog(
                                 horizontalAlignment = Alignment.CenterHorizontally,
                                 verticalArrangement = Arrangement.Center
                             ) {
-                                Icon(Icons.Default.Image, contentDescription = null, tint = Color.Gray)
-                                Text("Toca para seleccionar foto", color = Color.Gray, fontSize = 12.sp)
+                                Icon(
+                                    Icons.Default.Image,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(48.dp),
+                                    tint = Color.Gray
+                                )
+                                Text(
+                                    text = "Toca para seleccionar foto",
+                                    color = Color.Gray,
+                                    fontSize = 13.sp
+                                )
                             }
                         }
                     }
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-                // ── CAMPOS ──────────────────────────────────────────
+                // Campos
                 OutlinedTextField(
                     value = nombre,
                     onValueChange = { nombre = it },
                     label = { Text("Nombre del plato") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryColor,
+                        focusedLabelColor = PrimaryColor
+                    )
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = descripcion,
+                    onValueChange = { descripcion = it },
+                    label = { Text("Descripción (opcional)") },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    minLines = 2,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryColor,
+                        focusedLabelColor = PrimaryColor
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = precio,
                     onValueChange = { precio = it },
                     label = { Text("Precio") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                var expanded by remember { mutableStateOf(false) }
-
-                ExposedDropdownMenuBox(
-                    expanded = expanded,
-                    onExpandedChange = { expanded = !expanded }
-                ) {
-                    OutlinedTextField(
-                        value = categoria,
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text("Categoría") },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        trailingIcon = {
-                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                        },
-                        colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors()
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryColor,
+                        focusedLabelColor = PrimaryColor
                     )
-
-                    ExposedDropdownMenu(
-                        expanded = expanded,
-                        onDismissRequest = { expanded = false },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color.White)
-                    ) {
-                        CATEGORIAS_PREDEFINIDAS.forEach { cat ->
-                            DropdownMenuItem(
-                                text = { Text(cat) },
-                                onClick = {
-                                    categoria = cat
-                                    expanded = false
-                                }
-                            )
-                        }
-                    }
-                }
+                )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
-                // ── ADICIONES ──────────────────────────────────────
+                // Categoría con chips
+                Text(
+                    text = "Categoría",
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 14.sp,
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+
+                var selectedCategoria by remember { mutableStateOf(categoria) }
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(CATEGORIAS) { cat ->
+                        FilterChip(
+                            selected = selectedCategoria == cat,
+                            onClick = { selectedCategoria = cat },
+                            label = { Text(cat, fontSize = 12.sp) },
+                            modifier = Modifier,
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = PrimaryColor.copy(alpha = 0.15f),
+                                selectedLabelColor = PrimaryColor
+                            )
+                        )
+                    }
+                }
+                // Sincronizar con el estado de la categoría
+                LaunchedEffect(selectedCategoria) {
+                    categoria = selectedCategoria
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Adiciones
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Adiciones disponibles", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(
+                        text = "🧂 Adiciones",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = TextPrimary
+                    )
                     TextButton(onClick = { showAddAdicion = true }) {
-                        Text("Agregar adición")
+                        Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Agregar")
                     }
                 }
 
                 if (adiciones.isNotEmpty()) {
                     adiciones.forEachIndexed { index, adicion ->
-                        Row(
+                        Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(vertical = 4.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFF8F9FA)
                         ) {
-                            Column {
-                                Text(
-                                    text = adicion.nombre,
-                                    fontWeight = FontWeight.Medium,
-                                    fontSize = 14.sp
-                                )
-                                Text(
-                                    text = formatter.format(adicion.precio),
-                                    fontSize = 12.sp,
-                                    color = Color.Gray
-                                )
-                            }
-                            Row {
-                                // ✅ Botón EDITAR
-                                IconButton(
-                                    onClick = { editandoAdicionIndex = index },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Edit,
-                                        contentDescription = "Editar",
-                                        tint = Color(0xFF1565C0),
-                                        modifier = Modifier.size(16.dp)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column {
+                                    Text(
+                                        text = adicion.nombre,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 14.sp
+                                    )
+                                    Text(
+                                        text = formatter.format(adicion.precio),
+                                        fontSize = 12.sp,
+                                        color = TextSecondary
                                     )
                                 }
-                                // Botón ELIMINAR
-                                IconButton(
-                                    onClick = { adiciones = adiciones.filterIndexed { i, _ -> i != index } },
-                                    modifier = Modifier.size(28.dp)
-                                ) {
-                                    Icon(
-                                        Icons.Default.Close,
-                                        contentDescription = "Eliminar",
-                                        tint = Color.Red,
-                                        modifier = Modifier.size(16.dp)
-                                    )
+                                Row {
+                                    IconButton(
+                                        onClick = { editandoAdicionIndex = index },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Edit,
+                                            contentDescription = "Editar",
+                                            tint = PrimaryColor,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { adiciones = adiciones.filterIndexed { i, _ -> i != index } },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.Default.Close,
+                                            contentDescription = "Eliminar",
+                                            tint = ErrorColor,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 } else {
-                    Text("No hay adiciones agregadas", color = Color.Gray, fontSize = 12.sp)
+                    Text(
+                        text = "No hay adiciones agregadas",
+                        color = TextSecondary,
+                        fontSize = 13.sp,
+                        modifier = Modifier.padding(vertical = 8.dp)
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-                // ── BOTONES ─────────────────────────────────────────
+                // Botones
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    TextButton(
+                    OutlinedButton(
                         onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Cancelar")
                     }
@@ -686,7 +830,7 @@ fun AddPlatoDialog(
                         onClick = {
                             val precioDouble = precio.toDoubleOrNull()
                             if (nombre.isNotBlank() && precioDouble != null && precioDouble > 0) {
-                                onSave(nombre, descripcion, precioDouble, categoria, adiciones, imagenUri)  // ✅ Pasar categoría
+                                onSave(nombre, descripcion, precioDouble, categoria, adiciones, imagenUri)
                             } else {
                                 Toast.makeText(
                                     context,
@@ -696,16 +840,20 @@ fun AddPlatoDialog(
                             }
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PrimaryColor,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(if (plato == null) "Guardar" else "Actualizar")
+                        Text(if (plato == null) "Guardar" else "Actualizar", fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
     }
 
-    // ✅ Dialog para AGREGAR adición
+    // Diálogo para agregar/editar adición
     if (showAddAdicion) {
         AddAdicionDialog(
             adicionExistente = null,
@@ -717,7 +865,6 @@ fun AddPlatoDialog(
         )
     }
 
-    // ✅ Dialog para EDITAR adición
     editandoAdicionIndex?.let { index ->
         val adicion = adiciones[index]
         AddAdicionDialog(
@@ -733,9 +880,10 @@ fun AddPlatoDialog(
     }
 }
 
+// ─── DIÁLOGO AGREGAR/EDITAR ADICIÓN ───────────────────────────────
 @Composable
 fun AddAdicionDialog(
-    adicionExistente: Adicion? = null,  // ✅ NUEVO
+    adicionExistente: Adicion? = null,
     onDismiss: () -> Unit,
     onSave: (nombre: String, precio: Double) -> Unit
 ) {
@@ -744,51 +892,65 @@ fun AddAdicionDialog(
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(24.dp)
+                .shadow(16.dp, RoundedCornerShape(20.dp)),
+            colors = CardDefaults.cardColors(containerColor = SurfaceColor)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(24.dp)
             ) {
                 Text(
-                    if (adicionExistente == null) "Agregar Adición" else "Editar Adición",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold
+                    text = if (adicionExistente == null) "➕ Agregar Adición" else "✏️ Editar Adición",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = nombre,
                     onValueChange = { nombre = it },
-                    label = { Text("Nombre de la adición") },
+                    label = { Text("Nombre") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryColor,
+                        focusedLabelColor = PrimaryColor
+                    )
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = precio,
                     onValueChange = { precio = it },
                     label = { Text("Precio adicional") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = PrimaryColor,
+                        focusedLabelColor = PrimaryColor
+                    )
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    TextButton(
+                    OutlinedButton(
                         onClick = onDismiss,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
                         Text("Cancelar")
                     }
@@ -801,9 +963,13 @@ fun AddAdicionDialog(
                             }
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = PrimaryColor,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text(if (adicionExistente == null) "Agregar" else "Guardar")
+                        Text(if (adicionExistente == null) "Agregar" else "Guardar", fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -811,6 +977,7 @@ fun AddAdicionDialog(
     }
 }
 
+// ─── DIÁLOGO DE PROMOCIÓN ──────────────────────────────────────────
 @Composable
 fun PromocionDialog(
     plato: Plato,
@@ -819,66 +986,84 @@ fun PromocionDialog(
     onSave: (precioPromocion: Double, descuento: Int) -> Unit
 ) {
     val context = LocalContext.current
-    val formatter = remember { NumberFormat.getCurrencyInstance(Locale("es", "CO")) }
 
     var precioPromocion by remember { mutableStateOf(plato.precioPromocion.toString()) }
     var descuento by remember { mutableStateOf(plato.descuento.toString()) }
 
     Dialog(onDismissRequest = onDismiss) {
         Card(
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(20.dp),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(24.dp)
+                .shadow(16.dp, RoundedCornerShape(20.dp)),
+            colors = CardDefaults.cardColors(containerColor = SurfaceColor)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(20.dp)
+                    .padding(24.dp)
             ) {
-                Text("Promoción para ${plato.nombre}", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "🎯 Promoción para ${plato.nombre}",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = "Precio original: ${formatter.format(plato.precio)}",
-                    fontSize = 14.sp
+                    fontSize = 14.sp,
+                    color = TextSecondary
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 OutlinedTextField(
                     value = precioPromocion,
                     onValueChange = { precioPromocion = it },
                     label = { Text("Precio en promoción") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = WarningColor,
+                        focusedLabelColor = WarningColor
+                    )
                 )
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
                     value = descuento,
                     onValueChange = { descuento = it },
-                    label = { Text("Porcentaje de descuento (%)") },
+                    label = { Text("Descuento (%)") },
                     modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    singleLine = true,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = WarningColor,
+                        focusedLabelColor = WarningColor
+                    )
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    TextButton(
+                    OutlinedButton(
                         onClick = {
                             onSave(0.0, 0)
                             onDismiss()
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = Color(0xFFE53935)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = ErrorColor
                         )
                     ) {
                         Text("Quitar promoción")
@@ -899,9 +1084,13 @@ fun PromocionDialog(
                             }
                         },
                         modifier = Modifier.weight(1f),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF9800))
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = WarningColor,
+                            contentColor = Color.White
+                        ),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Aplicar promoción")
+                        Text("Aplicar", fontWeight = FontWeight.Bold)
                     }
                 }
             }
