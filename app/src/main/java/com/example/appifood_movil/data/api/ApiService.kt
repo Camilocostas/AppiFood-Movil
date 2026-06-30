@@ -1,10 +1,10 @@
-// data/api/ApiService.kt
 package com.example.appifood_movil.data.api
 
 import com.example.appifood_movil.data.api.request.LoginRequest
 import com.example.appifood_movil.data.api.request.RegisterRequest
 import com.example.appifood_movil.data.api.request.OrderRequest
 import com.example.appifood_movil.data.api.request.CartRequest
+import com.example.appifood_movil.data.api.request.RestaurantRequest
 import com.example.appifood_movil.data.api.response.*
 import retrofit2.Response
 import retrofit2.http.*
@@ -45,6 +45,26 @@ interface ApiService {
     suspend fun getRestaurantReviews(
         @Path("id") id: Int
     ): Response<ReviewsResponse>
+
+    // ── RESTAURANTES (dueño) ──────────────────────────────────────
+    @GET("restaurants/owner/{uid}")
+    suspend fun getRestaurantByOwner(
+        @Path("uid") uid: String,
+        @Header("Authorization") token: String
+    ): Response<RestaurantDetailResponse>
+
+    @POST("restaurants")
+    suspend fun createRestaurant(
+        @Header("Authorization") token: String,
+        @Body restaurant: RestaurantRequest
+    ): Response<RestaurantCreatedResponse>
+
+    @PUT("restaurants/{id}")
+    suspend fun updateRestaurant(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int,
+        @Body restaurant: RestaurantRequest
+    ): Response<MessageResponse>
 
     // ── PEDIDOS ───────────────────────────────────────────────────
     @GET("user/orders")

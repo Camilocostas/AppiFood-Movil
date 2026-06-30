@@ -22,6 +22,9 @@ import kotlinx.coroutines.tasks.await
 fun AppNavigation(searchViewModel: SearchViewModel) {
     val navController = rememberNavController()
 
+    // ✅ Declaramos el ViewModel compartido para que persista entre pantallas
+    val sharedCartViewModel: com.example.appifood_movil.ui.viewmodel.CartViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+
     // Estado de autenticación
     var isAuthenticated by remember { mutableStateOf(false) }
     var isRestaurant by remember { mutableStateOf(false) }
@@ -34,7 +37,6 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         isAuthenticated = currentUser != null
 
         if (currentUser != null) {
-            // Verificar si es restaurante
             try {
                 val firestore = FirebaseFirestore.getInstance()
                 val doc = firestore.collection("restaurants").document(currentUser.uid).get().await()
@@ -46,7 +48,6 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         isLoading = false
     }
 
-    // Determinar destino inicial
     val startDestination = if (isLoading) {
         Screen.Splash.route
     } else if (isAuthenticated) {
@@ -62,12 +63,10 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         composable(Screen.Splash.route) {
             SplashScreen(
                 onFinished = {
-                    // Verificar nuevamente al terminar el splash
                     val auth = FirebaseAuth.getInstance()
                     val user = auth.currentUser
 
                     if (user != null) {
-                        // Usuario autenticado - verificar si es restaurante
                         val firestore = FirebaseFirestore.getInstance()
                         firestore.collection("restaurants").document(user.uid).get()
                             .addOnSuccessListener { doc ->
@@ -82,13 +81,11 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
                                 }
                             }
                             .addOnFailureListener {
-                                // Si falla, ir a Home como cliente
                                 navController.navigate(Screen.Home.route) {
                                     popUpTo(Screen.Splash.route) { inclusive = true }
                                 }
                             }
                     } else {
-                        // No autenticado → onboarding
                         navController.navigate(Screen.Onboarding.route) {
                             popUpTo(Screen.Splash.route) { inclusive = true }
                         }
@@ -100,17 +97,13 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         composable(Screen.Onboarding.route) {
             OnboardingScreen(onFinished = {
                 navController.navigate(Screen.RoleSelection.route) {
-                    // ✅ Elimina Splash y Onboarding — RoleSelection es la nueva raíz
                     popUpTo(Screen.Splash.route) { inclusive = true }
                 }
             })
         }
 
-        // Busca esta línea y reemplázala:
         composable(Screen.Auth.route) {
             AuthScreen(onLoginNavigation = {
-                // ✅ popUpTo(0) limpia TODO el backstack — Splash, Onboarding,
-                // RoleSelection y Auth quedan eliminados. Home es la nueva raíz.
                 navController.navigate(Screen.Home.route) {
                     popUpTo(0) { inclusive = true }
                 }
@@ -129,12 +122,13 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
             RestaurantDashboardScreen(navController = navController)
         }
 
+        composable("gestionPlatos") { GestionPlatosScreen(navController = navController) }
+        composable("gestionInfoRestaurante") { GestionInfoRestauranteScreen(navController = navController) }
+        composable("gestionResenas") { GestionResenasScreen(navController = navController) }
+
         composable(Screen.OrderConfirmation.route) { backStackEntry ->
             val orderId = backStackEntry.arguments?.getString("orderId") ?: ""
-            OrderConfirmationScreen(
-                navController = navController,
-                orderId       = orderId
-            )
+            OrderConfirmationScreen(navController = navController, orderId = orderId)
         }
 
         composable(Screen.Home.route) {
@@ -150,15 +144,20 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         }
 
         composable(
-            route     = Screen.ProductDetail.route,
+            route = Screen.ProductDetail.route,
             arguments = listOf(navArgument("id") { type = NavType.IntType })
         ) { backStackEntry ->
             val id = backStackEntry.arguments?.getInt("id") ?: 0
-            ProductDetailScreen(navController = navController, id = id)
+            // ✅ Pasamos el sharedCartViewModel para que se guarden los datos
+            ProductDetailScreen(
+                navController = navController,
+                id = id,
+                cartViewModel = sharedCartViewModel
+            )
         }
 
         composable(
-            route     = Screen.RestaurantDetail.route,
+            route = Screen.RestaurantDetail.route,
             arguments = listOf(navArgument("id") { type = NavType.IntType })
         ) { backStackEntry ->
             val id = backStackEntry.arguments?.getInt("id") ?: 0
@@ -166,7 +165,11 @@ fun AppNavigation(searchViewModel: SearchViewModel) {
         }
 
         composable(Screen.Cart.route) {
-            CartScreen(navController = navController)
+            // ✅ Pasamos el sharedCartViewModel para ver los productos agregados
+            CartScreen(
+                navController = navController,
+                cartViewModel = sharedCartViewModel
+            )
         }
 
         composable(Screen.Profile.route) { ProfileScreen(navController) }

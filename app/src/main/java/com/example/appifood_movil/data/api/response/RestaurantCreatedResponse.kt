@@ -1,9 +1,8 @@
-// data/api/response/AuthResponse.kt
 package com.example.appifood_movil.data.api.response
 
 import com.google.gson.annotations.SerializedName
 
-data class AuthResponse(
+data class RestaurantCreatedResponse(
     @SerializedName("success")
     val success: Boolean = false,
 
@@ -11,27 +10,22 @@ data class AuthResponse(
     val message: String = "",
 
     @SerializedName("data")
-    val data: AuthData? = null
+    val data: RestaurantData? = null
 )
 
-data class AuthData(
-    @SerializedName("token")
-    val token: String = "",
-
-    @SerializedName("user")
-    val user: UserDto? = null
-)
-
-data class UserDto(
+data class RestaurantData(
     @SerializedName("id")
     val id: Int = 0,
 
     @SerializedName("name")
     val name: String = "",
 
-    @SerializedName("email")
-    val email: String = "",
+    @SerializedName("address")
+    val address: String = "",
 
-    @SerializedName("rol")
-    val rol: String = "usuario"
+    @SerializedName("phone")
+    val phone: String = "",
+
+    @SerializedName("uid")
+    val uid: String = ""
 )

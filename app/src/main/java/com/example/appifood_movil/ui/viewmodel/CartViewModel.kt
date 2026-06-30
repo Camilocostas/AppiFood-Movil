@@ -1,92 +1,108 @@
-// ui/viewmodel/CartViewModel.kt
 package com.example.appifood_movil.ui.viewmodel
 
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-import com.example.appifood_movil.R
 import com.example.appifood_movil.data.model.ReceiptItem
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import javax.inject.Inject
 
 @HiltViewModel
 class CartViewModel @Inject constructor() : ViewModel() {
 
-    // ui/viewmodel/CartViewModel.kt
-// Solo cambia la forma de construir los ReceiptItem —
-// ahora el último parámetro se llama initialQuantity
+    private val _cartItems = MutableStateFlow<List<ReceiptItem>>(emptyList())
+    val cartItems: StateFlow<List<ReceiptItem>> = _cartItems.asStateFlow()
 
-    val cartItems = mutableStateListOf(
-        ReceiptItem(id = 1, name = "Delicious Burger",    price = 35000, imageRes = R.drawable.cheese,         initialQuantity = 1),
-        ReceiptItem(id = 2, name = "Chicago Deep Pizza",  price = 44000, imageRes = R.drawable.chicago_pizza,  initialQuantity = 2),
-        ReceiptItem(id = 3, name = "Coca Cola 1L",        price =  6000, imageRes = R.drawable.cocacola,       initialQuantity = 1),
-        ReceiptItem(id = 4, name = "Ramen Tonkotsu",      price = 22000, imageRes = R.drawable.ramen,          initialQuantity = 3),
-        ReceiptItem(id = 5, name = "Mega-Taco",           price = 23000, imageRes = R.drawable.cheese,         initialQuantity = 2),
-        ReceiptItem(id = 6, name = "Sopa de guisantes",   price = 16000, imageRes = R.drawable.lomosaltado,    initialQuantity = 1),
-        ReceiptItem(id = 7, name = "Helado de Yogurt",    price =  9000, imageRes = R.drawable.helado,         initialQuantity = 1),
-        ReceiptItem(id = 8, name = "Pastel de Chocolate", price =  8000, imageRes = R.drawable.ensaladacesar,  initialQuantity = 4)
-    )
+    // ── NUEVO: información del restaurante del carrito actual ────
+    // El carrito asume un solo restaurante a la vez. Se fija con
+    // el primer producto agregado y se limpia junto con clearCart().
+    private val _restaurantName  = MutableStateFlow("")
+    val restaurantName: StateFlow<String> = _restaurantName.asStateFlow()
 
-    // ── Derivados reactivos: se recalculan solo cuando cartItems cambia ──
-    val subtotal by derivedStateOf { cartItems.sumOf { it.price * it.quantity } }
-    val shipping = 3_500
-    val total    by derivedStateOf { subtotal + shipping }
+    private val _restaurantPhone = MutableStateFlow("")
+    val restaurantPhone: StateFlow<String> = _restaurantPhone.asStateFlow()
 
-    // ── Estado del cupón ──────────────────────────────────────────
-    var couponCode   = mutableStateOf("")
-    var couponApplied = mutableStateOf(false)
-    var couponError  = mutableStateOf<String?>(null)
+    // ── Propiedades calculadas ────────────────────────────────────
+    val subtotal: Int
+        get() = _cartItems.value.sumOf { it.price * it.quantity }
 
-    // ── Estados de UI para flujo de pago ─────────────────────────
-    var showPaySheet    = mutableStateOf(false)
-    var showReceipt     = mutableStateOf(false)
-    var showConfirmAnim = mutableStateOf(false)
-    var selectedPayment = mutableStateOf("Efectivo")
-    var paymentDetail   = mutableStateOf("")
+    val shipping: Int
+        get() = if (subtotal > 0) 3500 else 0
 
-    // ── Operaciones del carrito ───────────────────────────────────
-    fun increaseQuantity(item: ReceiptItem) {
-        item.quantity++
-    }
+    val total: Int
+        get() = subtotal + shipping
 
-    fun decreaseQuantity(item: ReceiptItem) {
-        if (item.quantity > 1) item.quantity--
-        else removeItem(item)
-    }
-
-    fun removeItem(item: ReceiptItem) {
-        cartItems.remove(item)
-    }
-
-    // ── Vaciar carrito desde el ViewModel (no desde la UI) ───────
-    fun clearCart() {
-        cartItems.clear()
-        couponApplied.value = false
-        couponCode.value    = ""
-        couponError.value   = null
-    }
-
-    // ── Validación de cupón (stub — conectar con API real) ────────
-    fun applyCoupon() {
-        couponError.value = when (couponCode.value.trim().uppercase()) {
-            "BIENVENIDO" -> { couponApplied.value = true; null }
-            ""           -> "Ingresa un código de cupón"
-            else         -> "Cupón no válido"
+    fun addItem(
+        id: Int,
+        name: String,
+        price: Int,
+        quantity: Int,
+        imageRes: Int,
+        imageUrl: String? = null,
+        adiciones: List<String> = emptyList(),
+        // ── NUEVO: parámetros opcionales con defaults ─────────────
+        restaurantName  : String = "",
+        restaurantPhone : String = ""
+    ) {
+        // Fijar el restaurante solo si el carrito estaba vacío
+        // o si aún no tenía restaurante asignado
+        if (_cartItems.value.isEmpty() && restaurantName.isNotBlank()) {
+            _restaurantName.value  = restaurantName
+            _restaurantPhone.value = restaurantPhone
         }
+
+        _cartItems.update { currentList ->
+            val newList = currentList.toMutableList()
+            val uniqueId = (id.toString() + adiciones.sorted().joinToString()).hashCode()
+
+            val existingItem = newList.find { it.id == uniqueId }
+            if (existingItem != null) {
+                existingItem.addQuantity(quantity)
+            } else {
+                newList.add(
+                    ReceiptItem(
+                        id = uniqueId,
+                        name = name,
+                        price = price,
+                        imageRes = imageRes,
+                        imageUrl = imageUrl,
+                        adiciones = adiciones,
+                        initialQuantity = quantity
+                    )
+                )
+            }
+            newList
+        }
+    }
+
+    fun updateQuantity(id: Int, increment: Boolean) {
+        _cartItems.update { list ->
+            list.map { item ->
+                if (item.id == id) {
+                    if (increment) item.increaseQuantity() else item.decreaseQuantity()
+                }
+                item
+            }.filter { it.quantity > 0 }
+        }
+    }
+
+    fun removeItem(id: Int) {
+        _cartItems.update { list -> list.filter { it.id != id } }
+        // Si el carrito quedó vacío, limpia también el restaurante
+        if (_cartItems.value.isEmpty()) {
+            _restaurantName.value  = ""
+            _restaurantPhone.value = ""
+        }
+    }
+
+    fun clearCart() {
+        _cartItems.value       = emptyList()
+        _restaurantName.value  = ""
+        _restaurantPhone.value = ""
     }
 
     fun formatCurrency(amount: Int): String =
         "\$${String.format("%,d", amount).replace(",", ".")}"
-
-    // ── Confirmar pedido ──────────────────────────────────────────
-    fun confirmOrder() {
-        showConfirmAnim.value = true
-    }
-
-    fun onOrderAnimationFinished() {
-        showConfirmAnim.value = false
-        showReceipt.value     = true
-    }
 }

@@ -2,7 +2,7 @@ package com.example.appifood_movil.data.api.response
 
 import com.google.gson.annotations.SerializedName
 
-data class RestaurantsResponse(
+data class ReviewsResponse(
     @SerializedName("success")
     val success: Boolean = false,
 
@@ -10,5 +10,5 @@ data class RestaurantsResponse(
     val message: String = "",
 
     @SerializedName("data")
-    val data: List<RestaurantDto> = emptyList()
+    val data: List<ReviewDto> = emptyList()
 )

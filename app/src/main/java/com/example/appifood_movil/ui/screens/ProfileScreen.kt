@@ -282,7 +282,7 @@ fun ProfileScreen(
                                 isLoggingOut = true
                                 delay(800)
                                 authViewModel.signOut()
-                                navController.navigate(Screen.Auth.route) {
+                                navController.navigate(Screen.RoleSelection.route) {
                                     popUpTo(0) { inclusive = true }
                                 }
                                 isLoggingOut = false

@@ -1,5 +1,6 @@
 package com.example.appifood_movil.ui.screens
 
+import android.util.Log
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
@@ -45,7 +46,10 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
     searchViewModel: SearchViewModel
 ) {
+    val restaurants by viewModel.restaurants.collectAsState()
     val filteredRestaurants by searchViewModel.filteredRestaurants.collectAsState()
+    val filteredProducts by viewModel.filteredProducts.collectAsState()  // ✅ Agregar
+    val promotionProducts by viewModel.promotionProducts.collectAsState()
 
     // ✅ Obtener colores del tema
     val colorScheme = MaterialTheme.colorScheme
@@ -96,7 +100,7 @@ fun HomeScreen(
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
-                .background(background)  // ✅ Usa color del tema
+                .background(background)
                 .padding(bottom = paddingValues.calculateBottomPadding())
         ) {
             // ── CARRUSEL HEADER ────────────────────────────────────
@@ -163,11 +167,10 @@ fun HomeScreen(
             item {
                 AnimatedPromoBanner(
                     onClick = { /* Navegar a promociones */ },
-                    primary = primary  // ✅ Pasamos el color del tema
+                    primary = primary
                 )
             }
 
-            // ── CATEGORÍAS ─────────────────────────────────────────
             // ── CATEGORÍAS ─────────────────────────────────────────
             item {
                 AnimatedSectionHeader(
@@ -188,13 +191,12 @@ fun HomeScreen(
                             onClick = { viewModel.onCategorySelected(cat) },
                             primary = primary,
                             onSurface = onSurface,
-                            surface = surface  // ✅ AÑADE ESTA LÍNEA
+                            surface = surface
                         )
                     }
                 }
             }
 
-            // ── PROMOCIONES ────────────────────────────────────────
             item {
                 AnimatedSectionHeader(
                     title = stringResource(id = R.string.section_promotions),
@@ -206,28 +208,47 @@ fun HomeScreen(
             }
 
             item {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(15.dp)
-                ) {
-                    items(viewModel.filteredProducts) { product ->
-                        AnimatedPromoFoodCard(
-                            name = product.name,
-                            price = "$ ${String.format("%,.0f", product.price)}",
-                            oldPrice = "$35.000",
-                            imageRes = product.imageRes,
-                            onNavigate = {
-                                navController.navigate(Screen.ProductDetail.passId(product.id))
-                            },
-                            surface = surface,
-                            onSurface = onSurface,
-                            primary = primary
+                if (promotionProducts.isEmpty()) {
+                    // ✅ Mostrar mensaje si no hay promociones
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No hay promociones disponibles",
+                            color = Color.Gray,
+                            fontSize = 14.sp
                         )
+                    }
+                } else {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(15.dp)
+                    ) {
+                        items(promotionProducts) { product ->  // ✅ Usar promotionProducts
+                            AnimatedPromoFoodCard(
+                                name = product.name,
+                                price = "$ ${String.format("%,.0f", product.precioPromocion)}",  // ✅ Precio con promoción
+                                oldPrice = "$ ${String.format("%,.0f", product.price)}",        // ✅ Precio original
+                                imageUrl = product.imagenUrl,
+                                imageRes = product.imageRes,
+                                discount = product.descuento,  // ✅ Nuevo parámetro
+                                onNavigate = {
+                                    navController.navigate(Screen.ProductDetail.passId(product.id))
+                                },
+                                surface = surface,
+                                onSurface = onSurface,
+                                primary = primary
+                            )
+                        }
                     }
                 }
             }
 
-            // ── RESTAURANTES POPULARES ────────────────────────────
+
+// ── RESTAURANTES POPULARES ────────────────────────────
             item {
                 AnimatedSectionHeader(
                     title = stringResource(id = R.string.section_popular_restaurants),
@@ -239,28 +260,49 @@ fun HomeScreen(
             }
 
             item {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = 20.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    items(filteredRestaurants) { restaurant ->
-                        AnimatedRestaurantCard(
-                            name             = restaurant.name,
-                            rating           = restaurant.rating,
-                            time             = stringResource(id = R.string.delivery_time_range),
-                            imageUrl         = restaurant.imageUrl,
-                            imageRes         = restaurant.imageRes,
-                            category         = restaurant.category,   // ← agrega esto
-                            onClick          = { navController.navigate(Screen.RestaurantDetail.passId(restaurant.id)) },
-                            surface          = surface,
-                            onSurface        = onSurface,
-                            onSurfaceVariant = onSurfaceVariant
+                // ✅ LOG PARA VER CUÁNTOS RESTAURANTES HAY
+                LaunchedEffect(restaurants) {
+                    Log.d("HomeScreen", "📊 Restaurantes a mostrar: ${restaurants.size}")
+                }
+
+                if (restaurants.isEmpty()) {
+                    // ✅ Mostrar mensaje si no hay restaurantes
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "No hay restaurantes disponibles",
+                            color = Color.Gray,
+                            fontSize = 14.sp
                         )
+                    }
+                } else {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 20.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        items(restaurants) { restaurant ->
+                            AnimatedRestaurantCard(
+                                name = restaurant.name,
+                                rating = restaurant.rating,
+                                time = restaurant.deliveryTime,
+                                imageUrl = restaurant.imageUrl,
+                                imageRes = restaurant.imageRes,
+                                category = restaurant.category,
+                                onClick = {
+                                    navController.navigate(Screen.RestaurantDetail.passId(restaurant.id))
+                                },
+                                surface = surface,
+                                onSurface = onSurface,
+                                onSurfaceVariant = onSurfaceVariant
+                            )
+                        }
                     }
                 }
             }
-
-            item { Spacer(modifier = Modifier.height(30.dp)) }
         }
     }
 }
@@ -269,7 +311,7 @@ fun HomeScreen(
 @Composable
 fun AnimatedPromoBanner(
     onClick: () -> Unit,
-    primary: Color  // ✅ Recibe el color del tema
+    primary: Color
 ) {
     var isHovered by remember { mutableStateOf(false) }
 
@@ -309,11 +351,10 @@ fun AnimatedPromoBanner(
                 .height(120.dp)
                 .background(
                     Brush.horizontalGradient(
-                        colors = listOf(primary, primary.copy(alpha = 0.7f))  // ✅ Usa el color del tema
+                        colors = listOf(primary, primary.copy(alpha = 0.7f))
                     )
                 )
         ) {
-            // Decoración
             Box(
                 modifier = Modifier
                     .size(100.dp)
@@ -366,7 +407,7 @@ fun AnimatedPromoBanner(
                         Icon(
                             imageVector = Icons.Default.ArrowForward,
                             contentDescription = null,
-                            tint = primary,  // ✅ Usa el color del tema
+                            tint = primary,
                             modifier = Modifier.size(28.dp)
                         )
                     }
@@ -377,7 +418,6 @@ fun AnimatedPromoBanner(
 }
 
 // ── CATEGORY CHIP CON ANIMACIÓN ──────────────────────────────────
-// ── CATEGORY CHIP CON ANIMACIÓN ──────────────────────────────────
 @Composable
 fun AnimatedCategoryChip(
     text: String,
@@ -385,7 +425,7 @@ fun AnimatedCategoryChip(
     onClick: () -> Unit,
     primary: Color,
     onSurface: Color,
-    surface: Color  // ✅ Añadimos el color de superficie
+    surface: Color
 ) {
     val scale by animateFloatAsState(
         targetValue = if (isSelected) 1.05f else 1f,
@@ -404,12 +444,12 @@ fun AnimatedCategoryChip(
             }
             .clickable { onClick() },
         shape = RoundedCornerShape(50),
-        color = if (isSelected) primary else surface,  // ✅ Cambiado: usa surface en lugar de Color.White
+        color = if (isSelected) primary else surface,
         shadowElevation = if (isSelected) 4.dp else 0.dp
     ) {
         Text(
             text = text,
-            color = if (isSelected) Color.White else onSurface,  // ✅ Usa onSurface para texto
+            color = if (isSelected) Color.White else onSurface,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
             fontSize = 13.sp,
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp)
@@ -436,7 +476,7 @@ fun AnimatedSectionHeader(
                 .width(40.dp)
                 .height(3.dp)
                 .clip(RoundedCornerShape(50))
-                .background(primary)  // ✅ Usa color del tema
+                .background(primary)
         )
         Spacer(modifier = Modifier.height(8.dp))
         Row(
@@ -448,12 +488,12 @@ fun AnimatedSectionHeader(
                 text = title,
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = onSurface  // ✅ Usa color del tema
+                color = onSurface
             )
             if (showViewAll) {
                 Text(
                     text = stringResource(id = R.string.label_view_all),
-                    color = primary,  // ✅ Usa color del tema
+                    color = primary,
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.clickable { onViewAllClick() }
@@ -464,12 +504,16 @@ fun AnimatedSectionHeader(
 }
 
 // ── PROMO FOOD CARD CON ANIMACIÓN ───────────────────────────────
+// En HomeScreen.kt - Actualizar AnimatedPromoFoodCard
+
 @Composable
 fun AnimatedPromoFoodCard(
     name: String,
     price: String,
     oldPrice: String,
-    imageRes: Int,
+    imageUrl: String? = null,
+    imageRes: Int = R.drawable.cheese,
+    discount: Int = 0,  // ✅ NUEVO
     onNavigate: () -> Unit,
     surface: Color,
     onSurface: Color,
@@ -512,32 +556,59 @@ fun AnimatedPromoFoodCard(
         ) {
             // ── Imagen con badge de descuento ──────────────────
             Box {
-                Image(
-                    painter = painterResource(id = imageRes),
-                    contentDescription = null,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp)
-                        .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
-                    contentScale = ContentScale.Crop
-                )
-
-                // Badge "-20%" como en la web
-                Surface(
-                    color = Color(0xFFE53935),  // Rojo como en la web
-                    shape = RoundedCornerShape(
-                        topStart = 16.dp,
-                        bottomEnd = 16.dp
-                    ),
-                    modifier = Modifier.align(Alignment.TopStart)
-                ) {
-                    Text(
-                        text = "-20%",
-                        color = Color.White,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                if (!imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                        contentScale = ContentScale.Crop,
+                        error = painterResource(imageRes)
                     )
+                } else {
+                    Image(
+                        painter = painterResource(id = imageRes),
+                        contentDescription = null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                // ✅ Badge de descuento (solo si hay descuento)
+                if (discount > 0) {
+                    Surface(
+                        color = Color(0xFFE53935),
+                        shape = RoundedCornerShape(topStart = 16.dp, bottomEnd = 16.dp),
+                        modifier = Modifier.align(Alignment.TopStart)
+                    ) {
+                        Text(
+                            text = "-$discount%",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                } else {
+                    // Si no hay descuento, mostrar "OFERTA" genérico
+                    Surface(
+                        color = Color(0xFFFF9800),
+                        shape = RoundedCornerShape(topStart = 16.dp, bottomEnd = 16.dp),
+                        modifier = Modifier.align(Alignment.TopStart)
+                    ) {
+                        Text(
+                            text = "🔥 OFERTA",
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
                 }
             }
 
@@ -545,7 +616,6 @@ fun AnimatedPromoFoodCard(
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
-                // Nombre del restaurante
                 Text(
                     text = name,
                     fontWeight = FontWeight.Bold,
@@ -556,9 +626,8 @@ fun AnimatedPromoFoodCard(
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                // Nombre del producto (ej: "Alitas BBQ")
                 Text(
-                    text = "Alitas BBQ",  // O puedes pasar este parámetro
+                    text = name,  // o el nombre del restaurante
                     fontSize = 12.sp,
                     color = onSurface.copy(alpha = 0.7f),
                     maxLines = 1
@@ -566,19 +635,20 @@ fun AnimatedPromoFoodCard(
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // ── Precios: precio actual + tachado ──────────
                 Row(
                     verticalAlignment = Alignment.Bottom,
                     horizontalArrangement = Arrangement.SpaceBetween,
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column {
+                        // ✅ Precio con promoción (rojo)
                         Text(
                             text = price,
-                            color = Color(0xFFE53935),  // Rojo como en la web
+                            color = Color(0xFFE53935),
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 16.sp
                         )
+                        // ✅ Precio original (tachado)
                         Text(
                             text = oldPrice,
                             color = onSurface.copy(alpha = 0.4f),
@@ -589,13 +659,12 @@ fun AnimatedPromoFoodCard(
                         )
                     }
 
-                    // ── Botones + y - (estilo web) ──────────────
+                    // ── Botones + y - ──────────────────────────────
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         if (quantity > 0) {
-                            // Botón "-"
                             Surface(
                                 shape = CircleShape,
                                 color = Color(0xFFEEEEEE),
@@ -613,7 +682,6 @@ fun AnimatedPromoFoodCard(
                             }
                         }
 
-                        // Cantidad (solo si > 0)
                         if (quantity > 0) {
                             Text(
                                 text = quantity.toString(),
@@ -625,7 +693,6 @@ fun AnimatedPromoFoodCard(
                             )
                         }
 
-                        // Botón "+"
                         Surface(
                             shape = CircleShape,
                             color = primary,
@@ -647,79 +714,87 @@ fun AnimatedPromoFoodCard(
         }
     }
 }
+
+// ── RESTAURANT CARD CON ANIMACIÓN ───────────────────────────────
 @Composable
 fun AnimatedRestaurantCard(
-    name             : String,
-    rating           : String,
-    time             : String,
-    imageUrl         : String? = null,
-    imageRes         : Int,
+    name: String,
+    rating: String,
+    time: String,
+    imageUrl: String? = null,
+    imageRes: Int = R.drawable.restaurantechino,
     category: String = "",
-    onClick          : () -> Unit,
-    surface          : Color,
-    onSurface        : Color,
-    onSurfaceVariant : Color
+    onClick: () -> Unit,
+    surface: Color,
+    onSurface: Color,
+    onSurfaceVariant: Color
 ) {
-    var isPressed   by remember { mutableStateOf(false) }
-    var isFavorite  by remember { mutableStateOf(false) }
+    var isPressed by remember { mutableStateOf(false) }
+    var isFavorite by remember { mutableStateOf(false) }
 
     val scale by animateFloatAsState(
-        targetValue   = if (isPressed) 0.97f else 1f,
+        targetValue = if (isPressed) 0.97f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness    = Spring.StiffnessLow
+            stiffness = Spring.StiffnessLow
         ),
         label = "restCardScale"
     )
 
-    // Animación del corazón
     val heartScale by animateFloatAsState(
-        targetValue   = if (isFavorite) 1.3f else 1f,
+        targetValue = if (isFavorite) 1.3f else 1f,
         animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
-        label         = "heartScale"
+        label = "heartScale"
     )
 
     Card(
-        modifier  = Modifier
-            .width(220.dp)                          // más ancha — como la web
+        modifier = Modifier
+            .width(220.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clickable { isPressed = true; onClick() },
-        shape     = RoundedCornerShape(20.dp),
-        colors    = CardDefaults.cardColors(containerColor = surface),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = surface),
         elevation = CardDefaults.cardElevation(
             defaultElevation = 3.dp,
             pressedElevation = 8.dp
         )
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-
-            // ── Imagen con badges ─────────────────────────────────
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(140.dp)
             ) {
-                // Imagen del restaurante
-                AsyncImage(
-                    model              = imageUrl ?: imageRes,
-                    contentDescription = name,
-                    modifier           = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
-                    contentScale       = ContentScale.Crop,
-                    error              = painterResource(R.drawable.restaurantechino)
-                )
+                if (!imageUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = imageUrl,
+                        contentDescription = name,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
+                        contentScale = ContentScale.Crop,
+                        error = painterResource(imageRes)
+                    )
+                } else {
+                    Image(
+                        painter = painterResource(id = imageRes),
+                        contentDescription = name,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)),
+                        contentScale = ContentScale.Crop
+                    )
+                }
 
-                // ── Badge "Abierto" — esquina superior izquierda ──
                 Surface(
-                    modifier  = Modifier
+                    modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(10.dp),
-                    shape     = RoundedCornerShape(50),
-                    color     = Color(0xFF1D9E75)           // verde como la web
+                    shape = RoundedCornerShape(50),
+                    color = Color(0xFF1D9E75)
                 ) {
                     Row(
-                        modifier          = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
@@ -731,16 +806,15 @@ fun AnimatedRestaurantCard(
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
                             "Abierto",
-                            color      = Color.White,
-                            fontSize   = 10.sp,
+                            color = Color.White,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                // ── Botón favorito — esquina superior derecha ─────
                 Box(
-                    modifier         = Modifier
+                    modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(10.dp)
                         .size(32.dp)
@@ -750,145 +824,134 @@ fun AnimatedRestaurantCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector        = if (isFavorite)
+                        imageVector = if (isFavorite)
                             Icons.Default.Favorite else Icons.Default.FavoriteBorder,
                         contentDescription = "Favorito",
-                        tint               = if (isFavorite) Color(0xFFD32F2F)
+                        tint = if (isFavorite) Color(0xFFD32F2F)
                         else Color(0xFF888888),
-                        modifier           = Modifier
+                        modifier = Modifier
                             .size(16.dp)
                             .graphicsLayer { scaleX = heartScale; scaleY = heartScale }
                     )
                 }
             }
 
-            // ── Contenido inferior ────────────────────────────────
             Column(
                 modifier = Modifier.padding(12.dp)
             ) {
-                // Nombre del restaurante
                 Text(
-                    text       = name,
+                    text = name,
                     fontWeight = FontWeight.ExtraBold,
-                    fontSize   = 15.sp,
-                    color      = onSurface,
-                    maxLines   = 1
+                    fontSize = 15.sp,
+                    color = onSurface,
+                    maxLines = 1
                 )
 
                 Spacer(modifier = Modifier.height(2.dp))
 
-                // Subtítulo — "Seleccionado por clientes"
                 Text(
-                    text     = "Seleccionado por clientes",
+                    text = "Seleccionado por clientes",
                     fontSize = 11.sp,
-                    color    = onSurfaceVariant
+                    color = onSurfaceVariant
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // ── Tag de categoría (pill) ────────────────────────
-                // Extraemos la categoría del nombre como aproximación
-                // hasta que el modelo exponga el campo category directamente
                 Surface(
                     shape = RoundedCornerShape(6.dp),
                     color = Color(0xFFFFF3E0)
                 ) {
                     Text(
-                        text     = "popular",
+                        text = if (category.isNotEmpty()) category else "popular",
                         fontSize = 11.sp,
-                        color    = Color(0xFFE65100),
+                        color = Color(0xFFE65100),
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // ── Fila de métricas: rating | tiempo | precio ─────
                 Row(
-                    modifier              = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment     = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Rating
                     MetricChip(
                         modifier = Modifier.weight(1f),
-                        icon     = {
+                        icon = {
                             Icon(
                                 Icons.Default.Star, null,
-                                tint     = Color(0xFFFFB300),
+                                tint = Color(0xFFFFB300),
                                 modifier = Modifier.size(12.dp)
                             )
                         },
-                        text     = rating,
-                        bgColor  = Color(0xFFFFF8E1)
+                        text = rating,
+                        bgColor = Color(0xFFFFF8E1)
                     )
 
-                    // Tiempo
                     MetricChip(
                         modifier = Modifier.weight(1.4f),
-                        icon     = {
+                        icon = {
                             Icon(
                                 Icons.Default.Schedule, null,
-                                tint     = Color(0xFF555555),
+                                tint = Color(0xFF555555),
                                 modifier = Modifier.size(12.dp)
                             )
                         },
-                        text     = time,
-                        bgColor  = Color(0xFFF5F5F5)
+                        text = time,
+                        bgColor = Color(0xFFF5F5F5)
                     )
 
-                    // Precio de envío
                     MetricChip(
                         modifier = Modifier.weight(1.4f),
-                        icon     = {
+                        icon = {
                             Text("🛵", fontSize = 10.sp)
                         },
-                        text     = "\$3.500",
-                        bgColor  = Color(0xFFF5F5F5)
+                        text = "\$3.500",
+                        bgColor = Color(0xFFF5F5F5)
                     )
                 }
 
                 Spacer(modifier = Modifier.height(10.dp))
 
-                // ── "Ver horario completo" ─────────────────────────
                 Text(
-                    text       = "Ver horario completo",
-                    color      = Color(0xFFD32F2F),
-                    fontSize   = 12.sp,
+                    text = "Ver horario completo",
+                    color = Color(0xFFD32F2F),
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    modifier   = Modifier.clickable { /* TODO: mostrar horario */ }
+                    modifier = Modifier.clickable { /* TODO: mostrar horario */ }
                 )
             }
         }
     }
 }
 
-// ── MetricChip — pill de métrica (rating/tiempo/precio) ──────────
+// ── MetricChip ────────────────────────────────────────────────────
 @Composable
 private fun MetricChip(
-    modifier : Modifier = Modifier,
-    icon     : @Composable () -> Unit,
-    text     : String,
-    bgColor  : Color
+    modifier: Modifier = Modifier,
+    icon: @Composable () -> Unit,
+    text: String,
+    bgColor: Color
 ) {
     Surface(
         modifier = modifier,
-        shape    = RoundedCornerShape(8.dp),
-        color    = bgColor
+        shape = RoundedCornerShape(8.dp),
+        color = bgColor
     ) {
         Row(
-            modifier          = Modifier.padding(horizontal = 6.dp, vertical = 5.dp),
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
             icon()
             Spacer(modifier = Modifier.width(3.dp))
             Text(
-                text       = text,
-                fontSize   = 10.sp,
+                text = text,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
-                color      = Color(0xFF333333),
-                maxLines   = 1
+                color = Color(0xFF333333),
+                maxLines = 1
             )
         }
     }

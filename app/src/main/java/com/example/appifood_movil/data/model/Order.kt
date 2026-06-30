@@ -29,11 +29,7 @@ data class CustomerInfo(
     val phone    : String = ""
 ) { constructor() : this("", "", "") }
 
-data class RestaurantInfo(
-    val id    : Int    = 0,
-    val name  : String = "",
-    val phone : String = ""
-) { constructor() : this(0, "", "") }
+
 
 data class OrderItem(
     val name     : String = "",

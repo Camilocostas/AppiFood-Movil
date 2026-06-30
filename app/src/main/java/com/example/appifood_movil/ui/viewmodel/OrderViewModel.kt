@@ -3,7 +3,10 @@ package com.example.appifood_movil.ui.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import com.example.appifood_movil.data.model.*
+import com.example.appifood_movil.data.model.CustomerInfo
+import com.example.appifood_movil.data.model.Order
+import com.example.appifood_movil.data.model.OrderItem
+import com.example.appifood_movil.data.model.PaymentInfo
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -13,17 +16,18 @@ import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
 import javax.inject.Inject
 
+// ✅ Importar el RestaurantInfo del viewmodel
+import com.example.appifood_movil.ui.viewmodel.RestaurantInfo as ViewModelRestaurantInfo
+
 @HiltViewModel
 class OrderViewModel @Inject constructor() : ViewModel() {
 
     private val firestore = FirebaseFirestore.getInstance()
     private val auth      = FirebaseAuth.getInstance()
 
-    // ── Estado del pedido en construcción ────────────────────────
     private val _currentOrder = MutableStateFlow<Order?>(null)
     val currentOrder: StateFlow<Order?> = _currentOrder.asStateFlow()
 
-    // ── Estado del pedido guardado (para mostrar comprobante) ─────
     private val _savedOrder = MutableStateFlow<Order?>(null)
     val savedOrder: StateFlow<Order?> = _savedOrder.asStateFlow()
 
@@ -33,10 +37,9 @@ class OrderViewModel @Inject constructor() : ViewModel() {
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
-    // ── Construir el pedido antes de confirmar ────────────────────
     fun buildOrder(
         userData        : com.example.appifood_movil.data.model.UserData?,
-        restaurantInfo  : RestaurantInfo,
+        restaurantInfo  : ViewModelRestaurantInfo,
         cartItems       : List<com.example.appifood_movil.data.model.ReceiptItem>,
         deliveryAddress : String,
         paymentMethod   : String,
@@ -52,16 +55,16 @@ class OrderViewModel @Inject constructor() : ViewModel() {
             timestamp       = System.currentTimeMillis(),
             status          = "pending",
             customer        = CustomerInfo(
-                uid      = uid,
+                uid = uid,
                 fullName = "${userData?.names ?: ""} ${userData?.lastNames ?: ""}".trim(),
-                phone    = userData?.phone ?: ""
+                phone = userData?.phone ?: ""
             ),
-            restaurant      = restaurantInfo,
+            restaurant      = ViewModelRestaurantInfoToData(restaurantInfo),
             items           = cartItems.map { item ->
                 OrderItem(
-                    name     = item.name,
+                    name = item.name,
                     quantity = item.quantity,
-                    price    = item.price,
+                    price = item.price,
                     subtotal = item.price * item.quantity
                 )
             },
@@ -74,7 +77,20 @@ class OrderViewModel @Inject constructor() : ViewModel() {
         _currentOrder.value = order
     }
 
-    // ── Guardar pedido en Firestore y exponer el resultado ────────
+    // ✅ Función de conversión con los campos en español
+    private fun ViewModelRestaurantInfoToData(viewModelInfo: ViewModelRestaurantInfo): com.example.appifood_movil.data.model.RestaurantInfo {
+        return com.example.appifood_movil.data.model.RestaurantInfo(
+            nombre = viewModelInfo.nombre,
+            descripcion = viewModelInfo.descripcion,
+            categoria = viewModelInfo.categoria,
+            direccion = viewModelInfo.direccion,
+            telefono = viewModelInfo.telefono,
+            horario = viewModelInfo.horario,
+            imagenPortada = viewModelInfo.imagenPortada,
+            fotosGaleria = viewModelInfo.fotosGaleria
+        )
+    }
+
     fun confirmAndSaveOrder(onSuccess: (String) -> Unit) {
         val order = _currentOrder.value ?: return
         _isLoading.value = true

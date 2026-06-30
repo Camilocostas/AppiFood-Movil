@@ -13,8 +13,8 @@ import javax.inject.Inject
 data class SearchCriteria(
     val query: String = "",
     val category: String? = null,
-    val maxPrice: Double = 100000.0, // Precio máximo inicial alto para mostrar todo al inicio
-    val radiusKm: Double = 500.0,    // Radio inicial amplio para evitar listas vacías por ubicación
+    val maxPrice: Double = 100000.0,
+    val radiusKm: Double = 500.0,
     val userLocation: Location? = null
 )
 
@@ -23,6 +23,7 @@ class SearchViewModel @Inject constructor(
     private val locationManager: LocationManager,
     private val foodRepository: FoodRepository
 ) : ViewModel() {
+
     private val _criteria = MutableStateFlow(SearchCriteria())
     val criteria = _criteria.asStateFlow()
 
@@ -32,21 +33,18 @@ class SearchViewModel @Inject constructor(
         _criteria
     ) { restaurants, c ->
         restaurants.filter { rest ->
-            // 1. Filtro por búsqueda de texto (Nombre, Categoría o Platos)
+            // 1. Filtro por búsqueda de texto
             val matchesQuery = c.query.isBlank() ||
                     rest.name.contains(c.query, true) ||
                     rest.category.contains(c.query, true) ||
                     rest.dishes.any { it.name.contains(c.query, true) }
 
             // 2. Filtro por precio máximo
-            // Si el restaurante tiene platos, verificamos si alguno entra en el presupuesto.
-            // Si no tiene platos (datos de API parciales), lo mostramos para no ser tan restrictivos.
             val matchesPrice = rest.dishes.isEmpty() || rest.dishes.any { dish ->
                 dish.price <= c.maxPrice
             }
 
             // 3. Filtro por distancia
-            // Solo filtramos por distancia si tenemos la ubicación del usuario y el radio no es el máximo (500)
             val matchesDistance = if (c.userLocation != null && c.radiusKm < 500) {
                 val results = FloatArray(1)
                 Location.distanceBetween(
@@ -59,7 +57,7 @@ class SearchViewModel @Inject constructor(
                 val distanceInKm = results[0] / 1000.0
                 distanceInKm <= c.radiusKm
             } else {
-                true // Si no hay ubicación o el radio es "ilimitado" (500), mostramos todo
+                true
             }
 
             matchesQuery && matchesPrice && matchesDistance

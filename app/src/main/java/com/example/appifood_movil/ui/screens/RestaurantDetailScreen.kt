@@ -40,8 +40,11 @@ import com.google.maps.android.compose.Marker
 import com.google.maps.android.compose.rememberCameraPositionState
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.graphicsLayer
+import java.text.NumberFormat
+import java.util.Locale
 import android.widget.Toast
 import androidx.compose.foundation.lazy.LazyRow
+import com.example.appifood_movil.navigation.Screen
 
 // ── Paleta unificada ──────────────────────────────────────────────
 private val RedPrimary   = Color(0xFFD32F2F)
@@ -61,6 +64,7 @@ fun RestaurantDetailScreen(
     val restaurant by viewModel.restaurant.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val context = LocalContext.current
+    val platos by viewModel.platos.collectAsState()
 
     // ── LOG PARA VERIFICAR EL ID ─────────────────────────────────
     android.util.Log.d("RestaurantDetail", "ID recibido: $id")
@@ -68,7 +72,7 @@ fun RestaurantDetailScreen(
     // ── CARGAR DATOS ──────────────────────────────────────────────
     LaunchedEffect(id) {
         android.util.Log.d("RestaurantDetail", "Cargando restaurante con ID: $id")
-        viewModel.loadRestaurant(id)
+        viewModel.loadRestaurantDetail(id)
     }
 
     var isFavorite by remember { mutableStateOf(false) }
@@ -280,6 +284,7 @@ fun RestaurantDetailScreen(
             }
 
             // ── CONTENIDO DE LAS TABS ──────────────────────────────
+            // ── CONTENIDO DE LAS TABS ──────────────────────────────
             when (selectedTabIndex) {
                 0 -> { // ── FOTOS ──────────────────────────────────────
                     item {
@@ -288,7 +293,7 @@ fun RestaurantDetailScreen(
                 }
 
                 1 -> { // ── MENÚ ────────────────────────────────────────
-                    if (restaurantData.dishes.isEmpty()) {
+                    if (platos.isEmpty()) {
                         item {
                             EmptyStateMessage(
                                 icon = Icons.Default.Restaurant,
@@ -296,12 +301,25 @@ fun RestaurantDetailScreen(
                             )
                         }
                     } else {
-                        items(restaurantData.dishes) { dish ->
-                            AnimatedDishItem(dish = dish)
+                        items(platos) { plato ->
+                            // ✅ Generar el ID de la misma manera que en getProducts()
+                            val productId = restaurantData.id * 100 + platos.indexOf(plato)
+
+                            AnimatedDishItem(
+                                platoId = productId,  // ✅ Usar el mismo ID que en getProducts()
+                                nombre = plato.nombre,
+                                descripcion = plato.descripcion.ifEmpty { "Delicioso plato" },
+                                precio = plato.precio,
+                                precioPromocion = plato.precioPromocion,
+                                descuento = plato.descuento,
+                                imagenUrl = plato.imagenUrl,
+                                onNavigate = {
+                                    navController.navigate(Screen.ProductDetail.passId(productId))
+                                }
+                            )
                         }
                     }
 
-                    // ── MAPA ────────────────────────────────────────────
                     item {
                         AnimatedMapSection(
                             hasValidLocation = hasValidLocation,
@@ -648,9 +666,22 @@ fun AnimatedPhotosTab() {
 }
 
 // ── PLATO ANIMADO ─────────────────────────────────────────────────
+// ui/screens/RestaurantDetailScreen.kt
+
+// ── PLATO ANIMADO ─────────────────────────────────────────────────
 @Composable
-fun AnimatedDishItem(dish: com.example.appifood_movil.domain.model.Dish) {
+fun AnimatedDishItem(
+    platoId: Int,  // ✅ NUEVO: ID del plato
+    nombre: String,
+    descripcion: String,
+    precio: Double,
+    precioPromocion: Double = 0.0,
+    descuento: Int = 0,
+    imagenUrl: String? = null,
+    onNavigate: () -> Unit  // ✅ NUEVO: Callback para navegar
+) {
     var isPressed by remember { mutableStateOf(false) }
+    val formatter = remember { NumberFormat.getCurrencyInstance(Locale("es", "CO")) }
 
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.98f else 1f,
@@ -671,6 +702,7 @@ fun AnimatedDishItem(dish: com.example.appifood_movil.domain.model.Dish) {
             }
             .clickable {
                 isPressed = true
+                onNavigate()  // ✅ Navegar al detail
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -683,52 +715,105 @@ fun AnimatedDishItem(dish: com.example.appifood_movil.domain.model.Dish) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Imagen del plato
-            Image(
-                painter = painterResource(id = dish.imageRes),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(70.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Crop
-            )
+            if (!imagenUrl.isNullOrEmpty()) {
+                AsyncImage(
+                    model = imagenUrl,
+                    contentDescription = nombre,
+                    modifier = Modifier
+                        .size(70.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(R.drawable.burguer)
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.burguer),
+                    contentDescription = nombre,
+                    modifier = Modifier
+                        .size(70.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = dish.name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "Plato delicioso",
-                    color = TextMuted,
-                    fontSize = 13.sp,
-                    maxLines = 1
-                )
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "$${String.format("%.0f", dish.price)}",
-                    color = RedPrimary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = RedPrimary.copy(alpha = 0.1f)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Agregar",
-                        color = RedPrimary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        text = nombre,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = TextPrimary
                     )
+                    if (precioPromocion > 0 && descuento > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFFE53935).copy(alpha = 0.1f)
+                        ) {
+                            Text(
+                                text = "-$descuento% OFF",
+                                color = Color(0xFFE53935),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
+
+                Text(
+                    text = descripcion,
+                    color = TextMuted,
+                    fontSize = 13.sp,
+                    maxLines = 2
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (precioPromocion > 0) {
+                        Text(
+                            text = formatter.format(precioPromocion),
+                            color = Color(0xFFE53935),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 18.sp
+                        )
+                        Text(
+                            text = formatter.format(precio),
+                            color = TextMuted,
+                            fontSize = 13.sp,
+                            style = androidx.compose.ui.text.TextStyle(
+                                textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                            )
+                        )
+                    } else {
+                        Text(
+                            text = formatter.format(precio),
+                            color = RedPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                    }
+                }
+            }
+
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = RedPrimary.copy(alpha = 0.1f),
+                modifier = Modifier.clickable { onNavigate() }  // ✅ También navega al hacer clic en "Agregar"
+            ) {
+                Text(
+                    text = "Agregar",
+                    color = RedPrimary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
             }
         }
     }

@@ -1,10 +1,13 @@
-// ui/screens/RestaurantDashboardScreen.kt
+@file:OptIn(ExperimentalMaterial3Api::class)
 package com.example.appifood_movil.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -19,45 +22,43 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.appifood_movil.navigation.Screen
+import com.example.appifood_movil.ui.viewmodel.RestaurantAuthViewModel
+import com.example.appifood_movil.ui.viewmodel.RestaurantDashboardViewModel
 import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.delay
 
-private val BluePrimary  = Color(0xFF1565C0)
-private val BlueDark     = Color(0xFF0D47A1)
-private val BlueDeep     = Color(0xFF002171)
-private val YellowAccent = Color(0xFFFFD600)
-private val RedPrimary   = Color(0xFFD32F2F)
-private val TextPrimary  = Color(0xFF1A1A1A)
-private val TextMuted    = Color(0xFF888888)
-private val SurfaceGray  = Color(0xFFF7F7F7)
+// ── Paleta rol restaurante ────────────────────────────────────────
+private val BluePrimary   = Color(0xFF1565C0)
+private val BlueDark      = Color(0xFF0D47A1)
+private val BlueDeep      = Color(0xFF002171)
+private val BlueAccent    = Color(0xFF42A5F5)
+private val YellowAccent  = Color(0xFFFFD600)
+private val GreenSuccess  = Color(0xFF1D9E75)
+private val OrangeWarn    = Color(0xFFF57F17)
+private val RedAlert      = Color(0xFFD32F2F)
+private val SurfaceLight  = Color(0xFFF0F4FF)
+private val TextPrimary   = Color(0xFF1A1A1A)
+private val TextMuted     = Color(0xFF888888)
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RestaurantDashboardScreen(navController: NavController) {
+fun RestaurantDashboardScreen(
+    navController     : NavController,
+    authViewModel     : RestaurantAuthViewModel        = hiltViewModel(),
+    dashboardViewModel: RestaurantDashboardViewModel   = hiltViewModel()
+) {
+    val user           = FirebaseAuth.getInstance().currentUser
+    val restauranteId  = user?.uid ?: ""
+    val platosActivos  by dashboardViewModel.platosActivos.collectAsState()
 
-    val auth      = FirebaseAuth.getInstance()
-    val firestore = FirebaseFirestore.getInstance()
-
-    // Cargar datos básicos del restaurante
-    var restaurantName by remember { mutableStateOf("Mi Restaurante") }
-    var ownerName      by remember { mutableStateOf("") }
-
-    LaunchedEffect(Unit) {
-        val uid = auth.currentUser?.uid ?: return@LaunchedEffect
-        firestore.collection("restaurants").document(uid).get()
-            .addOnSuccessListener { doc ->
-                restaurantName = doc.getString("restaurantName") ?: "Mi Restaurante"
-                ownerName      = doc.getString("ownerName") ?: ""
-            }
+    LaunchedEffect(restauranteId) {
+        if (restauranteId.isNotEmpty()) dashboardViewModel.loadPlatosActivos(restauranteId)
     }
 
-    // Animación de entrada
+    // ── Animación de entrada ──────────────────────────────────────
     var visible by remember { mutableStateOf(false) }
     val screenAlpha by animateFloatAsState(
         targetValue   = if (visible) 1f else 0f,
@@ -74,260 +75,428 @@ fun RestaurantDashboardScreen(navController: NavController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F5F5))
+            .background(SurfaceLight)
             .graphicsLayer { alpha = screenAlpha }
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-
-            // ── Header azul con gradiente ─────────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .offset(y = headerOffset)
-                    .background(
-                        Brush.verticalGradient(listOf(BluePrimary, BlueDark))
-                    )
-                    .padding(top = 56.dp, bottom = 28.dp, start = 24.dp, end = 24.dp)
-            ) {
-                // Círculos decorativos
-                Box(modifier = Modifier.size(150.dp).offset(x = 200.dp, y = (-40).dp)
-                    .clip(CircleShape).background(Color.White.copy(alpha = 0.05f)))
-
-                Column {
-                    Row(
-                        verticalAlignment     = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        modifier              = Modifier.fillMaxWidth()
-                    ) {
-                        Column {
-                            Text(
-                                "¡Hola, $ownerName! 👋",
-                                color    = Color.White.copy(alpha = 0.85f),
-                                fontSize = 14.sp
+        LazyColumn(
+            modifier            = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
+        ) {
+            // ── Header con gradiente azul ─────────────────────────
+            item {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = headerOffset)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(BluePrimary, BlueDark, BlueDeep)
                             )
-                            Text(
-                                restaurantName,
-                                color      = Color.White,
-                                fontSize   = 22.sp,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-                        // Avatar
-                        Box(
-                            modifier         = Modifier.size(48.dp).clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.2f)),
-                            contentAlignment = Alignment.Center
+                        )
+                        .padding(top = 52.dp, bottom = 32.dp,
+                            start = 24.dp, end = 24.dp)
+                ) {
+                    // Círculos decorativos
+                    Box(modifier = Modifier.size(200.dp)
+                        .offset(x = 180.dp, y = (-50).dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.04f)))
+                    Box(modifier = Modifier.size(120.dp)
+                        .offset(x = (-30).dp, y = 60.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.05f)))
+
+                    Column {
+                        // TopBar dentro del header
+                        Row(
+                            modifier              = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment     = Alignment.CenterVertically
                         ) {
-                            Text("🏪", fontSize = 22.sp)
+                            Text(
+                                "Panel de Administración",
+                                color      = Color.White.copy(alpha = 0.75f),
+                                fontSize   = 13.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                            // Cerrar sesión
+                            Box(
+                                modifier         = Modifier
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.15f))
+                                    .clickable {
+                                        FirebaseAuth.getInstance().signOut()
+                                        navController.navigate("roleSelection") {
+                                            popUpTo(0) { inclusive = true }
+                                        }
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.Logout, "Cerrar sesión",
+                                    tint = Color.White, modifier = Modifier.size(18.dp))
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // Avatar + bienvenida
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier         = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.White.copy(alpha = 0.18f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("🏪", fontSize = 26.sp)
+                            }
+                            Spacer(modifier = Modifier.width(14.dp))
+                            Column {
+                                Text(
+                                    "¡Hola, ${user?.displayName ?: "Restaurante"}! 👋",
+                                    color      = Color.White,
+                                    fontSize   = 20.sp,
+                                    fontWeight = FontWeight.ExtraBold
+                                )
+                                Text(
+                                    "Gestiona tu restaurante desde aquí",
+                                    color    = Color.White.copy(alpha = 0.75f),
+                                    fontSize = 13.sp
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        // Tag pill
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = Color.White.copy(alpha = 0.15f)
+                        ) {
+                            Text(
+                                "🔵 Panel activo",
+                                color      = Color.White,
+                                fontSize   = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier   = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                            )
                         }
                     }
+                }
+            }
 
-                    Spacer(modifier = Modifier.height(16.dp))
+            // ── Stats en tarjetas con entrada escalonada ──────────
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .offset(y = (-20).dp)
+                        .clip(RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp))
+                        .background(SurfaceLight)
+                        .padding(top = 24.dp, start = 20.dp, end = 20.dp)
+                ) {
+                    Text(
+                        "Resumen de hoy",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize   = 17.sp,
+                        color      = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(14.dp))
 
-                    // Tag pill
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = Color.White.copy(alpha = 0.18f)
+                    // Fila 1 de stats
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text(
-                            "Panel de administración",
-                            color      = Color.White,
-                            fontSize   = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier   = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                        AnimatedStatCard(
+                            modifier = Modifier.weight(1f),
+                            emoji    = "📦",
+                            value    = "0",
+                            label    = "Pedidos hoy",
+                            color    = BluePrimary,
+                            index    = 0
+                        )
+                        AnimatedStatCard(
+                            modifier = Modifier.weight(1f),
+                            emoji    = "💰",
+                            value    = "\$0",
+                            label    = "Ingresos",
+                            color    = GreenSuccess,
+                            index    = 1
                         )
                     }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Fila 2 de stats
+                    Row(
+                        modifier              = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        AnimatedStatCard(
+                            modifier = Modifier.weight(1f),
+                            emoji    = "⭐",
+                            value    = "N/A",
+                            label    = "Calificación",
+                            color    = OrangeWarn,
+                            index    = 2
+                        )
+                        AnimatedStatCard(
+                            modifier = Modifier.weight(1f),
+                            emoji    = "🍽️",
+                            value    = platosActivos.toString(),
+                            label    = "Platos activos",
+                            color    = RedAlert,
+                            index    = 3
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    // ── Sección gestionar ─────────────────────────
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .width(4.dp).height(20.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(BluePrimary)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            "Gestionar",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize   = 17.sp,
+                            color      = TextPrimary
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
                 }
             }
 
-            // ── Grid de opciones ──────────────────────────────────
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Estadísticas rápidas
-                Row(
-                    modifier              = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    QuickStatCard(
-                        modifier = Modifier.weight(1f),
-                        emoji    = "📦",
-                        label    = "Pedidos hoy",
-                        value    = "0",
-                        color    = BluePrimary,
-                        index    = 0
-                    )
-                    QuickStatCard(
-                        modifier = Modifier.weight(1f),
-                        emoji    = "💰",
-                        label    = "Ingresos hoy",
-                        value    = "\$0",
-                        color    = Color(0xFF2E7D32),
-                        index    = 1
-                    )
-                }
-                Row(
-                    modifier              = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    QuickStatCard(
-                        modifier = Modifier.weight(1f),
-                        emoji    = "⭐",
-                        label    = "Calificación",
-                        value    = "N/A",
-                        color    = Color(0xFFF57F17),
-                        index    = 2
-                    )
-                    QuickStatCard(
-                        modifier = Modifier.weight(1f),
-                        emoji    = "🍽️",
-                        label    = "Platos activos",
-                        value    = "0",
-                        color    = Color(0xFF6A1B9A),
-                        index    = 3
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(4.dp))
-
-                Text(
-                    "Gestionar",
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize   = 17.sp,
-                    color      = TextPrimary
+            // ── Cards de gestión con animación escalonada ─────────
+            val gestionItems = listOf(
+                GestionItem(
+                    icon        = Icons.Default.Store,
+                    emoji       = "🏪",
+                    title       = "Información del restaurante",
+                    description = "Nombre, descripción, dirección, teléfono y horarios",
+                    color       = BluePrimary,
+                    route       = "gestionInfoRestaurante"
+                ),
+                GestionItem(
+                    icon        = Icons.Default.Restaurant,
+                    emoji       = "🍽️",
+                    title       = "Mis platos",
+                    description = "Agrega, edita, elimina y gestiona promociones",
+                    color       = GreenSuccess,
+                    route       = "gestionPlatos"
+                ),
+                GestionItem(
+                    icon        = Icons.Default.Star,
+                    emoji       = "⭐",
+                    title       = "Reseñas",
+                    description = "Lee y responde las reseñas de tus clientes",
+                    color       = OrangeWarn,
+                    route       = "gestionResenas"
                 )
+            )
 
-                // Opciones de gestión
-                val options = listOf(
-                    DashOption("Mis platos",         Icons.Default.Restaurant,     Color(0xFF1565C0), "Agrega, edita o elimina platos de tu menú"),
-                    DashOption("Pedidos",            Icons.Default.ShoppingBag,    Color(0xFF2E7D32), "Gestiona los pedidos entrantes en tiempo real"),
-                    DashOption("Fotos",              Icons.Default.PhotoCamera,    Color(0xFF6A1B9A), "Sube y organiza las fotos de tu restaurante"),
-                    DashOption("Reseñas",            Icons.Default.Star,           Color(0xFFF57F17), "Lee y responde las reseñas de tus clientes"),
-                    DashOption("Estadísticas",       Icons.Default.BarChart,       Color(0xFF00695C), "Analiza el rendimiento de tu restaurante"),
-                    DashOption("Configuración",      Icons.Default.Settings,       TextMuted,         "Horarios, dirección, información de contacto")
+            items(gestionItems.size) { index ->
+                AnimatedGestionCard(
+                    item          = gestionItems[index],
+                    index         = index,
+                    onNavigate    = { navController.navigate(gestionItems[index].route) }
                 )
-
-                options.forEachIndexed { index, option ->
-                    DashOptionCard(option = option, index = index)
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                // Botón cerrar sesión
-                OutlinedButton(
-                    onClick  = {
-                        FirebaseAuth.getInstance().signOut()
-                        navController.navigate(Screen.RoleSelection.route) {
-                            popUpTo(0) { inclusive = true }
-                        }
-                    },
-                    modifier = Modifier.fillMaxWidth().height(50.dp),
-                    shape    = RoundedCornerShape(14.dp),
-                    border   = BorderStroke(1.5.dp, RedPrimary),
-                    colors   = ButtonDefaults.outlinedButtonColors(contentColor = RedPrimary)
-                ) {
-                    Icon(Icons.Default.ExitToApp, null, modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Cerrar sesión", fontWeight = FontWeight.Bold)
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
             }
+
+            item { Spacer(modifier = Modifier.height(32.dp)) }
         }
     }
 }
 
-data class DashOption(
-    val title       : String,
+data class GestionItem(
     val icon        : ImageVector,
+    val emoji       : String,
+    val title       : String,
+    val description : String,
     val color       : Color,
-    val description : String
+    val route       : String
 )
 
+// ── Stat card animada ─────────────────────────────────────────────
 @Composable
-private fun QuickStatCard(
+private fun AnimatedStatCard(
     modifier : Modifier,
     emoji    : String,
-    label    : String,
     value    : String,
+    label    : String,
     color    : Color,
     index    : Int
 ) {
     var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(index * 60L); visible = true }
+    LaunchedEffect(Unit) { delay(index * 80L); visible = true }
 
     AnimatedVisibility(
-        visible = visible,
-        enter   = fadeIn(tween(300)) + slideInVertically(
-            tween(350, easing = FastOutSlowInEasing) ) { it / 2 },
+        visible  = visible,
+        enter    = fadeIn(tween(300)) + slideInVertically(tween(380)) { it / 2 },
         modifier = modifier
     ) {
         Card(
             modifier  = Modifier.fillMaxWidth(),
-            shape     = RoundedCornerShape(16.dp),
+            shape     = RoundedCornerShape(18.dp),
             colors    = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(2.dp)
+            elevation = CardDefaults.cardElevation(3.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text(emoji, fontSize = 22.sp)
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(value, fontWeight = FontWeight.ExtraBold, fontSize = 20.sp, color = color)
-                Text(label, fontSize = 11.sp, color = TextMuted)
+                Row(
+                    modifier              = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment     = Alignment.Top
+                ) {
+                    Column {
+                        Text(
+                            value,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize   = 24.sp,
+                            color      = color
+                        )
+                        Text(label, fontSize = 12.sp, color = TextMuted)
+                    }
+                    Box(
+                        modifier         = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(color.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(emoji, fontSize = 18.sp)
+                    }
+                }
+                Spacer(modifier = Modifier.height(10.dp))
+                // Barra de progreso decorativa
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.dp)
+                        .clip(RoundedCornerShape(50))
+                        .background(color.copy(alpha = 0.15f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(0.4f)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(50))
+                            .background(color)
+                    )
+                }
             }
         }
     }
 }
 
+// ── Gestión card animada ──────────────────────────────────────────
 @Composable
-private fun DashOptionCard(option: DashOption, index: Int) {
-    var visible by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) { delay(index * 50L); visible = true }
-
+private fun AnimatedGestionCard(
+    item       : GestionItem,
+    index      : Int,
+    onNavigate : () -> Unit
+) {
+    var visible   by remember { mutableStateOf(false) }
     var isPressed by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) { delay(index * 70L + 200L); visible = true }
+
     val scale by animateFloatAsState(
         targetValue   = if (isPressed) 0.97f else 1f,
         animationSpec = spring(Spring.DampingRatioMediumBouncy),
-        label         = "dashCardScale"
+        label         = "gestionScale"
     )
 
     AnimatedVisibility(
         visible = visible,
         enter   = fadeIn(tween(300)) + slideInHorizontally(
-            tween(350, easing = FastOutSlowInEasing)) { it / 3 }
+            tween(380, easing = FastOutSlowInEasing)) { it / 3 },
+        modifier = Modifier
+            .padding(horizontal = 20.dp)
+            .padding(bottom = 12.dp)
     ) {
         Card(
-            modifier  = Modifier.fillMaxWidth()
+            modifier  = Modifier
+                .fillMaxWidth()
                 .graphicsLayer { scaleX = scale; scaleY = scale }
-                .clickable { isPressed = true },
-            shape     = RoundedCornerShape(16.dp),
+                .clickable { isPressed = true; onNavigate() },
+            shape     = RoundedCornerShape(20.dp),
             colors    = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(1.dp)
+            elevation = CardDefaults.cardElevation(3.dp)
         ) {
             Row(
-                modifier          = Modifier.fillMaxWidth().padding(16.dp),
+                modifier          = Modifier.fillMaxWidth().padding(18.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                // Ícono con gradiente
                 Box(
-                    modifier         = Modifier.size(44.dp).clip(RoundedCornerShape(12.dp))
-                        .background(option.color.copy(alpha = 0.1f)),
+                    modifier         = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            Brush.radialGradient(
+                                colors = listOf(
+                                    item.color.copy(alpha = 0.2f),
+                                    item.color.copy(alpha = 0.05f)
+                                )
+                            )
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(option.icon, null, tint = option.color,
-                        modifier = Modifier.size(22.dp))
+                    Text(item.emoji, fontSize = 26.sp)
                 }
-                Spacer(modifier = Modifier.width(14.dp))
+
+                Spacer(modifier = Modifier.width(16.dp))
+
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(option.title, fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp, color = TextPrimary)
-                    Text(option.description, fontSize = 12.sp, color = TextMuted)
+                    Text(
+                        item.title,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize   = 15.sp,
+                        color      = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(3.dp))
+                    Text(
+                        item.description,
+                        fontSize = 12.sp,
+                        color    = TextMuted,
+                        maxLines = 2,
+                        lineHeight = 17.sp
+                    )
                 }
-                Icon(Icons.Default.ChevronRight, null, tint = TextMuted,
-                    modifier = Modifier.size(20.dp))
+
+                Spacer(modifier = Modifier.width(8.dp))
+
+                // Flecha con color
+                Box(
+                    modifier         = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(item.color.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.ChevronRight, null,
+                        tint     = item.color,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
             }
         }
     }
 }
+
+// ── Stub de StatCard para evitar errores (ya no se usa pero puede quedar) ─
+@Composable
+fun StatCard(value: String, label: String, color: Color, modifier: Modifier = Modifier) {}
+
+// ── Stub ManagementCard ───────────────────────────────────────────
+@Composable
+fun ManagementCard(title: String, description: String, icon: String = "📋", onClick: () -> Unit) {}
