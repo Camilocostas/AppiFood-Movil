@@ -389,7 +389,7 @@ fun AnimatedPlatoCard(
                                     color = ErrorColor.copy(alpha = 0.12f)
                                 ) {
                                     Text(
-                                        text = "-${plato.descuento}% OFF",
+                                        text = "",
                                         color = ErrorColor,
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.ExtraBold,
