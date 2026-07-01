@@ -23,15 +23,16 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import com.example.appifood_movil.R
 import com.example.appifood_movil.data.model.UserData
-import androidx.compose.ui.res.painterResource
+import com.example.appifood_movil.data.model.MockFirebaseUser
 import com.example.appifood_movil.navigation.Screen
 import com.example.appifood_movil.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
@@ -49,13 +50,13 @@ private val TextMuted    = Color(0xFF888888)
 @Composable
 fun ProfileScreen(
     navController : NavController,
-    authViewModel : AuthViewModel = viewModel()
+    authViewModel : AuthViewModel = hiltViewModel()
 ) {
     val scope = rememberCoroutineScope()
 
-    val user     by authViewModel.user.collectAsState()
-    val userData by authViewModel.userData.collectAsState()
-    val isLoading by authViewModel.isLoading.collectAsState()
+    val user: MockFirebaseUser? by authViewModel.user.collectAsState(initial = null)
+    val userData by authViewModel.userData.collectAsState(initial = null)
+    val isLoading by authViewModel.isLoading.collectAsState(initial = false)
 
     // ── Estado de edición ──────────────────────────────────────────
     var isEditing by remember { mutableStateOf(false) }
@@ -80,9 +81,9 @@ fun ProfileScreen(
     // ── Actualizar campos editables cuando cambie userData ────────
     LaunchedEffect(userData) {
         userData?.let { data ->
-            editedNames = data.names ?: ""
-            editedLastNames = data.lastNames ?: ""
-            editedPhone = data.phone ?: ""
+            editedNames = data.names
+            editedLastNames = data.lastNames
+            editedPhone = data.phone
         }
     }
 
@@ -198,9 +199,9 @@ fun ProfileScreen(
                             onClick = {
                                 if (isEditing) {
                                     userData?.let { data ->
-                                        editedNames = data.names ?: ""
-                                        editedLastNames = data.lastNames ?: ""
-                                        editedPhone = data.phone ?: ""
+                                        editedNames = data.names
+                                        editedLastNames = data.lastNames
+                                        editedPhone = data.phone
                                     }
                                     isEditing = false
                                 } else {
@@ -249,6 +250,7 @@ fun ProfileScreen(
                                             email = userData?.email ?: "",
                                             phone = editedPhone.trim(),
                                             imageUrl = userData?.imageUrl ?: "",
+                                            address = userData?.address ?: "",
                                             createdAt = userData?.createdAt ?: System.currentTimeMillis()
                                         )
 
@@ -414,18 +416,7 @@ fun ProfileDecorativeCircles() {
             .clip(CircleShape).background(Color.White.copy(alpha = 0.03f)))
     }
 }
-// En ProfileScreen.kt, dentro de ProfileOptionsCard o donde quieras
-@Composable
-fun NotificationCenterItem(navController: NavController) {
-    ProfileMenuRow(
-        icon = Icons.Default.Notifications,
-        title = "🔔 Centro de notificaciones",
-        onClick = {
-            // Navegar a pantalla de notificaciones
-            navController.navigate("notifications")
-        }
-    )
-}
+
 // ── Header del perfil ─────────────────────────────────────────────
 @Composable
 fun ProfileHeader(

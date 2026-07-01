@@ -14,77 +14,28 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import com.example.appifood_movil.ui.viewmodel.SearchViewModel
 import com.example.appifood_movil.navigation.Screen
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.tasks.await
+import com.example.appifood_movil.data.local.TokenManager
 
 @Composable
 fun AppNavigation(searchViewModel: SearchViewModel) {
     val navController = rememberNavController()
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val tokenManager = remember { TokenManager(context) }
 
     // ✅ Declaramos el ViewModel compartido para que persista entre pantallas
     val sharedCartViewModel: com.example.appifood_movil.ui.viewmodel.CartViewModel = androidx.hilt.navigation.compose.hiltViewModel()
 
-    // Estado de autenticación
-    var isAuthenticated by remember { mutableStateOf(false) }
-    var isRestaurant by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(true) }
-
-    // Verificar autenticación al iniciar
-    LaunchedEffect(Unit) {
-        val auth = FirebaseAuth.getInstance()
-        val currentUser = auth.currentUser
-        isAuthenticated = currentUser != null
-
-        if (currentUser != null) {
-            try {
-                val firestore = FirebaseFirestore.getInstance()
-                val doc = firestore.collection("restaurants").document(currentUser.uid).get().await()
-                isRestaurant = doc.exists()
-            } catch (e: Exception) {
-                isRestaurant = false
-            }
-        }
-        isLoading = false
-    }
-
-    val startDestination = if (isLoading) {
-        Screen.Splash.route
-    } else if (isAuthenticated) {
-        if (isRestaurant) Screen.RestaurantDashboard.route else Screen.Home.route
-    } else {
-        Screen.Splash.route
-    }
-
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = Screen.Splash.route
     ) {
         composable(Screen.Splash.route) {
             SplashScreen(
                 onFinished = {
-                    val auth = FirebaseAuth.getInstance()
-                    val user = auth.currentUser
-
-                    if (user != null) {
-                        val firestore = FirebaseFirestore.getInstance()
-                        firestore.collection("restaurants").document(user.uid).get()
-                            .addOnSuccessListener { doc ->
-                                if (doc.exists()) {
-                                    navController.navigate(Screen.RestaurantDashboard.route) {
-                                        popUpTo(Screen.Splash.route) { inclusive = true }
-                                    }
-                                } else {
-                                    navController.navigate(Screen.Home.route) {
-                                        popUpTo(Screen.Splash.route) { inclusive = true }
-                                    }
-                                }
-                            }
-                            .addOnFailureListener {
-                                navController.navigate(Screen.Home.route) {
-                                    popUpTo(Screen.Splash.route) { inclusive = true }
-                                }
-                            }
+                    if (tokenManager.isLoggedIn()) {
+                        navController.navigate(Screen.Home.route) {
+                            popUpTo(Screen.Splash.route) { inclusive = true }
+                        }
                     } else {
                         navController.navigate(Screen.Onboarding.route) {
                             popUpTo(Screen.Splash.route) { inclusive = true }

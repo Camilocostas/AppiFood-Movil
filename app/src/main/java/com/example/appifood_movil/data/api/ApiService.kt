@@ -1,10 +1,6 @@
 package com.example.appifood_movil.data.api
 
-import com.example.appifood_movil.data.api.request.LoginRequest
-import com.example.appifood_movil.data.api.request.RegisterRequest
-import com.example.appifood_movil.data.api.request.OrderRequest
-import com.example.appifood_movil.data.api.request.CartRequest
-import com.example.appifood_movil.data.api.request.RestaurantRequest
+import com.example.appifood_movil.data.api.request.*
 import com.example.appifood_movil.data.api.response.*
 import retrofit2.Response
 import retrofit2.http.*
@@ -95,6 +91,24 @@ interface ApiService {
     suspend fun getFavorites(
         @Header("Authorization") token: String
     ): Response<FavoritesResponse>
+
+    // ── DIRECCIONES (CRUD) ────────────────────────────────────────
+    @GET("user/addresses")
+    suspend fun getAddresses(
+        @Header("Authorization") token: String
+    ): Response<AddressesResponse>
+
+    @POST("user/addresses")
+    suspend fun createAddress(
+        @Header("Authorization") token: String,
+        @Body request: AddressRequest
+    ): Response<MessageResponse>
+
+    @DELETE("user/addresses/{id}")
+    suspend fun deleteAddress(
+        @Header("Authorization") token: String,
+        @Path("id") id: Int
+    ): Response<MessageResponse>
 
     // ── NOTIFICACIONES ────────────────────────────────────────────
     @GET("notifications")

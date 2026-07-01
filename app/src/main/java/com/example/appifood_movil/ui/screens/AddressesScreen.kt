@@ -1,10 +1,10 @@
 package com.example.appifood_movil.ui.screens
 
-import androidx.compose.foundation.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -12,49 +12,43 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.example.appifood_movil.data.model.PaymentMethod
 import com.example.appifood_movil.ui.components.BaseScreen
-import com.example.appifood_movil.ui.viewmodel.AuthViewModel
+import com.example.appifood_movil.ui.viewmodel.AddressViewModel
+import com.example.appifood_movil.domain.model.Address
 
-private val RedPrimary   = Color(0xFFD32F2F)
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PaymentsScreen(
+fun AddressesScreen(
     navController: NavController,
-    authViewModel: AuthViewModel = hiltViewModel()
+    viewModel: AddressViewModel = hiltViewModel()
 ) {
-    val paymentMethods by authViewModel.paymentMethods.collectAsState()
-    val isLoading by authViewModel.isLoading.collectAsState()
+    val addresses by viewModel.addresses.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     var showAddDialog by remember { mutableStateOf(false) }
 
     BaseScreen(
-        title = "Mis Métodos de Pago",
+        title = "Mis Direcciones",
         navController = navController
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            if (paymentMethods.isEmpty() && !isLoading) {
-                EmptyPaymentsState { showAddDialog = true }
+            if (addresses.isEmpty() && !isLoading) {
+                EmptyAddressesState { showAddDialog = true }
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 80.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    items(paymentMethods) { method ->
-                        PaymentMethodItem(
-                            method = method,
-                            onDelete = { authViewModel.removePaymentMethod("0", method.id) { } },
-                            onSetDefault = { authViewModel.setDefaultPaymentMethod("0", method.id) { } }
+                    items(addresses) { address ->
+                        AddressItem(
+                            address = address,
+                            onDelete = { viewModel.deleteAddress(address.id) }
                         )
                     }
                 }
@@ -65,10 +59,10 @@ fun PaymentsScreen(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(16.dp),
-                containerColor = RedPrimary,
+                containerColor = Color(0xFFD32F2F),
                 contentColor = Color.White
             ) {
-                Icon(Icons.Default.Add, "Agregar método")
+                Icon(Icons.Default.Add, "Agregar dirección")
             }
 
             if (isLoading) {
@@ -78,19 +72,18 @@ fun PaymentsScreen(
     }
 
     if (showAddDialog) {
-        AddPaymentDialog(
+        AddAddressDialog(
             onDismiss = { showAddDialog = false },
-            onConfirm = { type, number ->
-                authViewModel.addPaymentMethod("0", PaymentMethod("", type, number, "", false)) {
-                    showAddDialog = false
-                }
+            onConfirm = { title, addr, details ->
+                viewModel.addAddress(title, addr, details)
+                showAddDialog = false
             }
         )
     }
 }
 
 @Composable
-fun PaymentMethodItem(method: PaymentMethod, onDelete: () -> Unit, onSetDefault: () -> Unit) {
+fun AddressItem(address: Address, onDelete: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -101,20 +94,20 @@ fun PaymentMethodItem(method: PaymentMethod, onDelete: () -> Unit, onSetDefault:
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = if (method.type.lowercase() == "efectivo") Icons.Default.Payments else Icons.Default.CreditCard,
+                imageVector = when(address.title.lowercase()) {
+                    "casa" -> Icons.Default.Home
+                    "trabajo" -> Icons.Default.Work
+                    else -> Icons.Default.LocationOn
+                },
                 contentDescription = null,
-                tint = RedPrimary
+                tint = Color(0xFFD32F2F)
             )
             Spacer(modifier = Modifier.width(16.dp))
             Column(modifier = Modifier.weight(1f)) {
-                Text(method.type, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                Text(method.identifier, color = Color.Gray, fontSize = 14.sp)
-            }
-            if (method.isDefault) {
-                Icon(Icons.Default.CheckCircle, "Predeterminado", tint = Color(0xFF1D9E75))
-            } else {
-                IconButton(onClick = onSetDefault) {
-                    Icon(Icons.Default.RadioButtonUnchecked, "Hacer predeterminado", tint = Color.Gray)
+                Text(address.title, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                Text(address.address, color = Color.Gray, fontSize = 14.sp)
+                if (!address.details.isNullOrBlank()) {
+                    Text(address.details, color = Color.Gray, fontSize = 12.sp)
                 }
             }
             IconButton(onClick = onDelete) {
@@ -125,40 +118,42 @@ fun PaymentMethodItem(method: PaymentMethod, onDelete: () -> Unit, onSetDefault:
 }
 
 @Composable
-fun EmptyPaymentsState(onAdd: () -> Unit) {
+fun EmptyAddressesState(onAdd: () -> Unit) {
     Column(
         modifier = Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.Default.CreditCardOff, null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
+        Icon(Icons.Default.LocationOff, null, modifier = Modifier.size(64.dp), tint = Color.LightGray)
         Spacer(modifier = Modifier.height(16.dp))
-        Text("No tienes métodos de pago guardados", color = Color.Gray)
+        Text("No tienes direcciones guardadas", color = Color.Gray)
         TextButton(onClick = onAdd) {
-            Text("Agregar mi primer método", color = RedPrimary)
+            Text("Agregar mi primera dirección", color = Color(0xFFD32F2F))
         }
     }
 }
 
 @Composable
-fun AddPaymentDialog(onDismiss: () -> Unit, onConfirm: (String, String) -> Unit) {
-    var type by remember { mutableStateOf("Tarjeta") }
-    var number by remember { mutableStateOf("") }
+fun AddAddressDialog(onDismiss: () -> Unit, onConfirm: (String, String, String?) -> Unit) {
+    var title by remember { mutableStateOf("") }
+    var address by remember { mutableStateOf("") }
+    var details by remember { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nuevo Método de Pago") },
+        title = { Text("Nueva Dirección") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(value = type, onValueChange = { type = it }, label = { Text("Tipo (Ej: Tarjeta, Nequi)") })
-                OutlinedTextField(value = number, onValueChange = { number = it }, label = { Text("Número o Identificador") })
+                OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Etiqueta (Ej: Casa)") })
+                OutlinedTextField(value = address, onValueChange = { address = it }, label = { Text("Dirección completa") })
+                OutlinedTextField(value = details, onValueChange = { details = it }, label = { Text("Detalles (Opcional)") })
             }
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(type, number) },
-                enabled = type.isNotBlank() && number.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(containerColor = RedPrimary)
+                onClick = { onConfirm(title, address, details) },
+                enabled = title.isNotBlank() && address.isNotBlank(),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
             ) { Text("Guardar") }
         },
         dismissButton = {

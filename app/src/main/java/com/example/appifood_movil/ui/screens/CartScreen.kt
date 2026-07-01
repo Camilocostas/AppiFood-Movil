@@ -24,6 +24,7 @@ import coil.compose.AsyncImage
 import com.example.appifood_movil.ui.viewmodel.CartViewModel
 import com.example.appifood_movil.ui.viewmodel.AuthViewModel
 import com.example.appifood_movil.ui.viewmodel.OrderViewModel
+import com.example.appifood_movil.ui.viewmodel.RestaurantInfo as ViewModelRestaurantInfo
 import com.example.appifood_movil.R
 import androidx.navigation.NavController
 import com.example.appifood_movil.data.model.ReceiptItem
@@ -48,8 +49,6 @@ fun CartScreen(
     val restaurantName  by cartViewModel.restaurantName.collectAsState()
     val restaurantPhone by cartViewModel.restaurantPhone.collectAsState()
 
-    // ── Estado para el Formulario de Pedido (BottomSheet) ───────
-    val sheetState = rememberModalBottomSheetState()
     var showOrderSheet by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -107,19 +106,21 @@ fun CartScreen(
             }
         }
 
-        // ✅ Integración del Formulario de Pedido
         if (showOrderSheet) {
             OrderFormBottomSheet(
-                sheetState     = sheetState,
-                cartViewModel  = cartViewModel,
-                authViewModel  = authViewModel,
-                orderViewModel = orderViewModel,
                 onDismiss      = { showOrderSheet = false },
-                onOrderPlaced  = { orderId ->
+                onOrderConfirmed = { orderId ->
                     showOrderSheet = false
-                    // Navegar a la confirmación con el ID generado
                     navController.navigate(Screen.OrderConfirmation.passId(orderId))
-                }
+                },
+                restaurantInfo = ViewModelRestaurantInfo(
+                    nombre = restaurantName,
+                    telefono = restaurantPhone
+                ),
+                cartItems = cartItems,
+                shipping = shipping,
+                authViewModel = authViewModel,
+                orderViewModel = orderViewModel
             )
         }
     }
