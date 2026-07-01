@@ -3,29 +3,27 @@ package com.example.appifood_movil.ui.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.appifood_movil.data.api.ApiService
-import com.example.appifood_movil.data.api.request.OrderRequest
-import com.example.appifood_movil.data.local.TokenManager
+import com.example.appifood_movil.data.model.CustomerInfo
 import com.example.appifood_movil.data.model.Order
 import com.example.appifood_movil.data.model.OrderItem
 import com.example.appifood_movil.data.model.PaymentInfo
-import com.example.appifood_movil.data.model.CustomerInfo
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
+// ✅ Importar el RestaurantInfo del viewmodel
 import com.example.appifood_movil.ui.viewmodel.RestaurantInfo as ViewModelRestaurantInfo
 
 @HiltViewModel
-class OrderViewModel @Inject constructor(
-    private val apiService: ApiService,
-    private val tokenManager: TokenManager
-) : ViewModel() {
+class OrderViewModel @Inject constructor() : ViewModel() {
+
+    private val firestore = FirebaseFirestore.getInstance()
+    private val auth      = FirebaseAuth.getInstance()
 
     private val _currentOrder = MutableStateFlow<Order?>(null)
     val currentOrder: StateFlow<Order?> = _currentOrder.asStateFlow()
@@ -48,6 +46,7 @@ class OrderViewModel @Inject constructor(
         paymentDetail   : String,
         shipping        : Int
     ) {
+        val uid      = auth.currentUser?.uid ?: ""
         val subtotal = cartItems.sumOf { it.price * it.quantity }
         val total    = subtotal + shipping
 
@@ -56,20 +55,11 @@ class OrderViewModel @Inject constructor(
             timestamp       = System.currentTimeMillis(),
             status          = "pending",
             customer        = CustomerInfo(
-                uid = "0",
+                uid = uid,
                 fullName = "${userData?.names ?: ""} ${userData?.lastNames ?: ""}".trim(),
                 phone = userData?.phone ?: ""
             ),
-            restaurant      = com.example.appifood_movil.data.model.RestaurantInfo(
-                nombre = restaurantInfo.nombre,
-                descripcion = restaurantInfo.descripcion,
-                categoria = restaurantInfo.categoria,
-                direccion = restaurantInfo.direccion,
-                telefono = restaurantInfo.telefono,
-                horario = restaurantInfo.horario,
-                imagenPortada = restaurantInfo.imagenPortada,
-                fotosGaleria = restaurantInfo.fotosGaleria
-            ),
+            restaurant      = ViewModelRestaurantInfoToData(restaurantInfo),
             items           = cartItems.map { item ->
                 OrderItem(
                     name = item.name,
@@ -87,38 +77,60 @@ class OrderViewModel @Inject constructor(
         _currentOrder.value = order
     }
 
+    // ✅ Función de conversión con los campos en español
+    private fun ViewModelRestaurantInfoToData(viewModelInfo: ViewModelRestaurantInfo): com.example.appifood_movil.data.model.RestaurantInfo {
+        return com.example.appifood_movil.data.model.RestaurantInfo(
+            nombre = viewModelInfo.nombre,
+            descripcion = viewModelInfo.descripcion,
+            categoria = viewModelInfo.categoria,
+            direccion = viewModelInfo.direccion,
+            telefono = viewModelInfo.telefono,
+            horario = viewModelInfo.horario,
+            imagenPortada = viewModelInfo.imagenPortada,
+            fotosGaleria = viewModelInfo.fotosGaleria
+        )
+    }
+
     fun confirmAndSaveOrder(onSuccess: (String) -> Unit) {
         val order = _currentOrder.value ?: return
-        val token = tokenManager.getBearerToken() ?: return
-        
-        viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                // Bridge to Railway API
-                val response = apiService.createOrder(token, OrderRequest(
-                    restaurant_id = 1,
-                    delivery_address = order.deliveryAddress,
-                    payment_method = order.payment.method,
-                    items = emptyList() 
-                ))
-                
-                if (response.isSuccessful) {
-                    _savedOrder.value = order
-                    onSuccess(order.orderId)
-                } else {
-                    _error.value = "Error al confirmar pedido"
-                }
-            } catch (e: Exception) {
-                Log.e("OrderVM", "Error saving order", e)
-                _error.value = "Error de conexión"
-            } finally {
-                _isLoading.value = false
+        _isLoading.value = true
+
+        firestore.collection("orders")
+            .document(order.orderId)
+            .set(order)
+            .addOnSuccessListener {
+                _isLoading.value  = false
+                _savedOrder.value = order
+                _error.value      = null
+                Log.d("OrderViewModel", "Pedido guardado: ${order.orderId}")
+                onSuccess(order.orderId)
             }
-        }
+            .addOnFailureListener { e ->
+                _isLoading.value = false
+                _error.value     = e.message ?: "Error al guardar el pedido"
+                Log.e("OrderViewModel", "Error guardando pedido", e)
+            }
     }
 
     fun loadOrderById(orderId: String) {
-        _savedOrder.value = _currentOrder.value
+        _isLoading.value = true
+        firestore.collection("orders")
+            .document(orderId)
+            .get()
+            .addOnSuccessListener { document ->
+                _isLoading.value = false
+                if (document.exists()) {
+                    val order = document.toObject(Order::class.java)
+                    _savedOrder.value = order
+                } else {
+                    _error.value = "Pedido no encontrado"
+                }
+            }
+            .addOnFailureListener { e ->
+                _isLoading.value = false
+                _error.value = e.message ?: "Error al cargar el pedido"
+                Log.e("OrderViewModel", "Error cargando pedido $orderId", e)
+            }
     }
 
     fun clearOrder() {

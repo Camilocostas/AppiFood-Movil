@@ -3,22 +3,21 @@ package com.example.appifood_movil.ui.viewmodel
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
-import com.example.appifood_movil.data.api.ApiService
-import com.example.appifood_movil.data.local.TokenManager
 import com.example.appifood_movil.data.model.Order
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
-class OrderHistoryViewModel @Inject constructor(
-    private val apiService: ApiService,
-    private val tokenManager: TokenManager
-) : ViewModel() {
+class OrderHistoryViewModel @Inject constructor() : ViewModel() {
+
+    private val firestore = FirebaseFirestore.getInstance()
+    private val auth      = FirebaseAuth.getInstance()
 
     private val _orders    = MutableStateFlow<List<Order>>(emptyList())
     val orders: StateFlow<List<Order>> = _orders.asStateFlow()
@@ -32,25 +31,36 @@ class OrderHistoryViewModel @Inject constructor(
     init { loadOrders() }
 
     fun loadOrders() {
-        val token = tokenManager.getBearerToken() ?: return
+        val uid = auth.currentUser?.uid ?: return
         _isLoading.value = true
         _error.value     = null
 
-        viewModelScope.launch {
-            try {
-                val response = apiService.getUserOrders(token)
-                if (response.isSuccessful && response.body() != null) {
-                    // Mapping from API Order to Domain/UI Order
-                    // For now keeping empty or mocking to avoid deep mapping complexity
-                    _orders.value = emptyList() 
+        firestore.collection("orders")
+            // ── Filtra por UID del cliente logueado ───────────────
+            // Cada Order guardado tiene customer.uid — solo carga
+            // los pedidos del usuario actual.
+            .whereEqualTo("customer.uid", uid)
+            .orderBy("timestamp", Query.Direction.DESCENDING)
+            .get()
+            .addOnSuccessListener { documents ->
+                val orderList = mutableListOf<Order>()
+                for (doc in documents) {
+                    try {
+                        val order = doc.toObject(Order::class.java)
+                        orderList.add(order)
+                    } catch (e: Exception) {
+                        Log.e("OrderHistoryVM", "Error parseando pedido ${doc.id}", e)
+                    }
                 }
-            } catch (e: Exception) {
-                Log.e("OrderHistoryVM", "Error loading history", e)
-                _error.value = "Error al cargar historial"
-            } finally {
+                _orders.value    = orderList
                 _isLoading.value = false
+                Log.d("OrderHistoryVM", "Pedidos cargados: ${orderList.size}")
             }
-        }
+            .addOnFailureListener { e ->
+                _isLoading.value = false
+                _error.value     = e.message ?: "Error al cargar pedidos"
+                Log.e("OrderHistoryVM", "Error cargando historial", e)
+            }
     }
 
     fun formatCurrency(amount: Int): String =

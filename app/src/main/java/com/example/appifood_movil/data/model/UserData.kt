@@ -5,14 +5,9 @@ data class UserData(
     val lastNames: String = "",
     val phone: String = "",
     val email: String = "",
-    val imageUrl: String = "",
     val address: String = "",
+    val imageUrl: String = "",  // ✅ Nuevo campo para la foto de perfil
     val createdAt: Long = System.currentTimeMillis()
 ) {
     constructor() : this("", "", "", "", "", "", System.currentTimeMillis())
 }
-
-data class MockFirebaseUser(
-    val uid: String,
-    val email: String
-)
