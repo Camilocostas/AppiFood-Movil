@@ -33,7 +33,29 @@ class FoodRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getProducts(): List<FoodProduct> = emptyList()
+    override suspend fun getProducts(): List<FoodProduct> {
+        return try {
+            val response = apiService.getRestaurants()
+            if (response.isSuccessful) {
+                val restaurants = response.body()?.data ?: emptyList()
+                restaurants.flatMap { resDto ->
+                    resDto.dishes?.mapIndexed { index, dishDto ->
+                        FoodProduct(
+                            id = (resDto.id * 100) + index, // Generate a temporary ID
+                            name = dishDto.name ?: "",
+                            price = dishDto.price ?: 0.0,
+                            imageRes = com.example.appifood_movil.R.drawable.cheese,
+                            categoria = resDto.category ?: "General",
+                            restaurantId = resDto.id,
+                            restaurantName = resDto.name
+                        )
+                    } ?: emptyList()
+                }
+            } else emptyList()
+        } catch (e: Exception) {
+            emptyList()
+        }
+    }
 
     override suspend fun getProductById(id: Int): FoodProduct? = null
 
