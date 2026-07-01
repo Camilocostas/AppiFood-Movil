@@ -1,6 +1,7 @@
 // ui/viewmodel/RestaurantOrderViewModel.kt
 package com.example.appifood_movil.ui.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.appifood_movil.data.model.Order
@@ -9,8 +10,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+
 import kotlinx.coroutines.flow.collectLatest
+import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 
 @HiltViewModel
@@ -66,7 +70,29 @@ class RestaurantOrderViewModel @Inject constructor(
             _orders.value.filter { it.status == status }
         }
     }
+    // En RestaurantOrderViewModel.kt
 
+    suspend fun saveNotificationToProfile(userId: String, title: String, message: String) {
+        try {
+            val notification = mapOf(
+                "title" to title,
+                "message" to message,
+                "timestamp" to System.currentTimeMillis(),
+                "read" to false,
+                "type" to "order_status"
+            )
+            // Guardar en Firestore en la subcolección del usuario
+            FirebaseFirestore.getInstance()
+                .collection("users")
+                .document(userId)
+                .collection("notifications")
+                .add(notification)
+                .await()
+            android.util.Log.d("OrderVM", "✅ Notificación guardada para usuario: $userId")
+        } catch (e: Exception) {
+            android.util.Log.e("OrderVM", "❌ Error guardando notificación: ${e.message}")
+        }
+    }
     suspend fun loadOrderDetail(orderId: String) {
         _isLoading.value = true
         try {

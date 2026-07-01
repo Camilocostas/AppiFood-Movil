@@ -414,7 +414,18 @@ fun ProfileDecorativeCircles() {
             .clip(CircleShape).background(Color.White.copy(alpha = 0.03f)))
     }
 }
-
+// En ProfileScreen.kt, dentro de ProfileOptionsCard o donde quieras
+@Composable
+fun NotificationCenterItem(navController: NavController) {
+    ProfileMenuRow(
+        icon = Icons.Default.Notifications,
+        title = "🔔 Centro de notificaciones",
+        onClick = {
+            // Navegar a pantalla de notificaciones
+            navController.navigate("notifications")
+        }
+    )
+}
 // ── Header del perfil ─────────────────────────────────────────────
 @Composable
 fun ProfileHeader(

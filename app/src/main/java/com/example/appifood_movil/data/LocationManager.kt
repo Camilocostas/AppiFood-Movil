@@ -17,17 +17,11 @@ class LocationManager @Inject constructor(
 
     @SuppressLint("MissingPermission")
     fun getCurrentLocation(onSuccess: (Location) -> Unit) {
-        // Primero intentamos obtener la última ubicación conocida
-        fusedLocationClient.lastLocation.addOnSuccessListener { location: Location? ->
-            if (location != null) {
-                onSuccess(location)
-            } else {
-                // Si la última ubicación es nula, solicitamos una actualización fresca
-                fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
-                    .addOnSuccessListener { freshLocation: Location? ->
-                        freshLocation?.let { onSuccess(it) }
-                    }
+        fusedLocationClient.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null)
+            .addOnSuccessListener { location: Location? ->
+                if (location != null) {
+                    onSuccess(location)
+                }
             }
-        }
     }
 }

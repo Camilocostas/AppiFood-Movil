@@ -13,7 +13,8 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import java.util.*
 import javax.inject.Inject
-
+import android.util.Log
+import kotlinx.coroutines.flow.asStateFlow
 @HiltViewModel
 class RestaurantDashboardViewModel @Inject constructor(
     private val firestore: FirebaseFirestore,          // ✅ Coma agregada
@@ -27,6 +28,21 @@ class RestaurantDashboardViewModel @Inject constructor(
     // ── Pedidos de hoy ──────────────────────────────────────────────
     private val _pedidosHoy = MutableStateFlow(0)
     val pedidosHoy: StateFlow<Int> = _pedidosHoy
+
+    private val _restaurantName = MutableStateFlow("")
+    val restaurantName: StateFlow<String> = _restaurantName.asStateFlow()
+
+    fun loadRestaurantName(restauranteId: String) {
+        viewModelScope.launch {
+            try {
+                val doc = firestore.collection("restaurants").document(restauranteId).get().await()
+                val name = doc.getString("restaurantName") ?: doc.getString("nombre") ?: ""
+                _restaurantName.value = name
+            } catch (e: Exception) {
+                Log.e("Dashboard", "Error cargando nombre: ${e.message}")
+            }
+        }
+    }
 
     private val _ingresosHoy = MutableStateFlow(0.0)
     val ingresosHoy: StateFlow<Double> = _ingresosHoy

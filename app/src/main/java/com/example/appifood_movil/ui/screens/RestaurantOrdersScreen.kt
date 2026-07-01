@@ -7,11 +7,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import com.example.appifood_movil.service.LocalNotificationService
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.ui.graphics.Color
@@ -26,6 +28,7 @@ import androidx.navigation.NavController
 import com.example.appifood_movil.data.model.Order
 import com.example.appifood_movil.navigation.Screen
 import com.example.appifood_movil.ui.viewmodel.RestaurantOrderViewModel
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -33,6 +36,9 @@ fun RestaurantOrdersScreen(
     navController: NavController,
     viewModel: RestaurantOrderViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val localNotificationService = remember { LocalNotificationService(context) }  // ✅ CREAR AQUÍ
+
     val orders by viewModel.filteredOrders.collectAsState()
     val pendingCount by viewModel.pendingCount.collectAsState()
     val selectedStatus by viewModel.selectedStatus.collectAsState()
@@ -119,6 +125,8 @@ fun RestaurantOrdersScreen(
                     items(orders) { order ->
                         OrderCard(
                             order = order,
+                            viewModel = viewModel,
+                            localNotificationService = localNotificationService,  // ✅ PASAR AQUÍ
                             onClick = {
                                 navController.navigate(
                                     Screen.RestaurantOrderDetail.passOrderId(order.orderId)
@@ -183,8 +191,11 @@ fun StatusFilterChips(
 @Composable
 fun OrderCard(
     order: Order,
+    localNotificationService: LocalNotificationService,
+    viewModel: RestaurantOrderViewModel,  // ✅ AÑADIR ESTE PARÁMETRO
     onClick: () -> Unit
 ) {
+    val scope = rememberCoroutineScope()
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -265,7 +276,7 @@ fun OrderCard(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Footer: Total y método de pago
+            // ─── FOOTER: Total y método de pago ──────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -295,10 +306,88 @@ fun OrderCard(
                     color = Color.Gray
                 )
             }
-        }
-    }
-}
 
+            // ─── ✅ BOTONES DE ACCIÓN ──────────────────────────────────────
+            if (order.status != "delivered" && order.status != "cancelled") {
+                Spacer(modifier = Modifier.height(12.dp))
+                HorizontalDivider(color = Color(0xFFEEEEEE), thickness = 1.dp)
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Botón "En preparación"
+                    if (order.status == "pending") {
+                        Button(
+                            onClick = {
+                                scope.launch {
+                                    val result = viewModel.updateOrderStatus(order.orderId, "preparing")
+                                    if (result) {
+                                        localNotificationService.showOrderNotification(
+                                            orderId = order.orderId,
+                                            restaurantName = order.restaurant.nombre,
+                                            status = "preparing",
+                                            address = order.deliveryAddress
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF2196F3)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.Restaurant, null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("👨‍🍳 Preparando", fontSize = 12.sp, color = Color.White)
+                        }
+                    }
+
+                    // ✅ Botón "Mandado" (DESPACHADO)
+                    if (order.status == "pending" || order.status == "preparing") {
+                        Button(
+                            onClick = {
+                                // ✅ CORRUTINA PARA LLAMAR A updateOrderStatus Y saveNotificationToProfile
+                                kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main)
+                                    .launch {
+                                        // 1. Actualizar estado en Firestore
+                                        val result =
+                                            viewModel.updateOrderStatus(order.orderId, "delivered")
+
+                                        if (result) {
+                                            // 2. Notificación al cliente
+                                            localNotificationService.showOrderNotification(
+                                                orderId = order.orderId,
+                                                restaurantName = order.restaurant.nombre,
+                                                status = "dispatched",
+                                                address = order.deliveryAddress
+                                            )
+
+                                            // 3. Guardar en el centro de notificaciones del perfil
+                                            viewModel.saveNotificationToProfile(
+                                                userId = order.customer.uid,  // ✅ CORRECTO: se llama uid
+                                                title = "📦 Tu pedido fue despachado",
+                                                message = "El restaurante ${order.restaurant.nombre} ha despachado tu pedido #${order.orderId} a ${order.deliveryAddress}"
+                                            )
+                                        }
+                                    }
+                            },
+                            modifier = Modifier.weight(1f),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color(0xFF1D9E75)
+                            ),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(Icons.Default.LocalShipping, null, modifier = Modifier.size(16.dp))
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text("📦 Mandado", fontSize = 12.sp, color = Color.White)
+                        }
+                    }
+                }
+            }
+        }}}
 @Composable
 fun StatusBadge(status: String) {
     val (color, label) = when (status) {

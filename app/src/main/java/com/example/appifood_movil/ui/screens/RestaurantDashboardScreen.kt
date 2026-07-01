@@ -35,18 +35,16 @@ import com.example.appifood_movil.ui.viewmodel.RestaurantDashboardViewModel
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 
-// ── Paleta rol restaurante ────────────────────────────────────────
-private val BluePrimary   = Color(0xFF1565C0)
-private val BlueDark      = Color(0xFF0D47A1)
-private val BlueDeep      = Color(0xFF002171)
-private val BlueAccent    = Color(0xFF42A5F5)
-private val YellowAccent  = Color(0xFFFFD600)
-private val GreenSuccess  = Color(0xFF1D9E75)
-private val OrangeWarn    = Color(0xFFF57F17)
-private val RedAlert      = Color(0xFFD32F2F)
-private val SurfaceLight  = Color(0xFFF0F4FF)
-private val TextPrimary   = Color(0xFF1A1A1A)
-private val TextMuted     = Color(0xFF888888)
+// ── Paleta AppiFood (ROJO) ────────────────────────────────────────
+private val AppiRed     = Color(0xFFD32F2F)
+private val AppiRedDark = Color(0xFFB71C1C)
+private val AppiRedDeep = Color(0xFF7F0000)
+private val AppiYellow  = Color(0xFFFFD600)
+private val GreenSuccess = Color(0xFF1D9E75)
+private val OrangeWarn  = Color(0xFFF57F17)
+private val SurfaceLight = Color(0xFFF5F5F5)
+private val TextPrimary  = Color(0xFF1A1A1A)
+private val TextMuted    = Color(0xFF888888)
 
 @Composable
 fun RestaurantDashboardScreen(
@@ -63,7 +61,6 @@ fun RestaurantDashboardScreen(
     val averageRating by dashboardViewModel.averageRating.collectAsState()
     val reviews by dashboardViewModel.reviews.collectAsState()
 
-    // ✅ Calculamos el valor de la calificación aquí
     val ratingDisplay = remember(averageRating) {
         if (averageRating > 0.0) String.format("%.1f", averageRating) else "N/A"
     }
@@ -73,7 +70,6 @@ fun RestaurantDashboardScreen(
             dashboardViewModel.loadDashboardData(restauranteId)
         }
     }
-
 
     // ── Animación de entrada ──────────────────────────────────────
     var visible by remember { mutableStateOf(false) }
@@ -99,7 +95,7 @@ fun RestaurantDashboardScreen(
             modifier            = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            // ── Header con gradiente azul ─────────────────────────
+            // ── Header con gradiente ROJO ─────────────────────────
             item {
                 Box(
                     modifier = Modifier
@@ -107,7 +103,7 @@ fun RestaurantDashboardScreen(
                         .offset(y = headerOffset)
                         .background(
                             Brush.verticalGradient(
-                                listOf(BluePrimary, BlueDark, BlueDeep)
+                                listOf(AppiRed, AppiRedDark, AppiRedDeep)
                             )
                         )
                         .padding(top = 52.dp, bottom = 32.dp,
@@ -186,24 +182,35 @@ fun RestaurantDashboardScreen(
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        // Tag pill
+                        // Tag pill AMARILLO
                         Surface(
                             shape = RoundedCornerShape(50),
-                            color = Color.White.copy(alpha = 0.15f)
+                            color = AppiYellow.copy(alpha = 0.25f)
                         ) {
-                            Text(
-                                "🔵 Panel activo",
-                                color      = Color.White,
-                                fontSize   = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                modifier   = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
-                            )
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(0xFF4CAF50))
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(
+                                    "● Panel activo",
+                                    color      = Color.White,
+                                    fontSize   = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                     }
                 }
             }
 
-            // ── Stats en tarjetas con entrada escalonada ──────────
+            // ── Stats en tarjetas ──────────────────────────────────
             item {
                 Column(
                     modifier = Modifier
@@ -213,12 +220,30 @@ fun RestaurantDashboardScreen(
                         .background(SurfaceLight)
                         .padding(top = 24.dp, start = 20.dp, end = 20.dp)
                 ) {
-                    Text(
-                        "Resumen de hoy",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize   = 17.sp,
-                        color      = TextPrimary
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            "📊 Resumen de hoy",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize   = 18.sp,
+                            color      = TextPrimary
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = AppiRed.copy(alpha = 0.1f)
+                        ) {
+                            Text(
+                                text = java.text.SimpleDateFormat("dd/MM/yyyy", java.util.Locale.getDefault()).format(java.util.Date()),
+                                color = AppiRed,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
                     Spacer(modifier = Modifier.height(14.dp))
 
                     // Fila 1 de stats
@@ -229,9 +254,9 @@ fun RestaurantDashboardScreen(
                         AnimatedStatCard(
                             modifier = Modifier.weight(1f),
                             emoji = "📦",
-                            value = pedidosHoy.toString(),  // ✅ Ahora es dinámico
+                            value = pedidosHoy.toString(),
                             label = "Pedidos hoy",
-                            color = BluePrimary,
+                            color = AppiRed,
                             index = 0
                         )
                         AnimatedStatCard(
@@ -254,7 +279,7 @@ fun RestaurantDashboardScreen(
                         AnimatedStatCard(
                             modifier = Modifier.weight(1f),
                             emoji = "⭐",
-                            value = ratingDisplay,   // ✅ Usamos la variable
+                            value = ratingDisplay,
                             label = "Calificación",
                             color = OrangeWarn,
                             index = 2
@@ -264,7 +289,7 @@ fun RestaurantDashboardScreen(
                             emoji    = "🍽️",
                             value    = platosActivos.toString(),
                             label    = "Platos activos",
-                            color    = RedAlert,
+                            color    = AppiRed,
                             index    = 3
                         )
                     }
@@ -277,11 +302,11 @@ fun RestaurantDashboardScreen(
                             modifier = Modifier
                                 .width(4.dp).height(20.dp)
                                 .clip(RoundedCornerShape(2.dp))
-                                .background(BluePrimary)
+                                .background(AppiRed)
                         )
                         Spacer(modifier = Modifier.width(10.dp))
                         Text(
-                            "Gestionar",
+                            "⚡ Gestionar",
                             fontWeight = FontWeight.ExtraBold,
                             fontSize   = 17.sp,
                             color      = TextPrimary
@@ -292,14 +317,14 @@ fun RestaurantDashboardScreen(
                 }
             }
 
-            // ── Cards de gestión con animación escalonada ─────────
+            // ── Cards de gestión ──────────────────────────────────
             val gestionItems = listOf(
                 GestionItem(
                     icon        = Icons.Default.Store,
                     emoji       = "🏪",
                     title       = "Información del restaurante",
                     description = "Nombre, descripción, dirección, teléfono y horarios",
-                    color       = BluePrimary,
+                    color       = AppiRed,
                     route       = "gestionInfoRestaurante"
                 ),
                 GestionItem(
@@ -311,12 +336,12 @@ fun RestaurantDashboardScreen(
                     route       = "gestionPlatos"
                 ),
                 GestionItem(
-                    icon        = Icons.Default.Receipt,   // Puedes usar Icons.Default.Receipt o Icons.Default.ShoppingCart
+                    icon        = Icons.Default.Receipt,
                     emoji       = "📋",
                     title       = "Pedidos",
                     description = "Visualiza y gestiona los pedidos entrantes",
-                    color       = BlueAccent,  // o un color que contraste
-                    route       = "restaurant_orders"  // "restaurant_orders"
+                    color       = Color(0xFF1565C0),
+                    route       = "restaurant_orders"
                 )
             )
 
@@ -328,33 +353,45 @@ fun RestaurantDashboardScreen(
                 )
             }
 
+            // ── Reseñas ────────────────────────────────────────────
             item {
-                Text(
-                    text = "⭐ Reseñas de clientes",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
-                    color = TextPrimary,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
-                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 20.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(4.dp).height(18.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(AppiYellow)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Text(
+                        text = "⭐ Reseñas de clientes",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 17.sp,
+                        color = TextPrimary
+                    )
+                }
             }
-
-            // Mostrar hasta 3 reseñas
 
             items(reviews.take(3)) { review ->
                 ReviewCard(review = review)
             }
 
-            // Botón "Ver todas" si hay más de 3
             if (reviews.size > 3) {
                 item {
                     TextButton(
-                        onClick = {
-                            // Navegar a la pantalla de todas las reseñas (aún por implementar)
-                            navController.navigate("gestionResenas")
-                        },
+                        onClick = { navController.navigate("gestionResenas") },
                         modifier = Modifier.padding(horizontal = 20.dp)
                     ) {
-                        Text("Ver todas las reseñas (${reviews.size})")
+                        Text(
+                            "Ver todas las reseñas (${reviews.size})",
+                            color = AppiRed,
+                            fontWeight = FontWeight.Medium
+                        )
                     }
                 }
             }
@@ -443,6 +480,8 @@ private fun AnimatedStatCard(
         }
     }
 }
+
+// ── Review Card ────────────────────────────────────────────────────
 @Composable
 fun ReviewCard(review: com.example.appifood_movil.data.model.Review) {
     Card(
@@ -473,7 +512,7 @@ fun ReviewCard(review: com.example.appifood_movil.data.model.Review) {
                         Icon(
                             imageVector = if (index < review.rating) Icons.Filled.Star else Icons.Filled.StarBorder,
                             contentDescription = null,
-                            tint = if (index < review.rating) Color(0xFFFFD600) else Color.Gray,
+                            tint = if (index < review.rating) AppiYellow else Color.Gray,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -502,6 +541,7 @@ private fun formatDate(timestamp: Long): String {
     val format = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault())
     return format.format(date)
 }
+
 // ── Gestión card animada ──────────────────────────────────────────
 @Composable
 private fun AnimatedGestionCard(
@@ -541,7 +581,6 @@ private fun AnimatedGestionCard(
                 modifier          = Modifier.fillMaxWidth().padding(18.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Ícono con gradiente
                 Box(
                     modifier         = Modifier
                         .size(56.dp)
@@ -580,7 +619,6 @@ private fun AnimatedGestionCard(
 
                 Spacer(modifier = Modifier.width(8.dp))
 
-                // Flecha con color
                 Box(
                     modifier         = Modifier
                         .size(32.dp)
@@ -598,11 +636,3 @@ private fun AnimatedGestionCard(
         }
     }
 }
-
-// ── Stub de StatCard para evitar errores (ya no se usa pero puede quedar) ─
-@Composable
-fun StatCard(value: String, label: String, color: Color, modifier: Modifier = Modifier) {}
-
-// ── Stub ManagementCard ───────────────────────────────────────────
-@Composable
-fun ManagementCard(title: String, description: String, icon: String = "📋", onClick: () -> Unit) {}

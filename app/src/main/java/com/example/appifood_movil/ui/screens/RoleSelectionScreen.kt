@@ -210,7 +210,7 @@ fun RoleSelectionScreen(navController: NavController) {
                             "Sube fotos de tu restaurante",
                             "Estadísticas y reportes"
                         ),
-                        accentColor   = Color(0xFF1565C0),
+                        accentColor   = RedPrimary,
                         isSelected    = selectedRole == "restaurante",
                         animDelay     = 80,
                         onSelect      = {

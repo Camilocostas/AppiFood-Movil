@@ -30,15 +30,14 @@ import com.example.appifood_movil.navigation.Screen
 import com.example.appifood_movil.ui.viewmodel.RestaurantAuthViewModel
 
 // ── Paleta — misma del sistema de diseño ─────────────────────────
-private val BluePrimary  = Color(0xFF1565C0)
-private val BlueDark     = Color(0xFF0D47A1)
-private val BlueDeep     = Color(0xFF002171)
-private val YellowAccent = Color(0xFFFFD600)
-private val RedPrimary   = Color(0xFFD32F2F)
+// ── Paleta — ROJO AppiFood ─────────────────────────────────────────
+private val RedPrimary   = Color(0xFFD32F2F)   // ✅ NUEVO
+private val RedDark      = Color(0xFFB71C1C)   // ✅ NUEVO
+private val RedDeep      = Color(0xFF7F0000)   // ✅ NUEVO
+private val YellowAccent = Color(0xFFFFD600)   // ✅ NUEVO
 private val FieldBg      = Color(0xFFF7F7F7)
 private val TextPrimary  = Color(0xFF1A1A1A)
 private val TextMuted    = Color(0xFF888888)
-
 enum class RestaurantAuthState { LOGIN, REGISTER }
 
 @Composable
@@ -85,7 +84,7 @@ fun RestaurantAuthScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(
-                Brush.verticalGradient(listOf(BluePrimary, BlueDark, BlueDeep))
+                Brush.verticalGradient(listOf(RedPrimary, RedDark, RedDeep))
             )
             .graphicsLayer { alpha = screenAlpha }
     ) {
@@ -284,7 +283,7 @@ private fun RestaurantLoginForm(
         Spacer(modifier = Modifier.height(24.dp))
         RestaurantButton(
             text    = "Iniciar sesión",
-            color   = BluePrimary,
+            color   = RedPrimary,
             enabled = email.isNotBlank() && password.isNotBlank()
         ) {
             viewModel.loginRestaurant(email.trim(), password)
@@ -296,7 +295,7 @@ private fun RestaurantLoginForm(
         ) {
             Text(buildAnnotatedString {
                 withStyle(SpanStyle(color = TextMuted)) { append("¿No tienes cuenta? ") }
-                withStyle(SpanStyle(color = BluePrimary, fontWeight = FontWeight.Bold)) {
+                withStyle(SpanStyle(color = RedPrimary, fontWeight = FontWeight.Bold)) {
                     append("Registra tu restaurante")
                 }
             })
@@ -379,7 +378,7 @@ private fun RestaurantRegisterForm(
 
         RestaurantButton(
             text    = "🏪  Registrar mi restaurante",
-            color   = BluePrimary,
+            color   = RedPrimary,
             enabled = isFormValid
         ) {
             viewModel.registerRestaurant(
@@ -455,7 +454,7 @@ private fun RestaurantTextField(
                 unfocusedContainerColor  = FieldBg,
                 focusedIndicatorColor    = Color.Transparent,
                 unfocusedIndicatorColor  = Color.Transparent,
-                focusedLeadingIconColor  = BluePrimary,
+                focusedLeadingIconColor  = RedPrimary,
                 unfocusedLeadingIconColor = TextMuted
             )
         )

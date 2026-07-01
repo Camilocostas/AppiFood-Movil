@@ -62,7 +62,10 @@ fun SearchScreen(
         animationSpec = tween(400, easing = FastOutSlowInEasing),
         label         = "searchFadeIn"
     )
-    LaunchedEffect(Unit) { visible = true }
+    LaunchedEffect(Unit) {
+        visible = true
+        viewModel.fetchUserLocation()
+    }
 
     Scaffold(
         modifier       = Modifier.graphicsLayer { alpha = screenAlpha },
