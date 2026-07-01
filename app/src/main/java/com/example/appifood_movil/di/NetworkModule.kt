@@ -2,6 +2,7 @@
 package com.example.appifood_movil.di
 
 import com.example.appifood_movil.data.api.ApiService
+import com.example.appifood_movil.data.local.TokenManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -18,21 +19,34 @@ import javax.inject.Singleton
 object NetworkModule {
 
     // ── URL de Railway — fuente única de verdad ───────────────────
-    // RetrofitClient.kt puede eliminarse del proyecto ya que
-    // Hilt es quien provee ApiService en toda la app.
     private const val BASE_URL =
         "https://deliveryappifoodv10-production-866d.up.railway.app/api/"
 
     @Provides
     @Singleton
-    fun provideOkHttpClient(): OkHttpClient {
+    fun provideOkHttpClient(tokenManager: TokenManager): OkHttpClient {
         val logging = HttpLoggingInterceptor().apply {
             level = HttpLoggingInterceptor.Level.BODY
         }
+
         return OkHttpClient.Builder()
             .connectTimeout(30, TimeUnit.SECONDS)
             .readTimeout(30, TimeUnit.SECONDS)
             .writeTimeout(30, TimeUnit.SECONDS)
+            .addInterceptor { chain ->
+                val originalRequest = chain.request()
+                val token = tokenManager.getToken()
+
+                val newRequest = originalRequest.newBuilder()
+                    .header("Accept", "application/json") // Forzar respuesta JSON
+                    .apply {
+                        if (!token.isNullOrEmpty()) {
+                            header("Authorization", "Bearer $token")
+                        }
+                    }
+                    .build()
+                chain.proceed(newRequest)
+            }
             .addInterceptor(logging)
             .build()
     }

@@ -121,26 +121,35 @@ fun AuthScreen(
     ) {
         AuthDecorativeCircles()
 
+        // ✅ Usamos un Column sin scroll para que el fondo blanco ocupe toda la altura
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .fillMaxSize(),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
             AuthHeader(
                 modifier    = Modifier.offset(y = headerOffsetY),
                 screenState = screenState
             )
 
+            // ── Tarjeta blanca ────────────────────────────────────
+            // ✅ Usamos un Box con weight(1f) para que ocupe todo el espacio restante
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .weight(1f)  // ✅ Ocupa todo el espacio restante
                     .offset(y = cardOffsetY)
                     .clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
                     .background(Color.White)
-                    .padding(horizontal = 28.dp)
-                    .padding(top = 32.dp, bottom = 40.dp)
             ) {
-                Column {
+                // ✅ Column con scroll para el contenido
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 28.dp)
+                        .padding(top = 32.dp, bottom = 40.dp)
+                ) {
                     AuthTitleBlock(screenState = screenState, error = error)
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -163,7 +172,7 @@ fun AuthScreen(
                         )
                         AuthState.REGISTER -> RegisterForm(
                             onLoginSwitch = { screenState = AuthState.LOGIN },
-                            authViewModel = authViewModel  // ← PASAMOS EL VIEWMODEL
+                            authViewModel = authViewModel
                         )
                         AuthState.FORGOT_PASSWORD -> ForgotPasswordForm(
                             onBackToLogin = { screenState = AuthState.VERIFY_CODE }
@@ -173,6 +182,9 @@ fun AuthScreen(
                             onBack     = { screenState = AuthState.FORGOT_PASSWORD }
                         )
                     }
+
+                    // ✅ Spacer para dar espacio adicional al final
+                    Spacer(modifier = Modifier.height(16.dp))
                 }
             }
         }

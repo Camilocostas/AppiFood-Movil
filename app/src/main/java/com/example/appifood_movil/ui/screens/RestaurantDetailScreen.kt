@@ -6,8 +6,15 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.items
+import android.R.attr.onClick
 import androidx.compose.foundation.shape.CircleShape
+import com.example.appifood_movil.ui.map.MapStyles
+import com.example.appifood_movil.ui.map.rememberMapViewWithLifecycle
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
@@ -21,27 +28,30 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import androidx.compose.ui.viewinterop.AndroidView
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.camera.CameraPosition
+import org.maplibre.android.maps.Style
 import com.example.appifood_movil.R
 import com.example.appifood_movil.ui.components.AppiFoodFooter
 import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.example.appifood_movil.ui.viewmodel.RestaurantDetailViewModel
-import com.google.android.gms.maps.model.LatLng
-import com.google.android.gms.maps.model.CameraPosition
-import com.google.maps.android.compose.GoogleMap
-import com.google.maps.android.compose.MarkerState
-import com.google.maps.android.compose.MapUiSettings
-import com.google.maps.android.compose.Marker
-import com.google.maps.android.compose.rememberCameraPositionState
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.graphicsLayer
+import java.text.NumberFormat
+import java.util.Locale
 import android.widget.Toast
 import androidx.compose.foundation.lazy.LazyRow
+import com.example.appifood_movil.navigation.Screen
+import org.maplibre.android.annotations.MarkerOptions
+import org.maplibre.android.geometry.LatLng
 
 // ── Paleta unificada ──────────────────────────────────────────────
 private val RedPrimary   = Color(0xFFD32F2F)
@@ -61,6 +71,8 @@ fun RestaurantDetailScreen(
     val restaurant by viewModel.restaurant.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val context = LocalContext.current
+    val platos by viewModel.platos.collectAsState()
+    val reviews by viewModel.reviews.collectAsState()
 
     // ── LOG PARA VERIFICAR EL ID ─────────────────────────────────
     android.util.Log.d("RestaurantDetail", "ID recibido: $id")
@@ -68,7 +80,7 @@ fun RestaurantDetailScreen(
     // ── CARGAR DATOS ──────────────────────────────────────────────
     LaunchedEffect(id) {
         android.util.Log.d("RestaurantDetail", "Cargando restaurante con ID: $id")
-        viewModel.loadRestaurant(id)
+        viewModel.loadRestaurantDetail(id)
     }
 
     var isFavorite by remember { mutableStateOf(false) }
@@ -225,8 +237,9 @@ fun RestaurantDetailScreen(
                                 fontSize = 15.sp,
                                 color = TextPrimary
                             )
+                            val reviewCount = viewModel.reviews.collectAsState().value.size
                             Text(
-                                text = " (${restaurantData.reviews.size} reseñas)",
+                                text = " ($reviewCount reseñas)",
                                 color = TextMuted,
                                 fontSize = 13.sp
                             )
@@ -271,6 +284,25 @@ fun RestaurantDetailScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
+                    Button(
+                        onClick = {
+                            navController.navigate("writeReview/${restaurantData.uid}/${restaurantData.name}")
+
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFFFFD600),
+                                    contentColor = Color.Black
+                        ),
+
+                    ) {
+                        Icon(Icons.Default.Star, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Escribir reseña")
+                    }
+
                     // ── TABS ───────────────────────────────────────────
                     AnimatedTabs(
                         selectedTabIndex = selectedTabIndex,
@@ -280,15 +312,20 @@ fun RestaurantDetailScreen(
             }
 
             // ── CONTENIDO DE LAS TABS ──────────────────────────────
+            // ── CONTENIDO DE LAS TABS ──────────────────────────────
             when (selectedTabIndex) {
                 0 -> { // ── FOTOS ──────────────────────────────────────
                     item {
-                        AnimatedPhotosTab()
+                        AnimatedPhotosTab(
+                            photos = restaurantData.fotosGaleria,
+                            navController = navController,
+                            restaurantId = restaurantData.id
+                        )
                     }
                 }
 
                 1 -> { // ── MENÚ ────────────────────────────────────────
-                    if (restaurantData.dishes.isEmpty()) {
+                    if (platos.isEmpty()) {
                         item {
                             EmptyStateMessage(
                                 icon = Icons.Default.Restaurant,
@@ -296,12 +333,25 @@ fun RestaurantDetailScreen(
                             )
                         }
                     } else {
-                        items(restaurantData.dishes) { dish ->
-                            AnimatedDishItem(dish = dish)
+                        items(platos) { plato ->
+                            // ✅ Generar el ID de la misma manera que en getProducts()
+                            val productId = restaurantData.id * 100 + platos.indexOf(plato)
+
+                            AnimatedDishItem(
+                                platoId = productId,  // ✅ Usar el mismo ID que en getProducts()
+                                nombre = plato.nombre,
+                                descripcion = plato.descripcion.ifEmpty { "Delicioso plato" },
+                                precio = plato.precio,
+                                precioPromocion = plato.precioPromocion,
+                                descuento = plato.descuento,
+                                imagenUrl = plato.imagenUrl,
+                                onNavigate = {
+                                    navController.navigate(Screen.ProductDetail.passId(productId))
+                                }
+                            )
                         }
                     }
 
-                    // ── MAPA ────────────────────────────────────────────
                     item {
                         AnimatedMapSection(
                             hasValidLocation = hasValidLocation,
@@ -314,7 +364,7 @@ fun RestaurantDetailScreen(
                 }
 
                 2 -> { // ── RESEÑAS ────────────────────────────────────
-                    if (restaurantData.reviews.isEmpty()) {
+                    if (reviews.isEmpty()) {
                         item {
                             EmptyStateMessage(
                                 icon = Icons.Default.Comment,
@@ -322,7 +372,7 @@ fun RestaurantDetailScreen(
                             )
                         }
                     } else {
-                        items(restaurantData.reviews) { review ->
+                        items(reviews) { review ->   // ✅ Usar la lista actualizada
                             AnimatedReviewItem(review = review)
                         }
                     }
@@ -587,13 +637,18 @@ fun AnimatedTabs(
 }
 
 // ── TABS DE FOTOS ──────────────────────────────────────────────────
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-fun AnimatedPhotosTab() {
-    val photos = listOf(
-        R.drawable.restaurante,
-        R.drawable.restaurantechino,
-        R.drawable.burguer
-    )
+fun AnimatedPhotosTab(
+    photos: List<String>,
+    navController: NavController,
+    restaurantId: Int
+) {
+    // Estado para el diálogo de imagen completa
+    var fullScreenImage by remember { mutableStateOf<String?>(null) }
+
+    // Estado para mostrar todas las fotos en grid
+    var showAllPhotos by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier
@@ -608,49 +663,203 @@ fun AnimatedPhotosTab() {
                 .fillMaxWidth()
                 .padding(16.dp)
         ) {
+            // ── HEADER ──────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Galería de imágenes",
+                    text = "📸 Fotos",
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
                     color = TextPrimary
                 )
-                Text(
-                    text = "Ver todas →",
-                    color = RedPrimary,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                if (photos.isNotEmpty()) {
+                    TextButton(onClick = { showAllPhotos = true }) {
+                        Text("Ver todas", color = RedPrimary, fontWeight = FontWeight.Medium)
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            // ── GALERÍA DE FOTOS ──────────────────────────────
+            if (photos.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFFF5F5F5)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            Icons.Default.Photo,
+                            contentDescription = null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(40.dp)
+                        )
+                        Text(
+                            text = "No hay fotos en la galería",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            } else {
+                // Mostrar hasta 5 fotos en horizontal
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(photos.take(5)) { imageUrl ->
+                        Card(
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .size(120.dp, 100.dp)
+                                .clickable {
+                                    // Abrir imagen en pantalla completa
+                                    fullScreenImage = imageUrl
+                                }
+                        ) {
+                            AsyncImage(
+                                model = imageUrl,
+                                contentDescription = "Foto del restaurante",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop,
+                                error = painterResource(R.drawable.restaurantechino)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ── DIÁLOGO PARA IMAGEN COMPLETA ──────────────────────────
+    fullScreenImage?.let { imageUrl ->
+        Dialog(
+            onDismissRequest = { fullScreenImage = null },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .clickable { fullScreenImage = null }
             ) {
-                items(photos) { photo ->
-                    Image(
-                        painter = painterResource(id = photo),
-                        contentDescription = null,
-                        modifier = Modifier
-                            .size(120.dp, 80.dp)
-                            .clip(RoundedCornerShape(12.dp)),
-                        contentScale = ContentScale.Crop
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = "Imagen completa",
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp),
+                    contentScale = ContentScale.Fit
+                )
+                // Botón cerrar
+                IconButton(
+                    onClick = { fullScreenImage = null },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                ) {
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Cerrar",
+                        tint = Color.White,
+                        modifier = Modifier.size(32.dp)
                     )
                 }
             }
         }
     }
-}
 
+    // ── DIÁLOGO PARA VER TODAS LAS FOTOS ──────────────────────
+    if (showAllPhotos) {
+        Dialog(
+            onDismissRequest = { showAllPhotos = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(16.dp),
+                shape = RoundedCornerShape(24.dp),
+                color = Color.White
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(16.dp)
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Todas las fotos",
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        IconButton(onClick = { showAllPhotos = false }) {
+                            Icon(Icons.Default.Close, contentDescription = "Cerrar")
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Grid de fotos
+                    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(3),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        items(photos) { imageUrl ->
+                            Card(
+                                shape = RoundedCornerShape(8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .aspectRatio(1f)
+                                    .clickable {
+                                        // Cerrar grid y abrir imagen completa
+                                        showAllPhotos = false
+                                        fullScreenImage = imageUrl
+                                    }
+                            ) {
+                                AsyncImage(
+                                    model = imageUrl,
+                                    contentDescription = "Foto",
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentScale = ContentScale.Crop,
+                                    error = painterResource(R.drawable.restaurantechino)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 // ── PLATO ANIMADO ─────────────────────────────────────────────────
 @Composable
-fun AnimatedDishItem(dish: com.example.appifood_movil.domain.model.Dish) {
+fun AnimatedDishItem(
+    platoId: Int,  // ✅ NUEVO: ID del plato
+    nombre: String,
+    descripcion: String,
+    precio: Double,
+    precioPromocion: Double = 0.0,
+    descuento: Int = 0,
+    imagenUrl: String? = null,
+    onNavigate: () -> Unit  // ✅ NUEVO: Callback para navegar
+) {
     var isPressed by remember { mutableStateOf(false) }
+    val formatter = remember { NumberFormat.getCurrencyInstance(Locale("es", "CO")) }
 
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.98f else 1f,
@@ -671,6 +880,7 @@ fun AnimatedDishItem(dish: com.example.appifood_movil.domain.model.Dish) {
             }
             .clickable {
                 isPressed = true
+                onNavigate()  // ✅ Navegar al detail
             },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
@@ -683,52 +893,105 @@ fun AnimatedDishItem(dish: com.example.appifood_movil.domain.model.Dish) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Imagen del plato
-            Image(
-                painter = painterResource(id = dish.imageRes),
-                contentDescription = null,
-                modifier = Modifier
-                    .size(70.dp)
-                    .clip(RoundedCornerShape(12.dp)),
-                contentScale = ContentScale.Crop
-            )
+            if (!imagenUrl.isNullOrEmpty()) {
+                AsyncImage(
+                    model = imagenUrl,
+                    contentDescription = nombre,
+                    modifier = Modifier
+                        .size(70.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop,
+                    error = painterResource(R.drawable.burguer)
+                )
+            } else {
+                Image(
+                    painter = painterResource(id = R.drawable.burguer),
+                    contentDescription = nombre,
+                    modifier = Modifier
+                        .size(70.dp)
+                        .clip(RoundedCornerShape(12.dp)),
+                    contentScale = ContentScale.Crop
+                )
+            }
 
             Spacer(modifier = Modifier.width(16.dp))
 
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = dish.name,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "Plato delicioso",
-                    color = TextMuted,
-                    fontSize = 13.sp,
-                    maxLines = 1
-                )
-            }
-
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    text = "$${String.format("%.0f", dish.price)}",
-                    color = RedPrimary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 18.sp
-                )
-
-                Surface(
-                    shape = RoundedCornerShape(50),
-                    color = RedPrimary.copy(alpha = 0.1f)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Agregar",
-                        color = RedPrimary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                        text = nombre,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = TextPrimary
                     )
+                    if (precioPromocion > 0 && descuento > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = Color(0xFFE53935).copy(alpha = 0.1f)
+                        ) {
+                            Text(
+                                text = "-$descuento% OFF",
+                                color = Color(0xFFE53935),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
                 }
+
+                Text(
+                    text = descripcion,
+                    color = TextMuted,
+                    fontSize = 13.sp,
+                    maxLines = 2
+                )
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (precioPromocion > 0) {
+                        Text(
+                            text = formatter.format(precioPromocion),
+                            color = Color(0xFFE53935),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 18.sp
+                        )
+                        Text(
+                            text = formatter.format(precio),
+                            color = TextMuted,
+                            fontSize = 13.sp,
+                            style = androidx.compose.ui.text.TextStyle(
+                                textDecoration = androidx.compose.ui.text.style.TextDecoration.LineThrough
+                            )
+                        )
+                    } else {
+                        Text(
+                            text = formatter.format(precio),
+                            color = RedPrimary,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                    }
+                }
+            }
+
+            Surface(
+                shape = RoundedCornerShape(50),
+                color = RedPrimary.copy(alpha = 0.1f),
+                modifier = Modifier.clickable { onNavigate() }  // ✅ También navega al hacer clic en "Agregar"
+            ) {
+                Text(
+                    text = "Agregar",
+                    color = RedPrimary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+                )
             }
         }
     }
@@ -800,30 +1063,32 @@ fun AnimatedMapSection(
                 }
             }
 
-            // ── MAPA ──────────────────────────────────────────────────
+            // ── MAPA CON MAPLIBRE (100% GRATUITO) ──────────────────
             if (hasValidLocation) {
-                val restaurantLocation = LatLng(latitude, longitude)
-                val cameraPositionState = rememberCameraPositionState {
-                    position = CameraPosition.fromLatLngZoom(restaurantLocation, 15f)
-                }
+                val location = LatLng(latitude, longitude)
+                val cameraPosition = CameraPosition.Builder()
+                    .target(location)
+                    .zoom(15.0)
+                    .build()
 
-                GoogleMap(
+                val mapView = rememberMapViewWithLifecycle()
+
+                AndroidView(
+                    factory = { mapView },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(200.dp)
-                        .clip(RoundedCornerShape(12.dp)),
-                    cameraPositionState = cameraPositionState,
-                    uiSettings = MapUiSettings(
-                        zoomControlsEnabled = true,
-                        compassEnabled = true,
-                        myLocationButtonEnabled = false
-                    )
-                ) {
-                    Marker(
-                        state = MarkerState(position = restaurantLocation),
-                        title = name,
-                        snippet = address
-                    )
+                        .clip(RoundedCornerShape(12.dp))
+                ) { view ->
+                    view.getMapAsync { mapboxMap ->
+                        mapboxMap.setStyle(MapStyles.openFreeMapStyleUrl) { style ->
+                            mapboxMap.cameraPosition = cameraPosition
+                            mapboxMap.markers.forEach { mapboxMap.removeMarker(it) } // evita duplicar markers en recomposición
+                            mapboxMap.addMarker(
+                                MarkerOptions().position(location).title(name).snippet(address)
+                            )
+                        }
+                    }
                 }
             } else {
                 // ── MENSAJE SI NO HAY UBICACIÓN ──────────────────────
@@ -858,7 +1123,7 @@ fun AnimatedMapSection(
 
 // ── RESEÑA ANIMADA ────────────────────────────────────────────────
 @Composable
-fun AnimatedReviewItem(review: com.example.appifood_movil.domain.model.Review) {
+fun AnimatedReviewItem(review: com.example.appifood_movil.data.model.Review) {
     var expanded by remember { mutableStateOf(false) }
 
     Card(
@@ -890,7 +1155,7 @@ fun AnimatedReviewItem(review: com.example.appifood_movil.domain.model.Review) {
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = review.user.take(1).uppercase(),
+                            text = review.userName.take(1).uppercase(),  // ✅ Cambiado
                             color = RedPrimary,
                             fontWeight = FontWeight.Bold,
                             fontSize = 16.sp
@@ -901,7 +1166,7 @@ fun AnimatedReviewItem(review: com.example.appifood_movil.domain.model.Review) {
 
                     Column {
                         Text(
-                            text = review.user,
+                            text = review.userName,  // ✅ Cambiado
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp,
                             color = TextPrimary
@@ -921,7 +1186,7 @@ fun AnimatedReviewItem(review: com.example.appifood_movil.domain.model.Review) {
                 }
 
                 Text(
-                    text = "hace 2 días",
+                    text = formatDate(review.createdAt),  // ✅ Usar función de formato
                     color = TextMuted,
                     fontSize = 11.sp
                 )
@@ -953,6 +1218,13 @@ fun AnimatedReviewItem(review: com.example.appifood_movil.domain.model.Review) {
             }
         }
     }
+}
+
+// ✅ Agrega esta función de formato si no existe
+private fun formatDate(timestamp: Long): String {
+    val date = java.util.Date(timestamp)
+    val format = java.text.SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale.getDefault())
+    return format.format(date)
 }
 
 // ── ESTADO VACÍO ──────────────────────────────────────────────────

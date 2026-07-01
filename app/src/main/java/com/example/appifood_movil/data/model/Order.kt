@@ -9,6 +9,7 @@ data class Order(
     val restaurant      : RestaurantInfo = RestaurantInfo(),
     val items           : List<OrderItem> = emptyList(),
     val payment         : PaymentInfo    = PaymentInfo(),
+    val restaurantUid: String = "",
     val deliveryAddress : String         = "",
     val subtotal        : Int            = 0,
     val shipping        : Int            = 0,
@@ -29,11 +30,7 @@ data class CustomerInfo(
     val phone    : String = ""
 ) { constructor() : this("", "", "") }
 
-data class RestaurantInfo(
-    val id    : Int    = 0,
-    val name  : String = "",
-    val phone : String = ""
-) { constructor() : this(0, "", "") }
+
 
 data class OrderItem(
     val name     : String = "",

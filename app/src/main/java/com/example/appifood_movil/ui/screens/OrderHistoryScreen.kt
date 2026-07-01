@@ -526,7 +526,7 @@ fun OrderHistoryCard(
                     Spacer(modifier = Modifier.width(10.dp))
                     Column {
                         Text(
-                            order.restaurant.name.ifBlank { "Restaurante AppiFood" },
+                            order.restaurant.nombre.ifBlank { "Restaurante AppiFood" },
                             fontWeight = FontWeight.Bold,
                             fontSize   = 14.sp,
                             color      = TextPrimary

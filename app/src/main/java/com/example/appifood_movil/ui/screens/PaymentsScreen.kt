@@ -2,10 +2,15 @@ package com.example.appifood_movil.ui.screens
 
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -15,11 +20,16 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.appifood_movil.data.model.PaymentMethod
@@ -27,13 +37,33 @@ import com.example.appifood_movil.ui.viewmodel.AuthViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-// ── Paleta unificada ──────────────────────────────────────────────
+// ── Paleta unificada AppiFood ─────────────────────────────────────
 private val RedPrimary   = Color(0xFFD32F2F)
 private val RedDark      = Color(0xFFB71C1C)
 private val RedDeep      = Color(0xFF7F0000)
 private val YellowAccent = Color(0xFFFFD600)
 private val TextPrimary  = Color(0xFF1A1A1A)
-private val TextMuted    = Color(0xFF888888)
+private val TextMuted    = Color(0xFF8A8A8A)
+private val BgScreen     = Color(0xFFF6F3F0)
+
+// ── Identidad visual real de cada método de pago ──────────────────
+private data class PaymentBrand(
+    val label: String,
+    val short: String,
+    val primary: Color,
+    val secondary: Color,
+    val onBrand: Color = Color.White
+)
+
+private val brandMap = mapOf(
+    "Nequi"        to PaymentBrand("Nequi",        "N",   Color(0xFF1B0F47), Color(0xFFE91C7D)),
+    "Daviplata"    to PaymentBrand("Daviplata",     "D",   Color(0xFFEE2A24), Color(0xFFB71B1B)),
+    "Bancolombia"  to PaymentBrand("Bancolombia",   "B",   Color(0xFFFFD100), Color(0xFFFCAA00), onBrand = Color(0xFF1A1A1A)),
+    "PSE"          to PaymentBrand("PSE",           "PSE", Color(0xFF00255D), Color(0xFF0057B8))
+)
+
+private fun brandFor(type: String) =
+    brandMap[type] ?: PaymentBrand(type, type.take(1).uppercase(), RedPrimary, RedDark)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -46,30 +76,24 @@ fun PaymentsScreen(
     val isLoading by authViewModel.isLoading.collectAsState()
     val scope = rememberCoroutineScope()
 
-    // ── ESTADOS ──────────────────────────────────────────────────────
     var showAddPaymentDialog by remember { mutableStateOf(false) }
     var showSuccessAnimation by remember { mutableStateOf(false) }
-    var isDeleting by remember { mutableStateOf(false) }
 
-    // ── ANIMACIÓN DE ENTRADA ──────────────────────────────────────
     var visible by remember { mutableStateOf(false) }
-
     val screenAlpha by animateFloatAsState(
         targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(400, easing = FastOutSlowInEasing),
+        animationSpec = tween(450, easing = FastOutSlowInEasing),
         label = "paymentsFadeIn"
     )
 
     LaunchedEffect(Unit) {
         visible = true
-        user?.uid?.let { uid ->
-            authViewModel.loadPaymentMethods(uid)
-        }
+        user?.uid?.let { uid -> authViewModel.loadPaymentMethods(uid) }
     }
 
     Scaffold(
         modifier = Modifier.graphicsLayer { alpha = screenAlpha },
-        containerColor = Color(0xFFF5F5F5),
+        containerColor = BgScreen,
         topBar = {
             AnimatedPaymentsTopBar(
                 onBack = { navController.popBackStack() },
@@ -79,19 +103,15 @@ fun PaymentsScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize()) {
             if (paymentMethods.isEmpty() && !isLoading) {
-                // ── SIN MÉTODOS DE PAGO ──────────────────────────────
-                AnimatedEmptyPayments(
-                    onAddPayment = { showAddPaymentDialog = true }
-                )
+                AnimatedEmptyPayments(onAddPayment = { showAddPaymentDialog = true })
             } else {
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
                         .padding(horizontal = 20.dp, vertical = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // ── TARJETA DE RESUMEN ────────────────────────────
                     item {
                         PaymentSummaryCard(
                             totalMethods = paymentMethods.size,
@@ -99,47 +119,41 @@ fun PaymentsScreen(
                         )
                     }
 
-                    // ── LISTA DE MÉTODOS ──────────────────────────────
-                    items(paymentMethods) { method ->
-                        AnimatedPaymentMethodItem(
-                            method = method,
-                            isDefault = method.isDefault,
-                            onSetDefault = {
-                                user?.uid?.let { uid ->
-                                    authViewModel.setDefaultPaymentMethod(uid, method.id) { success ->
-                                        if (success) {
-                                            scope.launch {
+                    itemsIndexed(paymentMethods) { index, method ->
+                        StaggeredEntry(index = index) {
+                            AnimatedPaymentMethodItem(
+                                method = method,
+                                isDefault = method.isDefault,
+                                onSetDefault = {
+                                    user?.uid?.let { uid ->
+                                        authViewModel.setDefaultPaymentMethod(uid, method.id) { success ->
+                                            if (success) scope.launch {
                                                 showSuccessAnimation = true
-                                                delay(1000)
+                                                delay(1100)
+                                                showSuccessAnimation = false
+                                            }
+                                        }
+                                    }
+                                },
+                                onDelete = {
+                                    user?.uid?.let { uid ->
+                                        authViewModel.removePaymentMethod(uid, method.id) { success ->
+                                            if (success) scope.launch {
+                                                showSuccessAnimation = true
+                                                delay(1100)
                                                 showSuccessAnimation = false
                                             }
                                         }
                                     }
                                 }
-                            },
-                            onDelete = {
-                                user?.uid?.let { uid ->
-                                    isDeleting = true
-                                    authViewModel.removePaymentMethod(uid, method.id) { success ->
-                                        isDeleting = false
-                                        if (success) {
-                                            scope.launch {
-                                                showSuccessAnimation = true
-                                                delay(1000)
-                                                showSuccessAnimation = false
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        )
+                            )
+                        }
                     }
 
                     item { Spacer(modifier = Modifier.height(30.dp)) }
                 }
             }
 
-            // ── LOADING ──────────────────────────────────────────────────
             if (isLoading) {
                 Box(
                     modifier = Modifier
@@ -147,66 +161,14 @@ fun PaymentsScreen(
                         .background(Color.Black.copy(alpha = 0.35f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(
-                        color = YellowAccent,
-                        strokeWidth = 3.dp,
-                        modifier = Modifier.size(48.dp)
-                    )
+                    CircularProgressIndicator(color = YellowAccent, strokeWidth = 3.dp, modifier = Modifier.size(48.dp))
                 }
             }
 
-            // ── ANIMACIÓN DE ÉXITO ──────────────────────────────────
-            AnimatedVisibility(
-                visible = showSuccessAnimation,
-                enter = fadeIn() + scaleIn(initialScale = 0.8f),
-                exit = fadeOut() + scaleOut(targetScale = 1.2f)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(Color.Black.copy(alpha = 0.4f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Surface(
-                        modifier = Modifier.size(220.dp, 180.dp),
-                        shape = RoundedCornerShape(28.dp),
-                        color = Color.White,
-                        shadowElevation = 8.dp
-                    ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center,
-                            modifier = Modifier.padding(16.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(72.dp)
-                                    .clip(CircleShape)
-                                    .background(RedPrimary),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = null,
-                                    tint = Color.White,
-                                    modifier = Modifier.size(40.dp)
-                                )
-                            }
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "¡Actualizado!",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 17.sp,
-                                color = Color.Black
-                            )
-                        }
-                    }
-                }
-            }
+            SuccessOverlay(visible = showSuccessAnimation)
         }
     }
 
-    // ── DIÁLOGO PARA AGREGAR MÉTODO DE PAGO ──────────────────────
     if (showAddPaymentDialog) {
         AddPaymentMethodDialog(
             onDismiss = { showAddPaymentDialog = false },
@@ -217,7 +179,7 @@ fun PaymentsScreen(
                             showAddPaymentDialog = false
                             scope.launch {
                                 showSuccessAnimation = true
-                                delay(1000)
+                                delay(1100)
                                 showSuccessAnimation = false
                             }
                         }
@@ -229,125 +191,169 @@ fun PaymentsScreen(
     }
 }
 
-// ── TOP BAR ANIMADA ──────────────────────────────────────────────
+// ── Entrada escalonada para items de lista ─────────────────────────
+@Composable
+private fun StaggeredEntry(index: Int, content: @Composable () -> Unit) {
+    var shown by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(60L * index)
+        shown = true
+    }
+    AnimatedVisibility(
+        visible = shown,
+        enter = fadeIn(tween(350)) + slideInVertically(
+            initialOffsetY = { it / 3 },
+            animationSpec = tween(380, easing = FastOutSlowInEasing)
+        )
+    ) {
+        content()
+    }
+}
+
+// ── TOP BAR con degradado de marca ──────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AnimatedPaymentsTopBar(
     onBack: () -> Unit,
     onAddPayment: () -> Unit
 ) {
-    TopAppBar(
-        title = {
-            Text(
-                text = "💳 Mis Métodos de Pago",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                Brush.horizontalGradient(listOf(RedPrimary, RedDark, RedDeep))
             )
-        },
-        navigationIcon = {
-            Surface(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .clickable { onBack() },
-                color = Color.White,
-                shadowElevation = 4.dp
-            ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(
-                        imageVector = Icons.Default.ArrowBack,
-                        contentDescription = "Atrás",
-                        tint = TextPrimary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-            }
-        },
-        actions = {
-            Button(
-                onClick = onAddPayment,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = RedPrimary,
-                    contentColor = Color.White
-                ),
-                shape = RoundedCornerShape(50)
-            ) {
-                Icon(
-                    Icons.Default.Add,
-                    contentDescription = "Agregar",
-                    modifier = Modifier.size(20.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text("Agregar", fontWeight = FontWeight.Bold)
-            }
-        },
-        colors = TopAppBarDefaults.topAppBarColors(
-            containerColor = Color.White,
-            scrolledContainerColor = Color.White
-        )
-    )
-}
-
-// ── RESUMEN DE PAGOS ──────────────────────────────────────────────
-@Composable
-fun PaymentSummaryCard(
-    totalMethods: Int,
-    defaultMethod: PaymentMethod?
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+            .statusBarsPadding()
     ) {
+        // Círculos decorativos translúcidos, fieles a la identidad de AppiFood
+        Box(
+            modifier = Modifier
+                .size(90.dp)
+                .graphicsLayer { translationX = 280f; translationY = -30f }
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.06f))
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Column {
-                Text(
-                    text = "💳 Métodos guardados",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "$totalMethods método(s) de pago",
-                    color = TextMuted,
-                    fontSize = 13.sp
-                )
-                if (defaultMethod != null) {
-                    Text(
-                        text = "Predeterminado: ${defaultMethod.type}",
-                        color = RedPrimary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Surface(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .clickable { onBack() },
+                    color = Color.White.copy(alpha = 0.16f)
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Atrás", tint = Color.White, modifier = Modifier.size(22.dp))
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column {
+                    Text("Métodos de pago", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Gestiona tus formas de pago", fontSize = 12.sp, color = Color.White.copy(alpha = 0.8f))
                 }
             }
+
             Surface(
-                shape = CircleShape,
-                color = RedPrimary.copy(alpha = 0.1f),
-                modifier = Modifier.size(48.dp)
+                shape = RoundedCornerShape(50),
+                color = RedDeep,
+                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.5f)),
+                modifier = Modifier.clickable { onAddPayment() }
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Text(
-                        text = "$totalMethods",
-                        color = RedPrimary,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Agregar", tint = Color.White, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("Agregar", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
                 }
             }
         }
     }
 }
 
-// ── ITEM DE MÉTODO DE PAGO ANIMADO ──────────────────────────────
+// ── RESUMEN ───────────────────────────────────────────────────────
+@Composable
+fun PaymentSummaryCard(totalMethods: Int, defaultMethod: PaymentMethod?) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(18.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column {
+                Text("Métodos guardados", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                Text("$totalMethods método(s) registrados", color = TextMuted, fontSize = 13.sp)
+                if (defaultMethod != null) {
+                    Spacer(modifier = Modifier.height(6.dp))
+                    val brand = brandFor(defaultMethod.type)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(brand.primary)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text("Predeterminado: ${defaultMethod.type}", color = RedPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                }
+            }
+            Surface(
+                shape = CircleShape,
+                color = RedPrimary.copy(alpha = 0.08f),
+                modifier = Modifier.size(54.dp)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text("$totalMethods", color = RedPrimary, fontWeight = FontWeight.Bold, fontSize = 20.sp)
+                }
+            }
+        }
+    }
+}
+
+// ── BADGE de marca animado (logo estilizado, sin necesidad de assets) ──
+@Composable
+private fun BrandBadge(type: String, size: androidx.compose.ui.unit.Dp = 52.dp, pulsing: Boolean = false) {
+    val brand = brandFor(type)
+    val infinite = rememberInfiniteTransition(label = "badgePulse")
+    val pulse by infinite.animateFloat(
+        initialValue = 1f,
+        targetValue = if (pulsing) 1.08f else 1f,
+        animationSpec = infiniteRepeatable(tween(900, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "pulseAnim"
+    )
+    Box(
+        modifier = Modifier
+            .size(size)
+            .graphicsLayer { scaleX = pulse; scaleY = pulse }
+            .clip(RoundedCornerShape(16.dp))
+            .background(Brush.linearGradient(listOf(brand.primary, brand.secondary)))
+            .shadow(0.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = brand.short,
+            color = brand.onBrand,
+            fontWeight = FontWeight.Black,
+            fontSize = if (brand.short.length > 1) 14.sp else 20.sp,
+            letterSpacing = 0.5.sp
+        )
+    }
+}
+
+// ── ITEM DE MÉTODO DE PAGO ──────────────────────────────────────────
 @Composable
 fun AnimatedPaymentMethodItem(
     method: PaymentMethod,
@@ -356,130 +362,150 @@ fun AnimatedPaymentMethodItem(
     onDelete: () -> Unit
 ) {
     var isPressed by remember { mutableStateOf(false) }
+    val brand = brandFor(method.type)
 
     val scale by animateFloatAsState(
         targetValue = if (isPressed) 0.97f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessLow),
         label = "methodScale"
     )
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
-            }
-            .clickable { isPressed = true },
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = if (isDefault) RedPrimary.copy(alpha = 0.05f) else Color.White
-        ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isDefault) 4.dp else 2.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clickable {
+                isPressed = true
+            },
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isDefault) 6.dp else 2.dp),
+        border = if (isDefault) BorderStroke(1.5.dp, Brush.horizontalGradient(listOf(RedPrimary, YellowAccent))) else null
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
+        LaunchedEffect(isPressed) {
+            if (isPressed) {
+                delay(120)
+                isPressed = false
+            }
+        }
+        Column(modifier = Modifier.fillMaxWidth().padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // ── ICONO ──────────────────────────────────────────
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(RedPrimary.copy(alpha = 0.1f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = method.getIcon(),
-                            fontSize = 24.sp
-                        )
-                    }
+                BrandBadge(type = method.type, pulsing = isDefault)
+                Spacer(modifier = Modifier.width(14.dp))
 
-                    Spacer(modifier = Modifier.width(14.dp))
-
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = method.type,
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 16.sp,
-                                color = TextPrimary
-                            )
-                            if (isDefault) {
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Surface(
-                                    shape = RoundedCornerShape(50),
-                                    color = RedPrimary
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(method.type, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = TextPrimary)
+                        if (isDefault) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = YellowAccent
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                                    verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(
-                                        text = "Predeterminado",
-                                        color = Color.White,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
-                                    )
+                                    Icon(Icons.Default.Star, contentDescription = null, tint = RedDeep, modifier = Modifier.size(11.dp))
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Text("Predeterminado", color = RedDeep, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
-                        Text(
-                            text = method.identifier,
-                            color = TextMuted,
-                            fontSize = 13.sp
-                        )
-                        Text(
-                            text = "Titular: ${method.holderName}",
-                            color = TextMuted,
-                            fontSize = 12.sp
-                        )
                     }
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(method.identifier, color = TextMuted, fontSize = 13.sp)
+                    Text("Titular: ${method.holderName}", color = TextMuted, fontSize = 12.sp)
                 }
             }
 
-            // ── ACCIONES ──────────────────────────────────────────────
+            Spacer(modifier = Modifier.height(10.dp))
+            HorizontalDivider(color = Color(0xFFF0EDEA))
+            Spacer(modifier = Modifier.height(6.dp))
+
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (!isDefault) {
-                    TextButton(
-                        onClick = onSetDefault,
-                        colors = ButtonDefaults.textButtonColors(
-                            contentColor = RedPrimary
-                        )
-                    ) {
-                        Icon(
-                            Icons.Default.Check,
-                            contentDescription = "Establecer por defecto",
-                            modifier = Modifier.size(16.dp)
-                        )
+                    TextButton(onClick = onSetDefault, colors = ButtonDefaults.textButtonColors(contentColor = RedPrimary)) {
+                        Icon(Icons.Default.Star, contentDescription = null, modifier = Modifier.size(15.dp))
                         Spacer(modifier = Modifier.width(4.dp))
-                        Text("Establecer por defecto", fontSize = 12.sp)
+                        Text("Predeterminar", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
+                }
+                IconButton(onClick = onDelete, modifier = Modifier.size(34.dp)) {
+                    Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = TextMuted, modifier = Modifier.size(19.dp))
+                }
+            }
+        }
+    }
+}
+
+// ── ESTADO VACÍO ──────────────────────────────────────────────────
+@Composable
+fun AnimatedEmptyPayments(onAddPayment: () -> Unit) {
+    val infinite = rememberInfiniteTransition(label = "emptyFloat")
+    val floatY by infinite.animateFloat(
+        initialValue = 0f, targetValue = -10f,
+        animationSpec = infiniteRepeatable(tween(1400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "floatAnim"
+    )
+
+    Column(
+        modifier = Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            colors = CardDefaults.cardColors(containerColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 44.dp, horizontal = 32.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(110.dp)
+                        .graphicsLayer { translationY = floatY }
+                        .clip(CircleShape)
+                        .background(Brush.linearGradient(listOf(RedPrimary.copy(alpha = 0.12f), YellowAccent.copy(alpha = 0.18f)))),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.CreditCard, contentDescription = null, tint = RedPrimary, modifier = Modifier.size(50.dp))
                 }
 
-                IconButton(
-                    onClick = onDelete,
-                    modifier = Modifier.size(32.dp)
+                Spacer(modifier = Modifier.height(20.dp))
+                Text("Aún no tienes métodos de pago", fontSize = 19.sp, fontWeight = FontWeight.Bold, color = TextPrimary, textAlign = TextAlign.Center)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    "Agrega Nequi, Daviplata, Bancolombia o PSE para pagar tus pedidos en segundos",
+                    color = TextMuted, fontSize = 14.sp, textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = onAddPayment,
+                    colors = ButtonDefaults.buttonColors(containerColor = RedPrimary, contentColor = Color.White),
+                    shape = RoundedCornerShape(50),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                    modifier = Modifier.fillMaxWidth(0.9f).height(50.dp)
                 ) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Eliminar",
-                        tint = TextMuted,
-                        modifier = Modifier.size(20.dp)
+                    Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Agregar método de pago",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        maxLines = 1
                     )
                 }
             }
@@ -487,102 +513,40 @@ fun AnimatedPaymentMethodItem(
     }
 }
 
-// ── ESTADO VACÍO ANIMADO ──────────────────────────────────────────
+// ── OVERLAY DE ÉXITO ─────────────────────────────────────────────
 @Composable
-fun AnimatedEmptyPayments(onAddPayment: () -> Unit) {
-    var bounce by remember { mutableStateOf(false) }
-
-    val scale by animateFloatAsState(
-        targetValue = if (bounce) 1.05f else 1f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow
-        ),
-        label = "emptyScale"
-    )
-
-    LaunchedEffect(Unit) {
-        bounce = true
-        delay(1000)
-        bounce = false
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+private fun SuccessOverlay(visible: Boolean) {
+    AnimatedVisibility(
+        visible = visible,
+        enter = fadeIn() + scaleIn(initialScale = 0.8f),
+        exit = fadeOut() + scaleOut(targetScale = 1.15f)
     ) {
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .graphicsLayer {
-                    scaleX = scale
-                    scaleY = scale
-                },
-            shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+        Box(
+            modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.42f)),
+            contentAlignment = Alignment.Center
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(48.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Surface(
+                modifier = Modifier.size(230.dp, 190.dp),
+                shape = RoundedCornerShape(28.dp),
+                color = Color.White,
+                shadowElevation = 10.dp
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(100.dp)
-                        .clip(CircleShape)
-                        .background(RedPrimary.copy(alpha = 0.1f)),
-                    contentAlignment = Alignment.Center
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(16.dp)
                 ) {
-                    Text(
-                        text = "💳",
-                        fontSize = 48.sp
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "No tienes métodos de pago",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = "Agrega un método de pago para realizar pedidos fácilmente",
-                    color = TextMuted,
-                    fontSize = 14.sp,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                )
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Button(
-                    onClick = onAddPayment,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = RedPrimary,
-                        contentColor = Color.White
-                    ),
-                    shape = RoundedCornerShape(50),
-                    modifier = Modifier.fillMaxWidth(0.7f)
-                ) {
-                    Icon(
-                        Icons.Default.Add,
-                        contentDescription = "Agregar",
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Agregar método de pago",
-                        fontWeight = FontWeight.Bold
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(76.dp)
+                            .clip(CircleShape)
+                            .background(Brush.linearGradient(listOf(RedPrimary, RedDeep))),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(40.dp))
+                    }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("¡Actualizado!", fontWeight = FontWeight.Bold, fontSize = 17.sp, color = TextPrimary)
                 }
             }
         }
@@ -590,6 +554,7 @@ fun AnimatedEmptyPayments(onAddPayment: () -> Unit) {
 }
 
 // ── DIÁLOGO PARA AGREGAR MÉTODO DE PAGO ──────────────────────────
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddPaymentMethodDialog(
     onDismiss: () -> Unit,
@@ -601,159 +566,236 @@ fun AddPaymentMethodDialog(
     var holderName by remember { mutableStateOf("") }
     var isDefault by remember { mutableStateOf(false) }
 
-    val paymentTypes = listOf("Nequi", "Bancolombia", "PSE", "Daviplata")
+    val paymentTypes = listOf("Nequi", "Daviplata", "Bancolombia", "PSE")
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "Agregar método de pago",
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp
-            )
-        },
-        text = {
-            Column {
-                // ── TIPO DE PAGO ──────────────────────────────────────
-                Text(
-                    text = "Tipo de pago",
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
-                    color = TextPrimary
-                )
-                Spacer(modifier = Modifier.height(8.dp))
+    var contentVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { contentVisible = true }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    paymentTypes.forEach { type ->
-                        FilterChip(
-                            selected = selectedType == type,
-                            onClick = { selectedType = type },
-                            label = {
+    Dialog(onDismissRequest = onDismiss) {
+        AnimatedVisibility(
+            visible = contentVisible,
+            enter = fadeIn(tween(280)) + scaleIn(initialScale = 0.92f, animationSpec = tween(280, easing = FastOutSlowInEasing))
+        ) {
+            Surface(
+                shape = RoundedCornerShape(28.dp),
+                color = Color.White,
+                shadowElevation = 12.dp,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(modifier = Modifier.padding(bottom = 8.dp)) {
+
+                    // ── Encabezado con degradado ──────────────────────
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                Brush.horizontalGradient(listOf(RedPrimary, RedDark, RedDeep)),
+                                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+                            )
+                            .padding(horizontal = 22.dp, vertical = 20.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(70.dp)
+                                .graphicsLayer { translationX = 260f; translationY = -20f }
+                                .clip(CircleShape)
+                                .background(Color.White.copy(alpha = 0.08f))
+                        )
+                        Column {
+                            Text("Nuevo método de pago", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 19.sp)
+                            Text("Elige tu billetera o banco favorito", color = Color.White.copy(alpha = 0.85f), fontSize = 12.sp)
+                        }
+                    }
+
+                    Column(modifier = Modifier.padding(horizontal = 22.dp, vertical = 18.dp)) {
+
+                        Text("Tipo de pago", fontWeight = FontWeight.SemiBold, fontSize = 14.sp, color = TextPrimary)
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            items(paymentTypes) { type ->
+                                PaymentTypeOption(
+                                    type = type,
+                                    selected = selectedType == type,
+                                    onClick = { selectedType = type }
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        OutlinedTextField(
+                            value = identifier,
+                            onValueChange = { identifier = it },
+                            label = { Text("Identificador") },
+                            placeholder = {
                                 Text(
-                                    text = type,
-                                    fontSize = 12.sp
+                                    when (selectedType) {
+                                        "Nequi", "Daviplata" -> "Número de celular"
+                                        "Bancolombia" -> "Número de cuenta"
+                                        "PSE" -> "Número de cuenta o correo"
+                                        else -> "Identificador"
+                                    }
                                 )
                             },
-                            modifier = Modifier.weight(1f),
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = RedPrimary.copy(alpha = 0.1f),
-                                selectedLabelColor = RedPrimary
+                            leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null, tint = RedPrimary) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = RedPrimary,
+                                focusedLabelColor = RedPrimary,
+                                cursorColor = RedPrimary
                             )
                         )
-                    }
-                }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.height(12.dp))
 
-                // ── IDENTIFICADOR ─────────────────────────────────────
-                OutlinedTextField(
-                    value = identifier,
-                    onValueChange = { identifier = it },
-                    label = { Text("Identificador") },
-                    placeholder = {
-                        when (selectedType) {
-                            "Nequi" -> Text("Número de celular")
-                            "Bancolombia" -> Text("Número de cuenta")
-                            "PSE" -> Text("Número de cuenta o correo")
-                            "Daviplata" -> Text("Número de celular")
-                            else -> Text("Identificador")
+                        OutlinedTextField(
+                            value = holderName,
+                            onValueChange = { holderName = it },
+                            label = { Text("Nombre del titular") },
+                            placeholder = { Text("Como aparece en la cuenta") },
+                            leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = RedPrimary) },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            singleLine = true,
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = RedPrimary,
+                                focusedLabelColor = RedPrimary,
+                                cursorColor = RedPrimary
+                            )
+                        )
+
+                        Spacer(modifier = Modifier.height(14.dp))
+
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isDefault) RedPrimary.copy(alpha = 0.06f) else Color(0xFFF7F5F3),
+                            modifier = Modifier.fillMaxWidth().clickable { isDefault = !isDefault }
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Switch(
+                                    checked = isDefault,
+                                    onCheckedChange = { isDefault = it },
+                                    colors = SwitchDefaults.colors(
+                                        checkedThumbColor = RedPrimary,
+                                        checkedTrackColor = RedPrimary.copy(alpha = 0.5f),
+                                        uncheckedThumbColor = TextMuted,
+                                        uncheckedTrackColor = TextMuted.copy(alpha = 0.3f)
+                                    )
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text("Establecer como predeterminado", fontSize = 13.sp, color = TextPrimary, fontWeight = FontWeight.Medium)
+                            }
                         }
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = RedPrimary,
-                        focusedLabelColor = RedPrimary,
-                        cursorColor = RedPrimary
-                    )
-                )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(22.dp))
 
-                // ── NOMBRE DEL TITULAR ──────────────────────────────
-                OutlinedTextField(
-                    value = holderName,
-                    onValueChange = { holderName = it },
-                    label = { Text("Nombre del titular") },
-                    placeholder = { Text("Como aparece en la cuenta") },
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = RedPrimary,
-                        focusedLabelColor = RedPrimary,
-                        cursorColor = RedPrimary
-                    )
-                )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            OutlinedButton(
+                                onClick = onDismiss,
+                                enabled = !isLoading,
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.weight(1f).height(48.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = TextMuted)
+                            ) {
+                                Text("Cancelar", fontWeight = FontWeight.SemiBold)
+                            }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // ── PREDETERMINADO ────────────────────────────────────
-                Row(
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Switch(
-                        checked = isDefault,
-                        onCheckedChange = { isDefault = it },
-                        colors = SwitchDefaults.colors(
-                            checkedThumbColor = RedPrimary,
-                            checkedTrackColor = RedPrimary.copy(alpha = 0.5f),
-                            uncheckedThumbColor = TextMuted,
-                            uncheckedTrackColor = TextMuted.copy(alpha = 0.3f)
-                        )
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Establecer como método predeterminado",
-                        fontSize = 13.sp,
-                        color = TextPrimary
-                    )
-                }
-            }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (identifier.isNotBlank() && holderName.isNotBlank()) {
-                        val paymentMethod = PaymentMethod(
-                            type = selectedType,
-                            identifier = identifier,
-                            holderName = holderName,
-                            isDefault = isDefault
-                        )
-                        onAdd(paymentMethod)
+                            Button(
+                                onClick = {
+                                    if (identifier.isNotBlank() && holderName.isNotBlank()) {
+                                        onAdd(
+                                            PaymentMethod(
+                                                type = selectedType,
+                                                identifier = identifier,
+                                                holderName = holderName,
+                                                isDefault = isDefault
+                                            )
+                                        )
+                                    }
+                                },
+                                enabled = !isLoading && identifier.isNotBlank() && holderName.isNotBlank(),
+                                colors = ButtonDefaults.buttonColors(containerColor = RedPrimary, contentColor = Color.White),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.weight(1.2f).height(48.dp)
+                            ) {
+                                if (isLoading) {
+                                    CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                Text("Agregar", fontWeight = FontWeight.Bold)
+                            }
+                        }
                     }
-                },
-                enabled = !isLoading && identifier.isNotBlank() && holderName.isNotBlank(),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = RedPrimary,
-                    contentColor = Color.White
-                ),
-                shape = RoundedCornerShape(12.dp)
-            ) {
-                if (isLoading) {
-                    CircularProgressIndicator(
-                        color = Color.White,
-                        strokeWidth = 2.dp,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
                 }
-                Text("Agregar")
             }
-        },
-        dismissButton = {
-            TextButton(
-                onClick = onDismiss,
-                enabled = !isLoading
-            ) {
-                Text("Cancelar", color = TextMuted)
-            }
-        },
-        shape = RoundedCornerShape(24.dp)
+        }
+    }
+}
+
+// ── Opción de tipo de pago (selector animado con badge de marca) ───
+@Composable
+private fun PaymentTypeOption(type: String, selected: Boolean, onClick: () -> Unit) {
+    val brand = brandFor(type)
+    val scale by animateFloatAsState(
+        targetValue = if (selected) 1.05f else 1f,
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+        label = "typeScale"
     )
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clickable { onClick() }
+            .width(74.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(56.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    if (selected) Brush.linearGradient(listOf(brand.primary, brand.secondary))
+                    else Brush.linearGradient(listOf(Color(0xFFF0EDEA), Color(0xFFF0EDEA)))
+                )
+                .then(
+                    if (selected) Modifier.shadow(8.dp, RoundedCornerShape(18.dp), spotColor = brand.primary)
+                    else Modifier
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = brand.short,
+                color = if (selected) brand.onBrand else TextMuted,
+                fontWeight = FontWeight.Black,
+                fontSize = if (brand.short.length > 1) 13.sp else 19.sp
+            )
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = type,
+            fontSize = 11.sp,
+            fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+            color = if (selected) RedPrimary else TextMuted,
+            textAlign = TextAlign.Center,
+            maxLines = 1
+        )
+        AnimatedVisibility(visible = selected) {
+            Box(
+                modifier = Modifier
+                    .padding(top = 3.dp)
+                    .size(4.dp)
+                    .clip(CircleShape)
+                    .background(RedPrimary)
+            )
+        }
+    }
 }
